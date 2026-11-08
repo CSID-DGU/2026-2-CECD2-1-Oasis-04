@@ -55,6 +55,20 @@ train:
   logging_steps: 10
   seed: 42
 
+rag:                                   # 교통 고유명사 보정 (kb/ + stt/rag_correct.py)
+  kb_dir: ~/data/kb_seoul              # kb/build_kb.py --regions 서울 출력 (MVP 는 서울 소재만)
+  weights: [0.8, 0.1, 0.1]             # 문자열(자모·발음) 유사도가 지배, 임베딩·거리는 동점일 때 가르는 용도
+  geo_radius_m: 20000
+  span_min_sim: 0.72                   # 구간 뒤에 교통 단서(까지·행·역·가는 …)가 있을 때 장소로 보는 문자열 유사도 하한
+  span_min_sim_nocue: 0.85             # 단서가 없을 때의 하한 (일반 단어가 장소로 잡히는 것을 막는다)
+  substitute_min_sim: 0.75             # 재디코딩이 실패하면 1순위 후보 표기로 직접 치환하는 기준 (순수 자모 유사도 0.7 이상도 함께 요구)
+  max_extra_edits: 1                   # 재디코딩 결과가 장소 구간 밖에서 이보다 많이 바뀌면 거부
+  skip_if_confidence_above: 1.0        # 1차 신뢰도 기준 생략은 끔. Whisper 는 '선능력'을 0.95 신뢰도로 확신하므로 쓸모없음
+  prompt_max_names: 10                 # Whisper 프롬프트에 넣을 후보 이름 수
+  kiosks:                              # 키오스크 위치 (서버 kiosk 테이블과 맞출 것). x=경도, y=위도
+    KIOSK_JONGNO_01: {name: 종로3가역 키오스크, x: 126.9918, y: 37.5704}
+    KIOSK_CHEONGNYANGNI_01: {name: 청량리역 버스정류장 키오스크, x: 127.0458, y: 37.5802}
+
 eval:
   batch_size: 8
   beam_size: 1
