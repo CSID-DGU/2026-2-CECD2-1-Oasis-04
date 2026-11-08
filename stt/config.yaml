@@ -1,0 +1,62 @@
+# Senior Voice STT — 단일 설정 파일. 로컬(WSL)과 대여 GPU에서 경로만 바꿔 쓴다.
+
+data:
+  root: ~/data/aihub94                 # AI-Hub 데이터 루트 (대여 서버에서는 그곳 경로로)
+  manifest_dir: ~/data/aihub94/manifests
+  max_seconds: 30                      # Whisper 입력 상한
+  min_seconds: 0.3
+  split:                               # 화자 해시 버킷(0~9) → 8:1:1
+    dev_buckets: [8]
+    test_buckets: [9]
+  sources:                             # select_utterances.py 출력 TSV + 16 kHz wav 폴더. wav가 없는 행은 건너뜀
+    - name: training                   # 키오스크 '지하철' (AI-Hub training)
+      index_tsv: subway_training.tsv
+      wav16k_dir: subway_16k/training
+    - name: validation                 # 키오스크 '지하철' (AI-Hub validation)
+      index_tsv: subway_validation.tsv
+      wav16k_dir: subway_16k/validation
+    - name: robot_training             # AI로봇 버스·정류장·택시·전철 (AI-Hub training)
+      index_tsv: bus_training.tsv
+      wav16k_dir: bus_16k/training
+    - name: robot_validation           # AI로봇 버스·정류장·택시·전철 (AI-Hub validation)
+      index_tsv: bus_validation.tsv
+      wav16k_dir: bus_16k/validation
+
+models:
+  baseline:                            # 기준선(E0) 비교 대상
+    - openai/whisper-medium
+    - openai/whisper-large-v3-turbo
+  finetune_base: openai/whisper-large-v3-turbo
+  language: ko
+  task: transcribe
+
+lora:                                  # 계획서 표 28 초기값
+  r: 32
+  alpha: 64
+  dropout: 0.05
+  target_modules: [q_proj, v_proj]
+
+train:
+  output_dir: ~/senior-voice/runs/lora-v1
+  learning_rate: 1.0e-4
+  warmup_ratio: 0.05
+  num_epochs: 3
+  per_device_batch_size: 4             # 8 GB VRAM 기준. 대여 GPU에서는 16~32로
+  grad_accum: 8                        # 실효 배치 32
+  fp16: true
+  gradient_checkpointing: true
+  eval_every_steps: 500
+  save_every_steps: 500
+  early_stopping_patience: 3
+  max_train_samples: 0                 # 0 = 전부. 로컬 점검은 --smoke 옵션(300개)
+  max_eval_samples: 0                  # 학습 중 dev 평가 샘플 수 (0 = dev 전부, 생성 평가라 시간이 걸림)
+  eval_batch_size: 8
+  num_workers: 4                       # DataLoader 워커 (log-mel 계산)
+  logging_steps: 10
+  seed: 42
+
+eval:
+  batch_size: 8
+  beam_size: 1
+  cer_remove_space: true               # 공백 제거 기준 CER (계획서)
+  max_eval_samples: 0

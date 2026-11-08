@@ -1,0 +1,63 @@
+# AI-Hub 데이터 (원본, 가공본, 전사가 포함된 목록). 이용 정책에 따라 커밋하지 않음
+data/
+datasets/
+manifests/
+*.wav
+*.flac
+*.mp3
+*.webm
+*.zip
+*.tar
+*.part*
+*.tsv
+*.jsonl
+*.xlsx
+006.*/
+
+# ── 모델 가중치·학습 산출물 (Git에 올리지 않음, 계획서 8.2) ──
+runs/
+checkpoints/
+models/
+adapters/
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.ckpt
+*.onnx
+wandb/
+tensorboard/
+*.tfevents.*
+
+# ── 비밀 정보 ──
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# ── 로그·캐시·임시 (전사·경로가 섞여 들어갈 수 있음) ──
+logs/
+*.log
+.cache/
+~/
+tmp/
+.tmp/
+
+# ── Python ──
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+.mypy_cache/
+.ruff_cache/
+
+# ── 편집기·OS ──
+.vscode/settings.json
+.idea/
+.DS_Store
+Thumbs.db
+desktop.ini

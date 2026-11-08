@@ -1,0 +1,14 @@
+# 저장소와 작업 폴더 모두 LF 로 통일 (Windows 체크아웃을 WSL 에서 실행해도 .sh/.py 가 깨지지 않게)
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.yaml text eol=lf
+*.md text eol=lf
+
+# 바이너리
+*.wav binary
+*.png binary
+*.jpg binary
+*.pdf binary
+*.docx binary
+*.xlsx binary
