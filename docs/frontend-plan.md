@@ -22,20 +22,6 @@
 
 2026-11-09 회의에서 확정된 나머지 항목(자동 녹음 없음, failCount 누적·초기화 규칙, LISTENING 10초 무발화, IDLE_REDUCED 재점검, RESOLVING→UNAVAILABLE 출발점)은 6절에 '확정'으로 표시했다.
 
-## Spring 비유 (전체 그림)
-
-| React 쪽 | Spring 쪽 | 설명 |
-|---|---|---|
-| `package.json` / Vite | `build.gradle` / Gradle + DevTools | 의존성 선언, 개발 서버(핫 리로드) |
-| `src/state/transitions.js` | Spring State Machine의 `StateMachineConfigurer` | "현재 상태 + 이벤트 → 다음 상태" 설정 표 |
-| `kioskReducer` | 상태 전이를 실행하는 `@Service` (순수 함수, 부수효과 없음) | `(현재상태, 이벤트) → 새 상태` 만 계산. API 호출 금지 |
-| `KioskContext` + `useKiosk()` | `ApplicationContext` + `@Autowired` | 어느 컴포넌트에서든 상태와 `dispatch`를 꺼내 쓰는 통로 |
-| `useKioskEffects` | `@EventListener` / `@Scheduled` | "상태가 X가 되면 API를 부르고 결과로 이벤트를 쏜다"는 부수효과 담당 |
-| `src/api/index.js` | `@Profile("mock")` vs `@Profile("prod")` 빈 선택 | 환경변수로 mock/real 구현을 바꿔 끼움 |
-| `src/api/mock/*`, `src/api/real/*` | 같은 인터페이스의 두 구현체(`Impl`) | 함수 이름·입출력이 같아야 교체가 쉬움 |
-| `screens/*.jsx` | Thymeleaf 뷰 템플릿 | 상태 하나당 화면 하나. 버튼은 `dispatch(이벤트)`만 호출 |
-| `useEffect` | `@PostConstruct` + 소멸 콜백 | 컴포넌트가 뜨거나 값이 바뀔 때 실행되는 훅 |
-
 ## 1. frontend/ 폴더 구조
 
 ```
