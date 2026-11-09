@@ -126,3 +126,44 @@ stateDiagram-v2
 8. **종료 상태 및 `IDLE` 복귀 경로 없음**: `ROUTE_GUIDE`, `QR_HANDOFF`, `UNAVAILABLE`, `MANUAL_SELECT` 에서 `IDLE` 로 돌아가는 전이(처음으로 버튼, 일정 시간 미조작 타임아웃 등)가 다이어그램에 없습니다. 실제 키오스크 운영에는 필요할 것으로 보입니다.
 9. **`ROUTE_GUIDE → QR_HANDOFF` 외의 선택지**: 경로 3개 중 다른 경로를 고르는 동작, 휴대폰으로 보내지 않고 끝내는 동작은 다이어그램에 없습니다.
 10. **`CONFIRMING` 의 "자동 녹음" 결과 처리**: 자동 녹음된 음성이 다시 `/stt → /resolve` 를 거치는지(즉 `CONFIRMING → RESOLVING` 전이가 있는지), 아니면 AFFIRM/부정만 판별하는지 다이어그램만으로는 알 수 없습니다. `REASKING` 의 "자동 녹음"도 `LISTENING` 을 거치는 것으로 그려져 있어 그대로 옮겼습니다.
+
+## 상태 전이 표
+
+위 Mermaid 다이어그램의 화살표 하나가 표의 한 행입니다(총 26행). 이벤트 이름은 영어 대문자 스네이크 케이스이며,
+`STARTUP_CHECK`·`FAIL_COUNT_CHECK` 는 마름모 판단 노드(`<<choice>>`)라서 "현재 상태" 열에 나와도 실제 화면 상태는 아닙니다.
+API 열은 다이어그램에 적힌 엔드포인트(`/health`, `/stt`, `/resolve`, `/route`)만 사용했고, 서버가 필요한지 다이어그램만으로 알 수 없는 경우는 '미정'으로 적었습니다.
+
+| 현재 상태 | 이벤트 | 다음 상태 | 필요한 API 호출 | 비고 |
+|---|---|---|---|---|
+| `[*]` (앱 시작) | `APP_START` | `STARTUP_CHECK` | `/health` | 시작 점검 진입 시 서버 상태 + 마이크 확인 |
+| `STARTUP_CHECK` | `HEALTH_SERVER_DOWN` | `CHECKING` | - | `/health` 응답 "서버 불가"에 따른 분기 |
+| `CHECKING` | `HEALTH_RETRY_TIMER` | `STARTUP_CHECK` | `/health` | 30초마다 재시도 (원본 점선) |
+| `STARTUP_CHECK` | `HEALTH_OK` | `IDLE` | - | `/health` 정상 + 마이크 정상 |
+| `STARTUP_CHECK` | `MIC_OR_STT_UNAVAILABLE` | `IDLE_REDUCED` | - | 마이크 또는 STT 불가 → 축소 운영, 마이크 버튼 숨김 |
+| `IDLE` | `MIC_BUTTON_PRESSED` | `LISTENING` | - | 녹음 시작 |
+| `IDLE` | `MANUAL_SELECT_PRESSED` | `MANUAL_SELECT` | 미정 | 목적지 목록을 서버에서 받는지 다이어그램에 없음 |
+| `IDLE_REDUCED` | `MANUAL_SELECT_PRESSED` | `MANUAL_SELECT` | 미정 | 축소 운영에서는 손으로 고르기만 가능 |
+| `LISTENING` | `SPEECH_END` | `RESOLVING` | `/stt` → `/resolve` | 무음 2.5초 또는 '다 말했어요' 버튼 |
+| `RESOLVING` | `RESOLVE_NEED_CONFIRM` | `CONFIRMING` | - | `/resolve` 응답 `need_confirm=true` |
+| `RESOLVING` | `RESOLVE_CONFIRMED` | `ROUTING` | `/route` | `/resolve` 응답 `need_confirm=false` |
+| `RESOLVING` | `RESOLVE_NOT_UNDERSTOOD` | `FAIL_COUNT_CHECK` | - | 못 알아들음 → 실패 횟수 +1 |
+| `RESOLVING` | `RESOLVE_OUT_OF_SCOPE_OR_ERROR` | `UNAVAILABLE` | - | 범위 밖 또는 서버 오류 (출발점 3-1로 판독, 확인 필요 2번) |
+| `CONFIRMING` | `DESTINATION_CONFIRMED` | `ROUTING` | `/route` | AFFIRM 또는 후보 선택. 음성 응답 판별에 `/stt` 를 쓰는지는 미정 |
+| `CONFIRMING` | `CONFIRM_NONE_OF_THEM` | `FAIL_COUNT_CHECK` | - | '모두 아니에요' → 실패 횟수 +1 |
+| `CONFIRMING` | `CONFIRM_SAY_OTHER_PLACE` | `LISTENING` | - | '다른 곳 말하기' |
+| `FAIL_COUNT_CHECK` | `FAIL_COUNT_1` | `REASKING` | - | 첫 번째 실패 |
+| `FAIL_COUNT_CHECK` | `FAIL_COUNT_2` | `MANUAL_SELECT` | 미정 | 두 번째 실패 → 손으로 고르기로 전환 |
+| `REASKING` | `RETRY_SPEECH` | `LISTENING` | - | '다시 말하기' (재질문 자동 녹음) |
+| `REASKING` | `MANUAL_SELECT_PRESSED` | `MANUAL_SELECT` | 미정 | |
+| `ROUTING` | `ROUTE_FOUND` | `ROUTE_GUIDE` | - | `/route` 응답 경로 있음 → 경로 3개, 1순위 크게 |
+| `ROUTING` | `ROUTE_FAILED` | `UNAVAILABLE` | - | 경로 없음 · 오류 · 연결 끊김 |
+| `UNAVAILABLE` | `MANUAL_SELECT_PRESSED` | `MANUAL_SELECT` | 미정 | |
+| `MANUAL_SELECT` | `POI_SELECTED` | `ROUTING` | `/route` | `poi_id` 직행 (`/resolve` 생략) |
+| `MANUAL_SELECT` | `SWITCH_TO_VOICE` | `LISTENING` | - | '말로 하기', 실패 횟수 초기화 |
+| `ROUTE_GUIDE` | `SEND_TO_PHONE_PRESSED` | `QR_HANDOFF` | 미정 | QR 생성에 서버가 필요한지 다이어그램에 없음 |
+
+### 표에서 '미정'으로 둔 이유
+
+- **`MANUAL_SELECT` 진입 5건**: 손으로 고르기 화면의 목적지 목록을 서버에서 받아오는지, 키오스크에 내장하는지 다이어그램에 없습니다.
+- **`ROUTE_GUIDE → QR_HANDOFF`**: QR 코드를 프론트에서 직접 만드는지, 서버가 짧은 URL이나 QR 이미지를 만들어 주는지 다이어그램에 없습니다.
+- **`CONFIRMING` 의 음성 응답**: "자동 녹음 + 버튼" 상태에서 음성으로 "네"라고 답했을 때 `/stt` 를 다시 거치는지 알 수 없어 비고에만 적었습니다.
