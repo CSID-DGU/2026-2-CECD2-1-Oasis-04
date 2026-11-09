@@ -12,6 +12,20 @@ from jamo import h2j, j2hcj
 _PAREN = re.compile(r"[\(\[（【][^\)\]）】]*[\)\]）】]")
 _NONWORD = re.compile(r"[^0-9A-Za-z가-힣]")
 _SPLIT = re.compile(r"[.·/,]")
+# 음성 인식은 "종로삼가", "사호선" 처럼 한글 숫자로 적는 경우가 많다 → 표기를 숫자로 통일 (종로3가, 4호선)
+_NUM = {"일": "1", "이": "2", "삼": "3", "사": "4", "오": "5", "육": "6", "칠": "7", "팔": "8", "구": "9", "십": "10"}
+_KNUM = re.compile(r"(십[일이삼사오육칠팔구]|[일이삼사오육칠팔구]십[일이삼사오육칠팔구]?|[일이삼사오육칠팔구십])"
+                   r"(?=(가|호선|번|동|리)(역|정류장|$|[^가-힣]))")
+
+
+def _knum_to_digits(m: re.Match) -> str:
+    s = m.group(1)
+    if len(s) == 1:
+        return _NUM[s]
+    if s.startswith("십"):
+        return str(10 + int(_NUM[s[1]]))
+    tens = int(_NUM[s[0]]) * 10
+    return str(tens + (int(_NUM[s[2]]) if len(s) == 3 else 0))
 
 # 긴 이름 → 흔히 쓰는 약칭 (왼쪽이 포함되면 오른쪽으로 바꾼 별칭도 만든다)
 _ABBREV = [
@@ -33,6 +47,7 @@ def normalize_name(name: str) -> str:
     s = unicodedata.normalize("NFC", name or "").strip()
     s = _PAREN.sub("", s)
     s = _NONWORD.sub("", s)
+    s = _KNUM.sub(_knum_to_digits, s)
     return s
 
 

@@ -1,0 +1,10 @@
+[tool.ruff]
+line-length = 150
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+ignore = ["E402"]  # kb/, stt/ 를 sys.path 에 넣은 뒤 import 하는 패턴을 허용
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from normalize import make_aliases, normalize_name, to_jamo  # noqa: E402
 
 DEFAULT_REGIONS = "서울"   # MVP 는 서울 소재만. 수도권으로 넓히려면 --regions 서울,인천,경기
+ALL_NAMES: set = set()     # 지역 필터와 무관한 전국 역·정류장 이름 (서울 밖 실제 지명을 오보정하지 않기 위한 목록)
 
 
 # ------------------------------------------------------------ file reading
@@ -89,6 +90,9 @@ def load_bus(path, regions):
             skipped += 1
             continue
         city = (r[ci["city"]] if ci["city"] is not None else "") + " " + (r[ci["mcity"]] if ci["mcity"] is not None else "")
+        nm = normalize_name(r[ci["name"]])
+        if nm:
+            ALL_NAMES.add(nm)
         if regions and not any(k in city for k in regions):
             continue
         x, y = to_float(r[ci["x"]]), to_float(r[ci["y"]])
@@ -129,6 +133,10 @@ def load_subway(path, regions):
             region_text = r[ci["addr"]]
         else:
             region_text = r[ci["op"]] if ci["op"] is not None else ""
+        nm = normalize_name(r[ci["name"]])
+        if nm:
+            ALL_NAMES.add(nm)
+            ALL_NAMES.add(nm + "역" if not nm.endswith("역") else nm[:-1])
         if regions and not any(k in region_text for k in regions):
             continue
         x, y = to_float(r[ci["x"]]), to_float(r[ci["y"]])
@@ -179,6 +187,9 @@ def main():
     ap.add_argument("--extra-aliases", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "extra_aliases.csv"),
                     help="옛 이름·통칭 CSV (name, alias). name 과 정식 이름이 같은 POI 전부에 alias 를 붙인다")
     ap.add_argument("--regions", default=DEFAULT_REGIONS)
+    ap.add_argument("--common-words-from", nargs="*", default=[],
+                    help="전사 TSV(text 열) 목록. 자주 나오는 일반 단어를 common_words.json 으로 저장해 장소 오인을 막는다 (커밋 금지)")
+    ap.add_argument("--common-min-count", type=int, default=30)
     ap.add_argument("--out", default="~/data/kb")
     ap.add_argument("--embedding-model", default="jhgan/ko-sroberta-multitask")
     ap.add_argument("--no-embedding", action="store_true", help="임베딩 색인 생략 (자모 검색만)")
@@ -254,7 +265,6 @@ def main():
     # 임베딩 색인: 중복 이름은 한 번만 임베딩 (이름 → poi 목록은 terms.jsonl 로 복원)
     if not args.no_embedding:
         import faiss
-        import numpy as np
         from sentence_transformers import SentenceTransformer
         uniq = sorted({t for t, _, _ in terms})
         print(f"embedding {len(uniq)} unique terms with {args.embedding_model} ...", flush=True)
@@ -269,8 +279,39 @@ def main():
             json.dump(uniq, f, ensure_ascii=False)
         print(f"embedding done in {time.time()-t0:.0f}s, dim {emb.shape[1]}")
 
+    # 전국 이름 목록: 지역 밖(수원역, 부평역 …)이라 지식베이스엔 없지만 실제 있는 이름 → RAG 가 다른 역으로 바꾸지 않게
+    kb_term_set = {t for t, _, _ in terms}
+    national = sorted(n for n in ALL_NAMES if n not in kb_term_set and len(n) >= 2)
+    with open(os.path.join(out_dir, "national_names.json"), "w", encoding="utf-8") as f:
+        json.dump(national, f, ensure_ascii=False)
+    print(f"national names outside KB: {len(national)}")
+
+    # 일반 단어 사전: 전사에 자주 나오지만 지식베이스 표기와 같지 않은 단어 (작동, 역사, 도움 …)
+    n_common = 0
+    if args.common_words_from:
+        import re
+        import collections as _c
+        particles = re.compile(r"(까지|으로|로|에서|에게|한테|이요|예요|이에요|은|는|이|가|을|를|에|요|도|행|방면|쪽)$")
+        kb_terms = {t for t, _, _ in terms}
+        cnt = _c.Counter()
+        for tsv in args.common_words_from:
+            header, rows = read_table(tsv)
+            ti = find_col(header, "text")
+            for r in rows:
+                if len(r) > ti:
+                    for w in r[ti].split():
+                        core = particles.sub("", normalize_name(w))
+                        if len(core) >= 2:
+                            cnt[core] += 1
+        common = sorted(w for w, c in cnt.items() if c >= args.common_min_count and w not in kb_terms
+                        and re.search(r"[가-힣]", w) and not any(w.endswith(s) for s in ("역", "정류장", "정류소")))
+        with open(os.path.join(out_dir, "common_words.json"), "w", encoding="utf-8") as f:
+            json.dump(common, f, ensure_ascii=False)
+        n_common = len(common)
+        print(f"common words: {n_common} (count >= {args.common_min_count}, from {len(args.common_words_from)} files)")
+
     meta = {
-        "built_at": time.strftime("%Y-%m-%d %H:%M"), "pois": len(pois), "aliases": len(alias_rows),
+        "built_at": time.strftime("%Y-%m-%d %H:%M"), "pois": len(pois), "aliases": len(alias_rows), "common_words": n_common,
         "by_type": {t: sum(1 for p in pois if p["poi_type"] == t) for t in ("BUS_STOP", "SUBWAY_STATION", "FACILITY")},
         "regions": regions, "embedding_model": None if args.no_embedding else args.embedding_model,
         "sources": {"bus": args.bus, "subway": args.subway, "facility": args.facility},

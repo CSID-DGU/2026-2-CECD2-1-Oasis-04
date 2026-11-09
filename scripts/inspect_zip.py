@@ -89,7 +89,7 @@ if json_names:
     for n, i in json_names[:max_scan]:
         try:
             obj = json.loads(zf.read(i).decode("utf-8-sig"))
-        except Exception as e:
+        except Exception:
             continue
         flat = flatten(obj)
         for k, v in flat.items():

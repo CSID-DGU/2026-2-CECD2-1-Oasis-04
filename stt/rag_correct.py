@@ -41,13 +41,23 @@ STOPWORDS = {
     "가야", "가서", "가면", "가고", "가자", "가요", "가게", "가니", "가는데", "타야", "타서", "타면", "타고", "내려", "와서",
     "오면", "있어", "없어", "알아", "몰라", "해줘", "하게", "되나", "있는", "없는", "거기", "이거", "그거", "저거",
     "빨리", "바로", "많이", "적게", "하나", "두장", "한장", "세장",
+    "뭐라고", "뭐라꼬", "뭐라", "뭐야", "그만", "됐어", "취소", "다시", "맞아", "아니", "아니야", "아니요",
+    # 역 안에서 쓰는 일반 명사 (역 이름과 소리가 비슷해 오인되기 쉬움: 작동→학동, 역사→역삼, 도움→동묘)
+    "당역", "이역", "여기역", "저역", "우리역", "이번역", "다음역", "전역", "급행", "완행", "직통", "일반",
+    "작동", "역사", "도움", "호출", "관리자", "고객", "방송", "발권", "환불", "정산", "예약", "시간표", "노선도",
+    "지연", "운행", "정차", "방향", "상행", "하행", "좌석", "분실물", "유실물", "보관함", "스크린도어", "안내방송",
+    # '…역' 꼴의 일반 명사 (도착역→동작역, 목적지역→삼각지역 방지)
+    "도착역", "목적지역", "출발역", "환승역", "종착역", "현재역", "그역", "하차역", "승차역", "내릴역", "탈역", "갈아탈역",
 }
-PARTICLES = re.compile(r"(까지|으로|로|에서|에게|한테|이요|예요|이에요|은|는|이|가|을|를|에|요|도|행|방면|쪽)$")
+# 조사: 방향·범위 조사(까지/으로/행/방면…)는 장소 단서로 치고, 그 밖의 일반 조사(을/를/이/가/은/는/에…)는 단서가 아니다
+PARTICLES = re.compile(r"(까지|으로|로|에서|에게|한테|이랑|하고|보다|이요|예요|이에요|은|는|이|가|을|를|에|요|도|와|과|랑|행|방면|쪽)$")
+DIRECTIONAL = {"까지", "으로", "로", "에서", "행", "방면", "쪽"}
 # 구간이 장소일 가능성을 높이는 단서: 구간 안(…역/…정류장), 바로 앞 단어, 바로 뒤 단어
 CUE_IN = re.compile(r"(역|정류장|정류소|터미널|공항|병원|시장|학교|공원|사거리|입구)$")
 CUE_BEFORE = re.compile(r"(목적지|행선지|출발지|여기서|거기서|에서|부터)$")
-CUE_AFTER = re.compile(r"^(까지|으로|로|에서|에|행|방면|쪽|가는|가려면|갈|도착|출발|내리|타|환승|근처|앞|안에|"
-                       r"고객센터|역무실|출구|승강장|개찰구|화장실|어느|몇)")
+# 뒤 단어는 '가다/타다/내리다' 계열 활용형만 (접두 '가'를 허용하면 '가까운', '가격' 까지 잡힌다)
+CUE_AFTER = re.compile(r"^(까지|으로|로|에서|행|방면|쪽|가는|가려면|가려고|갈|가요|가나요|가나|가니|가노|갑니까|가야|가자|갈래|"
+                       r"도착|출발|내리|내려|타는|타고|타면|타야|타|환승|근처|앞|방향)")
 
 
 LINE_NAME = re.compile(r"(호선|분당선|경의선|중앙선|경춘선|수인선|신설선|신림선|서해선|경강선|공항철도|골드라인|에버라인|선$)")
@@ -73,6 +83,18 @@ class RagCorrector:
         self.skip_conf = float(r.get("skip_if_confidence_above", 0.92))
         self.max_names = int(r.get("prompt_max_names", 8))
         self._search_cache = {}
+        # 전사 라벨에서 뽑은 자주 쓰는 일반 단어 (kb/build_kb.py --common-words-from). 있으면 장소 후보에서 뺀다
+        self.common_words = set()
+        cw_path = os.path.join(self.kb.dir, "common_words.json")
+        if os.path.exists(cw_path):
+            with open(cw_path, encoding="utf-8") as f:
+                self.common_words = set(json.load(f))
+        # 지식베이스 범위 밖의 전국 역·정류장 이름 (수원역, 부평역 …): 또렷이 인식됐으면 실제 지명이므로 건드리지 않는다
+        self.national_names = set()
+        nn_path = os.path.join(self.kb.dir, "national_names.json")
+        if os.path.exists(nn_path):
+            with open(nn_path, encoding="utf-8") as f:
+                self.national_names = set(json.load(f))
 
     # ---------------------------------------------------------- 1차 인식 + 신뢰도
     @torch.inference_mode()
@@ -116,19 +138,24 @@ class RagCorrector:
             for i in range(len(words) - n + 1):
                 chunk = " ".join(words[i:i + n])
                 core = PARTICLES.sub("", normalize_name(chunk))
-                if len(core) < 2 or core in STOPWORDS or not re.search(r"[가-힣]", core):
+                if len(core) < 2 or core in STOPWORDS or core in self.common_words or not re.search(r"[가-힣]", core):
                     continue
+                if core in self.national_names or (core + "역") in self.national_names:
+                    continue  # 서울 밖 실제 역·정류장 이름 → 범위 밖이지 오인식이 아니다
                 if LINE_NAME.search(core):
                     continue  # 노선 이름(분당선, 4호선)은 장소가 아니다 → "분당선→신분당선" 같은 치환 방지
-                if n > 1 and any(_word_core(w) in STOPWORDS for w in words[i:i + n]):
-                    continue  # "선능력 어느 출구에" 처럼 일반 단어가 섞인 구간은 보지 않는다
-                # 단서: 구간이 역/정류장 등으로 끝나거나, 조사가 붙어 있었거나, 앞뒤 단어가 교통 표현
+                if n > 1 and any(normalize_name(w) in STOPWORDS or _word_core(w) in STOPWORDS
+                                 or _word_core(w) in self.common_words for w in words[i:i + n]):
+                    continue  # "선능력 어느 출구에" 처럼 일반 단어가 섞인 구간은 보지 않는다 ('급행'은 조사 제거 전 형태로도 검사)
+                # 단서: 구간이 역/정류장 등으로 끝나거나, 방향 조사(까지/으로/행…)가 붙었거나, 앞뒤 단어가 교통 표현.
+                # 을/를/이/가 같은 일반 조사는 어떤 명사에나 붙으므로 단서로 치지 않는다 (작동을→학동 방지)
                 prv = words[i - 1] if i > 0 else ""
                 nxt = words[i + n] if i + n < len(words) else ""
-                has_cue = bool(CUE_IN.search(core) or PARTICLES.search(normalize_name(chunk))
+                m = PARTICLES.search(normalize_name(chunk))
+                has_cue = bool(CUE_IN.search(core) or (m and m.group(0) in DIRECTIONAL)
                                or CUE_AFTER.match(nxt) or CUE_BEFORE.search(_word_core(prv)))
                 if not has_cue and len(core) < 3:
-                    continue  # 단서 없는 두 글자(가야, 수서 …)는 장소로 보지 않는다
+                    continue  # 단서 없는 두 글자(가야, 수서, 역사 …)는 장소로 보지 않는다
                 cands = self._search(core, kiosk_xy)
                 if not cands:
                     continue
@@ -166,8 +193,11 @@ class RagCorrector:
         if not spans or confidence >= self.skip_conf:
             return result
 
-        # 이미 지식베이스 표기와 똑같이 인식된 구간은 고칠 것이 없다
-        fix_spans = [s for s in spans if s["candidates"][0]["matched"] != s["core"]]
+        # 이미 지식베이스 표기와 똑같이 인식된 구간은 고칠 것이 없다 ('신도림' 과 '신도림역' 처럼 역 접미사만 다른 것도 포함)
+        def same(a: str, b: str) -> bool:
+            return a == b or a + "역" == b or b + "역" == a
+
+        fix_spans = [s for s in spans if not same(s["candidates"][0]["matched"], s["core"])]
         if not fix_spans:
             return result
 
@@ -189,9 +219,15 @@ class RagCorrector:
         corrected = raw_text
         raw_n, red_n = normalize_name(raw_text), normalize_name(redecoded)
         hit = any(n in red_n and n not in raw_n for n in names)
-        # 장소 구간 밖까지 바뀌었으면(환각) 거부: 전체 편집 수 - 구간 길이 ≤ 허용치
+        # 장소 구간 밖까지 바뀌었으면(환각) 거부: 원문에서 구간을, 재디코딩에서 후보 이름을 지운 나머지가 거의 같아야 한다
         import rapidfuzz.distance.Levenshtein as Lev
-        extra = Lev.distance(raw_n, red_n) - sum(len(s["core"]) for s in fix_spans)
+        raw_rest, red_rest = raw_n, red_n
+        for s in fix_spans:
+            raw_rest = raw_rest.replace(s["core"], "", 1)
+        for nm in sorted((normalize_name(x) for x in names), key=len, reverse=True):
+            if nm and nm in red_rest:
+                red_rest = red_rest.replace(nm, "", 1)
+        extra = Lev.distance(raw_rest, red_rest)
         if hit and redecoded and extra <= self.max_extra_edits:
             corrected = redecoded
             result["rag_applied"] = True
@@ -200,7 +236,8 @@ class RagCorrector:
             # 재디코딩이 후보를 못 살리면 유사도 높은 구간만 직접 치환 ("선능력까지?" → "선릉역까지?")
             for s in sorted(fix_spans, key=lambda s: -s["start"]):
                 top = s["candidates"][0]
-                need = self.sub_min - (0.06 if CUE_IN.search(s["core"]) else 0.0)  # "…역"으로 끝나면 조금 관대하게
+                # 서울 밖 실제 지명은 위에서 전국 이름 목록으로 걸렀으므로, "…역" 구간도 같은 기준으로 치환한다
+                need = self.sub_min
                 # 발음 키만으로 비슷한 경우(인천→신정)는 치환하지 않는다: 순수 자모 유사도도 어느 정도 있어야 함
                 if top["jamo_sim"] >= need and top.get("jamo_only", 1.0) >= 0.7:
                     m = PARTICLES.search(normalize_name(s["span"]))
@@ -241,7 +278,7 @@ def main():
     kiosk_xy = (kiosk["x"], kiosk["y"]) if kiosk else None
 
     manifest = os.path.join(os.path.expanduser(cfg["data"]["manifest_dir"]), f"{args.split}.jsonl")
-    rows = [json.loads(l) for l in open(manifest, encoding="utf-8") if l.strip()]
+    rows = [json.loads(line) for line in open(manifest, encoding="utf-8") if line.strip()]
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
@@ -280,7 +317,9 @@ def main():
         applied += res["rag_applied"]
         ref_n = normalize_for_cer(r["text"])
         raw_n, cor_n = normalize_for_cer(raw), normalize_for_cer(res["corrected_text"])
-        refs.append(ref_n); raws.append(raw_n or " "); cors.append(cor_n or " ")
+        refs.append(ref_n)
+        raws.append(raw_n or " ")
+        cors.append(cor_n or " ")
         pns = proper_nouns_in(ref_n, kb_names)
         for n in pns:
             pn_total += 1

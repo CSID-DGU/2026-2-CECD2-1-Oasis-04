@@ -14,6 +14,7 @@ import math
 import os
 import sqlite3
 import sys
+import threading
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from normalize import normalize_name, to_jamo, to_phonetic  # noqa: E402
@@ -32,8 +33,10 @@ class TransitKB:
         self.dir = os.path.expanduser(kb_dir)
         self.w_str, self.w_emb, self.w_geo = weights
         self.radius = geo_radius_m
-        self.con = sqlite3.connect(os.path.join(self.dir, "transit.db"))
+        # 읽기 전용. FastAPI 가 스레드풀에서 호출해도 되도록 스레드 검사를 끄고 락으로 직렬화한다
+        self.con = sqlite3.connect(os.path.join(self.dir, "transit.db"), check_same_thread=False)
         self.con.row_factory = sqlite3.Row
+        self._lock = threading.Lock()
         # 표기(term) → poi_id 목록. 같은 이름의 정류장이 여럿이라 표기 단위로 비교해야 후보가 중복으로 차지 않는다
         self.term_to_pois = {}
         with open(os.path.join(self.dir, "terms.jsonl"), encoding="utf-8") as f:
@@ -66,7 +69,8 @@ class TransitKB:
 
     def poi(self, poi_id):
         if poi_id not in self._poi_cache:
-            r = self.con.execute("SELECT * FROM transit_poi WHERE poi_id=?", (poi_id,)).fetchone()
+            with self._lock:
+                r = self.con.execute("SELECT * FROM transit_poi WHERE poi_id=?", (poi_id,)).fetchone()
             self._poi_cache[poi_id] = dict(r) if r else None
         return self._poi_cache[poi_id]
 

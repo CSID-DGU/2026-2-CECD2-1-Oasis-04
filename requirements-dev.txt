@@ -1,0 +1,3 @@
+# 개발·CI 용 (테스트와 린트). 실행 환경에는 requirements.txt 만 있으면 된다
+pytest
+ruff
