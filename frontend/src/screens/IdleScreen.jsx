@@ -3,24 +3,25 @@ import ScreenFrame from '../components/ScreenFrame.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
+import { SCREEN_TITLES } from './titles.js'
 
 export default function IdleScreen() {
   const { dispatch } = useKiosk()
   return (
     <ScreenFrame
-      title={STATES.IDLE}
+      title={SCREEN_TITLES[STATES.IDLE]}
       actions={
         <>
-          <button type="button" onClick={() => dispatch({ type: EVENTS.MIC_BUTTON_PRESSED })}>
+          <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.MIC_BUTTON_PRESSED })}>
             말하기
           </button>
-          <button type="button" onClick={() => dispatch({ type: EVENTS.MANUAL_SELECT_PRESSED })}>
+          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.MANUAL_SELECT_PRESSED })}>
             손으로 고르기
           </button>
         </>
       }
     >
-      <p>어디로 가시나요?</p>
+      <p>버튼을 누르고 말씀하시거나, 손으로 골라 주세요</p>
     </ScreenFrame>
   )
 }

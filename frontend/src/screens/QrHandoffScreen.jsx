@@ -6,7 +6,7 @@
 // 화면 컴포넌트가 API 를 직접 부르는 것은 getPois / createQr 둘만 허용된다 (계획서 2-3절 예외).
 // QR 이 만들어지든 실패하든 상태는 QR_HANDOFF 그대로이고, 실패해도 이벤트를 dispatch 하지 않고 오류 문구만 보여 준다 (계획서 4절).
 // 불러오기 패턴은 ManualSelectScreen 과 같다: 로컬 state { status, url } + cancelled 플래그.
-//   status: 'loading' → '만드는 중…'
+//   status: 'loading' → '만드는 중이에요'
 //           'error'   → 'QR 을 만들지 못했어요'
 //           'ready'   → URL 텍스트
 // 1순위 경로가 없으면(정상 흐름에선 오지 않는다. DevPanel 로 routes 없이 들어온 경우) API 를 부르지 않고 바로 error 로 둔다.
@@ -17,6 +17,7 @@ import ScreenFrame from '../components/ScreenFrame.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { api } from '../api/index.js'
+import { SCREEN_TITLES } from './titles.js'
 
 const GUIDE_MESSAGE = '휴대폰 카메라로 QR을 찍으면 길 안내를 볼 수 있어요'
 const CREATE_ERROR_MESSAGE = 'QR을 만들지 못했어요'
@@ -55,15 +56,15 @@ export default function QrHandoffScreen() {
   }, [routeId]) // 화면이 열릴 때 한 번. routeId 는 QR_HANDOFF 에 머무는 동안 바뀌지 않는다.
 
   return (
-    <ScreenFrame title={STATES.QR_HANDOFF} showHome>
+    <ScreenFrame title={SCREEN_TITLES[STATES.QR_HANDOFF]} showHome>
       <p>{GUIDE_MESSAGE}</p>
-      <p style={{ fontSize: '0.8em', opacity: 0.7 }}>(지금은 QR 대신 주소 글자로 보여 드려요)</p>
+      <p className="hint">(지금은 QR 대신 주소 글자로 보여 드려요)</p>
 
-      {load.status === 'loading' && <p>만드는 중…</p>}
-      {load.status === 'error' && <p>{load.message}</p>}
+      {load.status === 'loading' && <p>만드는 중이에요</p>}
+      {load.status === 'error' && <p className="error">{load.message}</p>}
       {load.status === 'ready' && (
         // QR 자리. 이미지 라이브러리 도입 후 이 블록만 <img> 로 바꾸면 된다.
-        <p style={{ fontSize: '1.6em', fontWeight: 'bold', wordBreak: 'break-all' }}>{load.url}</p>
+        <p className="qr-url">{load.url}</p>
       )}
     </ScreenFrame>
   )

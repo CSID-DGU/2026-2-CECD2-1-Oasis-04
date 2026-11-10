@@ -15,6 +15,7 @@ import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { recorder } from '../devices/recorder.js'
 import { config } from '../config.js'
+import { SCREEN_TITLES } from './titles.js'
 
 const toSeconds = (ms) => (ms / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })
 
@@ -32,14 +33,14 @@ export default function ListeningScreen() {
 
   return (
     <ScreenFrame
-      title={STATES.LISTENING}
+      title={SCREEN_TITLES[STATES.LISTENING]}
       showHome
       actions={
         <>
-          <button type="button" onClick={() => dispatch({ type: EVENTS.SPEECH_END, text })}>
+          <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.SPEECH_END, text })}>
             다 말했어요
           </button>
-          <button type="button" onClick={() => dispatch({ type: EVENTS.LISTEN_CANCEL })}>
+          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.LISTEN_CANCEL })}>
             취소
           </button>
         </>
@@ -48,10 +49,11 @@ export default function ListeningScreen() {
       <p>듣고 있어요</p>
 
       <label>
-        <span>말씀 대신 글로 입력 (mock 마이크)</span>
+        <span className="hint">말씀 대신 글로 입력 (mock 마이크)</span>
         <br />
         <input
           type="text"
+          className="text-input"
           value={text}
           onChange={onChange}
           // 화면이 열리면 바로 타이핑할 수 있게 커서를 둔다. 상태가 LISTENING 으로 바뀔 때마다 새로 마운트되므로 매번 적용된다.
@@ -60,7 +62,7 @@ export default function ListeningScreen() {
           aria-label="말씀 대신 글로 입력"
         />
       </label>
-      <p style={{ fontSize: '0.8em', opacity: 0.7 }}>
+      <p className="hint">
         (개발용) 아무 입력 없이 {toSeconds(config.noSpeechMs)}초가 지나거나, 입력을 멈추고{' '}
         {toSeconds(config.silenceMs)}초가 지나면 자동으로 넘어가요
       </p>

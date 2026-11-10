@@ -7,6 +7,7 @@
 import { useEffect, useState } from 'react'
 import ScreenFrame from '../components/ScreenFrame.jsx'
 import { STATES } from '../state/states.js'
+import { SCREEN_TITLES } from './titles.js'
 import { config } from '../config.js'
 
 const TICK_MS = 1000 // 표시 갱신 주기. 전이 시간값이 아니라 화면 갱신 간격이라 config 에 두지 않는다
@@ -26,9 +27,8 @@ export default function CheckingScreen() {
   }, [deadline])
 
   return (
-    <ScreenFrame title={STATES.CHECKING}>
-      <p>서버 연결 중, 잠시 후 다시 시도합니다</p>
-      <p>{remaining}초 뒤 다시 시도</p>
+    <ScreenFrame title={SCREEN_TITLES[STATES.CHECKING]}>
+      <p>잠시 문제가 생겼어요. {remaining}초 뒤에 다시 해 볼게요</p>
     </ScreenFrame>
   )
 }

@@ -13,6 +13,7 @@ import ScreenFrame from '../components/ScreenFrame.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
+import { SCREEN_TITLES } from './titles.js'
 
 /** 소요 시간·환승을 한 줄 문구로. 값이 없는 항목은 뺀다. */
 function detailsOf(route) {
@@ -29,10 +30,10 @@ export default function RouteGuideScreen() {
 
   return (
     <ScreenFrame
-      title={STATES.ROUTE_GUIDE}
+      title={SCREEN_TITLES[STATES.ROUTE_GUIDE]}
       showHome
       actions={
-        <button type="button" onClick={() => dispatch({ type: EVENTS.SEND_TO_PHONE_PRESSED })}>
+        <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.SEND_TO_PHONE_PRESSED })}>
           휴대폰으로 보내기
         </button>
       }
@@ -42,19 +43,18 @@ export default function RouteGuideScreen() {
       {!best && <p>보여 드릴 경로가 없어요</p>}
 
       {best && (
-        // 1순위: 큰 글씨. 고령자 UI 는 Phase 6 global.css 에서 다듬고, 지금은 크기 차이만 둔다.
-        <div style={{ fontSize: '1.6em', fontWeight: 'bold', margin: '0.5em 0' }}>
-          <div>이렇게 가세요</div>
+        // 1순위: 제목 크기(40px)로 강조. 스타일은 global.css 의 .route-best. "이렇게 가세요" 는 화면 제목이 맡는다
+        <div className="route-best">
           <div>{best.summary}</div>
-          {detailsOf(best) && <div style={{ fontSize: '0.75em', fontWeight: 'normal' }}>{detailsOf(best)}</div>}
+          {detailsOf(best) && <div className="route-best-detail">{detailsOf(best)}</div>}
         </div>
       )}
 
       {others.length > 0 && (
         <>
-          <p style={{ fontSize: '0.9em', opacity: 0.8 }}>다른 방법 (참고용)</p>
+          <p className="hint">다른 방법</p>
           {/* 선택 불가 → 버튼이 아니라 목록으로만 그린다 (계획서 6절 8번) */}
-          <ol start={2} style={{ fontSize: '0.9em', opacity: 0.8 }}>
+          <ol start={2} className="route-others">
             {others.map((route) => (
               <li key={route.id}>
                 {route.summary}

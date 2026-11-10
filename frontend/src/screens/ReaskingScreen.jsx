@@ -9,25 +9,26 @@ import ScreenFrame from '../components/ScreenFrame.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
+import { SCREEN_TITLES } from './titles.js'
 
 export default function ReaskingScreen() {
   const { state, dispatch } = useKiosk()
   return (
     <ScreenFrame
-      title={STATES.REASKING}
+      title={SCREEN_TITLES[STATES.REASKING]}
       showHome
       actions={
         <>
-          <button type="button" onClick={() => dispatch({ type: EVENTS.RETRY_SPEECH })}>
+          <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.RETRY_SPEECH })}>
             다시 말하기
           </button>
-          <button type="button" onClick={() => dispatch({ type: EVENTS.MANUAL_SELECT_PRESSED })}>
+          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.MANUAL_SELECT_PRESSED })}>
             손으로 고르기
           </button>
         </>
       }
     >
-      <p>잘 못 알아들었어요. 다시 말씀해 주세요</p>
+      <p>잘 못 알아들었어요</p>
       {state.transcript && <p>들은 말: "{state.transcript}"</p>}
     </ScreenFrame>
   )

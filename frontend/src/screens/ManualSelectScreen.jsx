@@ -7,7 +7,7 @@
 // 화면에 오류 문구만 보여 준다 (계획서 4절). 전이가 없으니 reducer·transitions 에도 아무 흔적이 없다.
 //
 // 불러오기 상태는 이 화면만 쓰는 임시값이라 reducer 가 아니라 로컬 state(useState) 에 둔다.
-//   status: 'loading' → '불러오는 중…'
+//   status: 'loading' → '불러오는 중이에요'
 //           'error'   → '목록을 불러올 수 없어요'
 //           'ready'   → pois 를 큰 버튼으로
 // StrictMode 규칙: cancelled 플래그. 화면이 사라진 뒤(또는 StrictMode 1차 실행의 cleanup 뒤) 도착한 응답은 무시한다.
@@ -22,6 +22,7 @@ import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { api } from '../api/index.js'
+import { SCREEN_TITLES } from './titles.js'
 
 const LOAD_ERROR_MESSAGE = '목록을 불러올 수 없어요'
 
@@ -55,25 +56,23 @@ export default function ManualSelectScreen() {
 
   return (
     <ScreenFrame
-      title={STATES.MANUAL_SELECT}
+      title={SCREEN_TITLES[STATES.MANUAL_SELECT]}
       showHome
       actions={
-        <button type="button" onClick={() => dispatch({ type: EVENTS.SWITCH_TO_VOICE })}>
+        <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.SWITCH_TO_VOICE })}>
           말로 하기
         </button>
       }
     >
-      <p>가실 곳을 골라 주세요</p>
-
-      {load.status === 'loading' && <p>불러오는 중…</p>}
-      {load.status === 'error' && <p>{LOAD_ERROR_MESSAGE}</p>}
+      {load.status === 'loading' && <p>불러오는 중이에요</p>}
+      {load.status === 'error' && <p className="error">{LOAD_ERROR_MESSAGE}</p>}
 
       {load.status === 'ready' && (
-        <ul style={{ listStyle: 'none', padding: 0 }}>
+        <ul className="btn-list">
           {load.pois.map((poi) => (
-            // key: 서버가 준 고유 id. 큰 버튼 스타일은 Phase 6 global.css 에서 다듬는다.
+            // key: 서버가 준 고유 id. 목록 버튼 묶음은 주 버튼 하나로 본다 (global.css 예외 규칙).
             <li key={poi.id}>
-              <button type="button" onClick={() => dispatch({ type: EVENTS.POI_SELECTED, poi })}>
+              <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.POI_SELECTED, poi })}>
                 {poi.name}
                 {poi.category && <small> ({poi.category})</small>}
               </button>
