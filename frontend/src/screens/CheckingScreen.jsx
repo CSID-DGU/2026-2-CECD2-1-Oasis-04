@@ -5,6 +5,7 @@
 // setInterval 은 정확히 1초마다 돌지 않으므로(탭 비활성화 등) 빼기 방식은 effect 타이머와 어긋날 수 있다.
 // 마감 시각은 화면이 처음 그려질 때 한 번만 정한다 (useState 초기화 함수).
 import { useEffect, useState } from 'react'
+import ScreenFrame from '../components/ScreenFrame.jsx'
 import { STATES } from '../state/states.js'
 import { config } from '../config.js'
 
@@ -25,10 +26,9 @@ export default function CheckingScreen() {
   }, [deadline])
 
   return (
-    <section>
-      <h1>{STATES.CHECKING}</h1>
+    <ScreenFrame title={STATES.CHECKING}>
       <p>서버 연결 중, 잠시 후 다시 시도합니다</p>
       <p>{remaining}초 뒤 다시 시도</p>
-    </section>
+    </ScreenFrame>
   )
 }

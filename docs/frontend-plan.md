@@ -153,7 +153,7 @@ useEffect(() => {
 | `LISTENING` | `recorder.start()` 로 **10초 무발화** 타이머와 **2.5초 무음** 타이머 가동 (아래 책임 분리 참고) | `SPEECH_END` (payload: `{ text }`; 10초 무발화면 `{ text: '' }`) | 없음 |
 | `RESOLVING` | `api.stt(audio)` → `api.resolve(text)` | `RESOLVE_NEED_CONFIRM` / `RESOLVE_CONFIRMED` / `RESOLVE_NOT_UNDERSTOOD` / `RESOLVE_OUT_OF_SCOPE_OR_ERROR` | `stt()` 또는 `resolve()` throw → `RESOLVE_OUT_OF_SCOPE_OR_ERROR` |
 | `FAIL_COUNT_CHECK` | `failCount` 확인 (동기) | `FAIL_COUNT_1` (failCount === 1) / `FAIL_COUNT_2` (>= 2) | 없음 (동기) |
-| `ROUTING` | `api.route(poiId)` | `ROUTE_FOUND` / `ROUTE_FAILED` | `route()` throw → `ROUTE_FAILED` |
+| `ROUTING` | `api.route(selectedPoi.id)` | `ROUTE_FOUND` / `ROUTE_FAILED` | `route()` throw → `ROUTE_FAILED`; `selectedPoi` 없음 → API 호출 없이 `ROUTE_FAILED` |
 | `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF` | 공통 `inactivity` 핸들러. `config.inactivityMs`(60초) 타이머. `document`의 `pointerdown`/`keydown` 이 오면 타이머 리셋 | `INACTIVITY_TIMEOUT` | 없음 (타이머만) |
 | `IDLE` | 없음 (사용자 버튼이 이벤트를 낸다) | - | - |
 
@@ -241,7 +241,7 @@ export function routingHandler(state, dispatch, api) {
 | `ROUTING` | `RoutingScreen.jsx` | "가는 길 찾는 중..." 스피너 | 없음 |
 | `REASKING` | `ReaskingScreen.jsx` | "잘 못 알아들었어요, 다시 말씀해 주세요" + 다시 말하기 / 손으로 고르기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `RETRY_SPEECH`, `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + error 메시지 + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. 무입력 60초 복귀 | `POI_SELECTED`(poiId), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. 무입력 60초 복귀 | `POI_SELECTED`(poi), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 1순위 크게 + 2·3순위 작게, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 자리(텍스트/URL) 표시 + 처음으로. 무입력 60초 복귀 | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 

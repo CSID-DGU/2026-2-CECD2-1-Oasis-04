@@ -275,6 +275,79 @@ describe('payload 저장', () => {
   })
 })
 
+// RESOLVING 핸들러(effects/handlers/resolving.js)가 dispatch 하는 payload 모양을 reducer 가 그대로 받는지 고정한다.
+// 핸들러는 mock /resolve 응답 객체를 통째로 `resolve` 에 담아 보내고, poi 를 따로 꺼내 보내지 않는다.
+describe('payload 저장 — RESOLVING 핸들러 계약', () => {
+  const poi = { id: 'poi-seoul', name: '서울역', category: '지하철역' }
+  const candidates = [
+    { id: 'poi-h1', name: '동국대병원', category: '병원' },
+    { id: 'poi-h2', name: '서울병원', category: '병원' },
+  ]
+
+  it('RESOLVE_CONFIRMED: /resolve 응답 통째로 → resolve 에 저장되고 resolve.poi 가 selectedPoi', () => {
+    const response = { status: 'OK', needConfirm: false, poi }
+    const next = kioskReducer(at(STATES.RESOLVING, { transcript: '서울역' }), {
+      type: EVENTS.RESOLVE_CONFIRMED,
+      resolve: response,
+    })
+    expect(next.state).toBe(STATES.ROUTING)
+    expect(next.resolve).toEqual(response)
+    expect(next.selectedPoi).toEqual(poi)
+    expect(next.transcript).toBe('서울역') // 들은 말은 그대로 남는다
+  })
+
+  it('RESOLVE_CONFIRMED: 최상위 poi 만 보내면 selectedPoi 가 되지 않는다 (resolve.poi 만 읽는다)', () => {
+    const next = kioskReducer(at(STATES.RESOLVING), { type: EVENTS.RESOLVE_CONFIRMED, poi })
+    expect(next.state).toBe(STATES.ROUTING)
+    expect(next.resolve).toBeNull()
+    expect(next.selectedPoi).toBeNull()
+  })
+
+  it('RESOLVE_NEED_CONFIRM: /resolve 응답 통째로 → resolve 에 candidates 가 남고 selectedPoi 는 비어 있다', () => {
+    const response = { status: 'OK', needConfirm: true, candidates }
+    const next = kioskReducer(at(STATES.RESOLVING, { transcript: '병원' }), {
+      type: EVENTS.RESOLVE_NEED_CONFIRM,
+      resolve: response,
+    })
+    expect(next.state).toBe(STATES.CONFIRMING)
+    expect(next.resolve).toEqual(response)
+    expect(next.resolve.candidates).toHaveLength(2)
+    expect(next.selectedPoi).toBeNull()
+    expect(next.transcript).toBe('병원')
+  })
+
+  it('RESOLVE_NOT_UNDERSTOOD: payload 없음. transcript·resolve 는 건드리지 않고 failCount 만 +1', () => {
+    const before = at(STATES.RESOLVING, { transcript: '웅얼', resolve: null })
+    const next = kioskReducer(before, { type: EVENTS.RESOLVE_NOT_UNDERSTOOD })
+    expect(next.state).toBe(STATES.FAIL_COUNT_CHECK)
+    expect(next.failCount).toBe(1)
+    expect(next.transcript).toBe('웅얼')
+    expect(next.resolve).toBeNull()
+    expect(next.error).toBeNull()
+  })
+
+  it('RESOLVE_OUT_OF_SCOPE_OR_ERROR: error 문자열 저장, selectedPoi 는 만들지 않는다', () => {
+    const next = kioskReducer(at(STATES.RESOLVING, { transcript: '하와이' }), {
+      type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR,
+      error: 'STT_ERROR',
+    })
+    expect(next.state).toBe(STATES.UNAVAILABLE)
+    expect(next.error).toBe('STT_ERROR')
+    expect(next.selectedPoi).toBeNull()
+    expect(next.failCount).toBe(0) // 범위 밖·오류는 실패 횟수로 세지 않는다
+  })
+
+  it.each([
+    [EVENTS.RESOLVE_CONFIRMED, 'resolve'],
+    [EVENTS.RESOLVE_NEED_CONFIRM, 'resolve'],
+    [EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, 'error'],
+  ])('%s 에 payload 가 빠지면 %s 는 null (undefined 가 state 에 남지 않는다)', (event, field) => {
+    const next = kioskReducer(at(STATES.RESOLVING), { type: event })
+    expect(next[field]).toBeNull()
+    expect(next.selectedPoi).toBeNull()
+  })
+})
+
 describe('불변성', () => {
   const deepFreeze = (obj) => {
     for (const v of Object.values(obj)) if (v && typeof v === 'object') deepFreeze(v)

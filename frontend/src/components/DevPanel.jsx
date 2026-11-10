@@ -21,9 +21,9 @@ const SCENARIO_LABELS = {
   [SCENARIOS.serverDown]: 'serverDown — 서버 불가 → CHECKING',
   [SCENARIOS.sttDown]: 'sttDown — STT 불가 → IDLE_REDUCED',
   [SCENARIOS.micDown]: 'micDown — 마이크 불가 → IDLE_REDUCED',
-  [SCENARIOS.routeError]: 'routeError — 경로 조회 오류 (Phase 5)',
-  [SCENARIOS.poisError]: 'poisError — 목적지 목록 오류 (Phase 5)',
-  [SCENARIOS.qrError]: 'qrError — QR 생성 오류 (Phase 5)',
+  [SCENARIOS.routeError]: 'routeError — 경로 조회 오류 → UNAVAILABLE',
+  [SCENARIOS.poisError]: 'poisError — 목적지 목록 오류 (화면 문구만, 전이 없음)',
+  [SCENARIOS.qrError]: 'qrError — QR 생성 오류 (화면 문구만, 전이 없음)',
 }
 
 // payload 가 필요한 이벤트에 끼워 넣을 가짜 값. 화면이 뭔가 표시할 수 있을 정도만.
@@ -88,6 +88,19 @@ export default function DevPanel() {
       </div>
       <div>
         <strong>lastEvent</strong> {state.lastEvent ?? '-'}
+      </div>
+      <div>
+        <strong>transcript</strong> {state.transcript === '' ? '(빈 문자열)' : JSON.stringify(state.transcript)}
+      </div>
+      <div>
+        <strong>selectedPoi</strong>{' '}
+        {state.selectedPoi ? `${state.selectedPoi.name} (${state.selectedPoi.id})` : 'null'}
+      </div>
+      <div>
+        <strong>resolve.status</strong> {state.resolve?.status ?? 'null'}
+      </div>
+      <div>
+        <strong>error</strong> {state.error ?? 'null'}
       </div>
       <div>
         <strong>config(ms)</strong>{' '}

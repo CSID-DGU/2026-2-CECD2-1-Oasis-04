@@ -19,15 +19,31 @@ import { config } from '../config.js'
 import { startupCheckHandler } from './handlers/startupCheck.js'
 import { checkingHandler } from './handlers/checking.js'
 import { idleReducedHandler } from './handlers/idleReduced.js'
+import { listeningHandler } from './handlers/listening.js'
+import { resolvingHandler } from './handlers/resolving.js'
+import { failCountCheckHandler } from './handlers/failCountCheck.js'
+import { routingHandler } from './handlers/routing.js'
+import { inactivityHandler } from './handlers/inactivity.js'
 
 // 상태 → 핸들러. 여기 없는 상태(IDLE, 사용자 버튼이 이벤트를 내는 화면)는 effect 가 없다.
 // Phase 3: STARTUP_CHECK, CHECKING, IDLE_REDUCED
 // Phase 4: LISTENING, RESOLVING, FAIL_COUNT_CHECK, inactivity(CONFIRMING, REASKING)
-// Phase 5: ROUTING, inactivity(UNAVAILABLE, MANUAL_SELECT, ROUTE_GUIDE, QR_HANDOFF)
+// Phase 5: ROUTING (1번), inactivity(UNAVAILABLE, MANUAL_SELECT, ROUTE_GUIDE, QR_HANDOFF) (4번)
 const HANDLERS = {
   [STATES.STARTUP_CHECK]: startupCheckHandler,
   [STATES.CHECKING]: checkingHandler,
   [STATES.IDLE_REDUCED]: idleReducedHandler,
+  [STATES.LISTENING]: listeningHandler,
+  [STATES.RESOLVING]: resolvingHandler,
+  [STATES.FAIL_COUNT_CHECK]: failCountCheckHandler,
+  [STATES.ROUTING]: routingHandler,
+  // 무입력 복귀: 같은 핸들러 하나를 여섯 상태가 공유한다 (계획서 6절 7번 확정. LISTENING 은 recorder 의 무발화 타이머가 대신한다)
+  [STATES.CONFIRMING]: inactivityHandler,
+  [STATES.REASKING]: inactivityHandler,
+  [STATES.UNAVAILABLE]: inactivityHandler,
+  [STATES.MANUAL_SELECT]: inactivityHandler,
+  [STATES.ROUTE_GUIDE]: inactivityHandler,
+  [STATES.QR_HANDOFF]: inactivityHandler,
 }
 
 const deps = { api, recorder, config }
