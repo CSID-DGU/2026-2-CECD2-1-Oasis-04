@@ -1,0 +1,94 @@
+{
+  "status": "OK",
+  "properties": {
+    "total": 4,
+    "bus": 2,
+    "subway": 1,
+    "busAndSubway": 1,
+    "landingURL": "https://map.kakao.com/link/by/traffic/%EC%B6%9C%EB%B0%9C,37.570400,126.991800/%EC%84%A0%EB%A6%89%EC%97%AD,37.504500,127.049000"
+  },
+  "routes": [
+    {
+      "properties": {"type": "BUS_AND_SUBWAY", "totalDistance": 10998, "totalTime": 2736, "transfers": 1, "fare": {"value": 1650}},
+      "steps": [
+        {
+          "properties": {
+            "guidance": "3호선 (종로3가 > 압구정)", "type": "SUBWAY", "distance": 6600, "time": 720,
+            "stops": [{"name": "종로3가"}, {"name": "을지로3가"}, {"name": "충무로"}, {"name": "압구정"}],
+            "vehicles": [{"name": "3호선", "type": "일반"}]
+          },
+          "path": {"points": [[126.991877, 37.5715634], [127.0285, 37.527]]}
+        },
+        {
+          "properties": {
+            "guidance": "현대아파트현대아파트정류장까지 도보로 이동 (1번 출구)", "type": "WALKING", "distance": 406, "time": 446,
+            "stops": [{"name": "압구정"}, {"name": "현대아파트"}]
+          },
+          "path": {"points": [[127.0285, 37.527], [127.0301, 37.5282]]}
+        },
+        {
+          "properties": {
+            "guidance": "간선 472외 1대 (현대아파트 > 선릉역7번출구)", "type": "BUS", "distance": 3593, "time": 1152,
+            "stops": [{"name": "현대아파트"}, {"name": "강남구청역"}, {"name": "선릉역7번출구"}],
+            "vehicles": [{"name": "472", "type": "간선"}, {"name": "4312", "type": "지선"}, {"name": "472", "type": "간선"}]
+          },
+          "path": {"points": [[127.0301, 37.5282], [127.0486, 37.5052]]}
+        }
+      ]
+    },
+    {
+      "properties": {"type": "SUBWAY", "totalDistance": 15300, "totalTime": 1966, "transfers": 1, "fare": {"value": 1650}},
+      "steps": [
+        {
+          "properties": {
+            "guidance": "3호선 (종로3가 > 교대(법원.검찰청))", "type": "SUBWAY", "distance": 11800, "time": 1260,
+            "stops": [{"name": "종로3가"}, {"name": "을지로3가"}, {"name": "충무로"}, {"name": "교대(법원.검찰청)"}],
+            "vehicles": [{"name": "3호선", "type": "일반"}]
+          },
+          "path": {"points": [[126.991877, 37.5715634], [127.0143, 37.4934]]}
+        },
+        {
+          "properties": {
+            "guidance": "교대(법원.검찰청)교대역 환승", "type": "WALKING", "distance": 142, "time": 144,
+            "stops": [{"name": "교대(법원.검찰청)"}, {"name": "교대(법원.검찰청)"}]
+          },
+          "path": {"points": [[127.0143, 37.4934], [127.0141, 37.4937]]}
+        },
+        {
+          "properties": {
+            "guidance": "2호선 (교대(법원.검찰청) > 선릉)", "type": "SUBWAY", "distance": 3200, "time": 360,
+            "stops": [{"name": "교대(법원.검찰청)"}, {"name": "강남"}, {"name": "역삼"}, {"name": "선릉"}],
+            "vehicles": [{"name": "2호선", "type": "일반"}, {"name": "2호선", "type": "일반"}]
+          },
+          "path": {"points": [[127.0141, 37.4937], [127.04895, 37.5045]]}
+        }
+      ]
+    },
+    {
+      "properties": {"type": "BUS", "totalDistance": 9300, "totalTime": 1800, "transfers": 0, "fare": {"value": 2500}},
+      "steps": [
+        {
+          "properties": {
+            "guidance": "간선 N15(심야) (종로3가역.탑골공원 > 선릉역.포스코센터)", "type": "BUS", "distance": 9000, "time": 1500,
+            "stops": [{"name": "종로3가역.탑골공원"}, {"name": "한남오거리"}, {"name": "선릉역.포스코센터"}],
+            "vehicles": [{"name": "N15(심야)", "type": "간선"}]
+          },
+          "path": {"points": [[126.98914842, 37.57026152], [127.0492, 37.5048]]}
+        }
+      ]
+    },
+    {
+      "properties": {"type": "BUS", "totalDistance": 10100, "totalTime": 2700, "transfers": 0, "fare": {"min": 1500, "max": 2500}},
+      "steps": [
+        {
+          "properties": {
+            "guidance": "간선 8146(평일)외 2대 (종로3가역.탑골공원 > 선릉역)", "type": "BUS", "distance": 9800, "time": 2400,
+            "stops": [{"name": "종로3가역.탑골공원"}, {"name": "종로4가.종묘(중)"}, {"name": "선릉역"}],
+            "vehicles": [{"name": "8146(평일)", "type": "간선"}, {"name": "146", "type": "간선"}, {"name": "9401", "type": "직행"}]
+          },
+          "path": {"points": [[126.98914842, 37.57026152], [127.0492, 37.5048]]}
+        }
+      ]
+    }
+  ]
+}

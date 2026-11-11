@@ -9,6 +9,7 @@ usage (스크립트로):
   python search.py --kb ~/data/kb "서울대병언" --kiosk-x 126.99 --kiosk-y 37.57
 """
 import argparse
+import heapq
 import json
 import math
 import os
@@ -60,6 +61,7 @@ class TransitKB:
             meta = json.load(open(os.path.join(self.dir, "meta.json"), encoding="utf-8"))
             self.model_name = meta.get("embedding_model") or "jhgan/ko-sroberta-multitask"
         self._poi_cache = {}
+        self._all_pois = None    # nearest_any 가 처음 불릴 때 한 번 읽어 둔다
 
     def _model(self):
         if self.model is None:
@@ -88,6 +90,26 @@ class TransitKB:
                 continue
             seen.add(key)
             out.append(r)
+            if len(out) >= limit:
+                break
+        return out
+
+    def nearest_any(self, xy, limit=1):
+        """종류(정류장·역)를 가리지 않고 가까운 순으로 장소를 돌려준다. 현재 위치를 가장 가까운 정류장·역에 맞출 때 쓴다.
+        종류와 이름이 같은 곳(길 양쪽 정류장 등)은 가장 가까운 하나만 남긴다."""
+        if self._all_pois is None:
+            with self._lock:
+                rows = [dict(r) for r in self.con.execute("SELECT * FROM transit_poi")]
+            self._all_pois = [r for r in rows if r.get("x") is not None and r.get("y") is not None]
+        near = heapq.nsmallest(max(limit * 6, 12), self._all_pois,
+                               key=lambda r: haversine_m(xy[0], xy[1], r["x"], r["y"]))
+        seen, out = set(), []
+        for r in near:
+            key = (r["poi_type"], r["name_norm"])
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append({**r, "distance_m": int(haversine_m(xy[0], xy[1], r["x"], r["y"]))})
             if len(out) >= limit:
                 break
         return out

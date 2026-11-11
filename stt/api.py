@@ -1,4 +1,4 @@
-"""STT 파트 API (명세 v0.1 의 /health, /stt, /resolve + 프론트 연동용 /pois). FastAPI 라우터 + 단독 실행.
+"""STT 파트 API (명세 v0.1 의 /health, /stt, /resolve + 프론트 연동용 /pois, /location). FastAPI 라우터 + 단독 실행.
 
 서버 파트는 이 라우터를 마운트하면 된다 (FastAPI lifespan 안에서 startup() 호출):
     from stt.api import router, startup
@@ -34,6 +34,7 @@ sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "kb"))
 from intent import classify, confirm_text  # noqa: E402
 from normalize import normalize_name  # noqa: E402
+from origin import MAX_ACCURACY_M, MAX_DISTANCE_M, SNAP_M, locate  # noqa: E402
 from rag_correct import RagCorrector  # noqa: E402
 from search import TransitKB  # noqa: E402
 
@@ -51,17 +52,23 @@ EASY = {
     "MODEL_NOT_READY": "준비 중이에요. 잠시 후 다시 말씀해 주세요.",
     "NO_CANDIDATE": "어디로 가실지 잘 못 알아들었어요. 한 번 더 말씀해 주세요.",
     "OUT_OF_SCOPE": "이 키오스크에서는 서울 안의 길만 안내할 수 있어요.",
+    "POI_NOT_FOUND": "가실 곳을 찾지 못했어요. 처음부터 다시 해 주세요.",
+    "ROUTE_TOO_CLOSE": "가까운 곳이라 걸어서 가실 수 있어요.",
+    "ROUTE_NOT_FOUND": "가는 길을 찾지 못했어요.",
+    "UPSTREAM_ERROR": "지금은 길 안내를 받아올 수 없어요. 잠시 후 다시 해 주세요.",
     "VALIDATION_ERROR": "잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.",
     "INTERNAL_ERROR": "잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.",
 }
 HTTP = {"EMPTY_AUDIO": 400, "AUDIO_TOO_LONG": 413, "UNSUPPORTED_AUDIO": 415, "KIOSK_NOT_FOUND": 404,
-        "MODEL_NOT_READY": 503, "NO_CANDIDATE": 200, "OUT_OF_SCOPE": 200, "VALIDATION_ERROR": 400,
+        "MODEL_NOT_READY": 503, "NO_CANDIDATE": 200, "OUT_OF_SCOPE": 200, "POI_NOT_FOUND": 404,
+        "ROUTE_TOO_CLOSE": 422, "ROUTE_NOT_FOUND": 404, "UPSTREAM_ERROR": 502, "VALIDATION_ERROR": 400,
         "INTERNAL_ERROR": 500}
 
 
-def fail(code: str, message: str, t0: float):
+def fail(code: str, message: str, t0: float, easy: Optional[str] = None):
+    """실패 응답. easy 를 주면 기본 쉬운 문장 대신 그 문장을 쓴다 (예: '약 600미터예요' 처럼 값이 들어가는 경우)."""
     return JSONResponse(status_code=HTTP[code], content={
-        "success": False, "error": {"code": code, "message": message, "easy_message": EASY[code]},
+        "success": False, "error": {"code": code, "message": message, "easy_message": easy or EASY[code]},
         "latency_ms": int((time.time() - t0) * 1000)})
 
 
@@ -77,6 +84,8 @@ class State:
     model_name: str = ""
     engine: str = "base"
     kiosks: dict = {}
+    location_cfg: dict = {}
+    live_origin: dict = {}      # kiosk_id → 키오스크가 POST /location 으로 알린 현재 위치 (서버를 다시 띄우면 비워진다)
     kb_meta: dict = {}
     loaded: bool = False
 
@@ -93,6 +102,7 @@ def startup():
         S.cfg = yaml.safe_load(f)
     r = S.cfg.get("rag", {})
     S.kiosks = r.get("kiosks", {})
+    S.location_cfg = r.get("location") or {}
     S.kb = TransitKB(r.get("kb_dir", "~/data/kb_seoul"), tuple(r.get("weights", (0.8, 0.1, 0.1))),
                      float(r.get("geo_radius_m", 20000)))
     S.kb_meta = json.load(open(os.path.join(S.kb.dir, "meta.json"), encoding="utf-8"))
@@ -189,6 +199,13 @@ class Entity(BaseModel):
     candidates: list[EntityCandidate]
 
 
+class LocationReport(BaseModel):
+    kiosk_id: str
+    x: Optional[float] = Field(None, description="브라우저 위치의 경도 (WGS84). 위치를 못 받았으면 비운다")
+    y: Optional[float] = Field(None, description="브라우저 위치의 위도")
+    accuracy: Optional[float] = Field(None, description="브라우저가 알려 준 오차 반경(m)")
+
+
 class ResolveRequest(BaseModel):
     text: str = Field(..., description="/stt 의 corrected_text 또는 터치 입력 장소명")
     kiosk_id: str
@@ -240,6 +257,42 @@ def confirm_name(display: str) -> str:
     return __import__("re").sub(r"\s*\(.*?\)", "", display).strip()
 
 
+def resolve_origin(kiosk_id: str):
+    """요청의 출발지 → (출발지, None) 또는 (None, 오류 코드).
+    키오스크가 POST /location 으로 알린 현재 위치가 있으면 그 위치를, 없으면 설정 파일의 고정 위치를 쓴다."""
+    live = S.live_origin.get(kiosk_id)
+    if live:
+        return live, None
+    kiosk = S.kiosks.get(kiosk_id)
+    if not kiosk:
+        return None, "KIOSK_NOT_FOUND"
+    return {"source": "KIOSK", "x": kiosk["x"], "y": kiosk["y"], "name": kiosk.get("name", kiosk_id), "snapped": False,
+            "accuracy_m": None, "nearest": None}, None
+
+
+def report_location(kiosk_id: str, x: Optional[float] = None, y: Optional[float] = None,
+                    accuracy: Optional[float] = None):
+    """키오스크가 알린 브라우저 위치를 반영한다 → (지금부터 쓸 출발지, 고정 위치를 쓰게 된 이유 또는 None, 오류 코드 또는 None).
+
+    쓸 만한 위치면 가장 가까운 정류장·역에 맞춰 기억해 두고, 이후 /stt·/resolve·/pois·/route 가 그 위치를 출발지로 쓴다.
+    위치가 없거나 쓸 수 없으면(오차가 큼·안내 범위 밖) 기억해 둔 위치를 지우고 설정 파일의 고정 위치로 돌아간다.
+    """
+    reason = "NO_POSITION"
+    if x is not None and y is not None:
+        if S.kb is None:
+            reason = "KB_NOT_READY"
+        else:
+            c = S.location_cfg
+            got, reason = locate(S.kb, x, y, accuracy, float(c.get("snap_m", SNAP_M)),
+                                 float(c.get("max_accuracy_m", MAX_ACCURACY_M)), float(c.get("max_distance_m", MAX_DISTANCE_M)))
+            if got:
+                S.live_origin[kiosk_id] = got
+                return got, None, None
+    S.live_origin.pop(kiosk_id, None)
+    origin, err = resolve_origin(kiosk_id)
+    return origin, reason, err
+
+
 # ---------------------------------------------------------------- routes
 router = APIRouter(prefix="/api/v1", tags=["stt"])
 
@@ -253,7 +306,7 @@ def health():
         "stt": {"loaded": S.loaded, "engine": S.engine, "model": S.model_name},
         "knowledge_base": {"loaded": S.kb is not None, "poi_count": S.kb_meta.get("pois", 0),
                            "base_date": S.kb_meta.get("built_at", "")},
-        "odsay": {"reachable": None},  # 서버 파트에서 채움
+        "route": getattr(S, "route_info", None),  # 경로 안내까지 띄운 전체 서버(server/app.py)에서 채운다
     }
     return ok(data, t0)
 
@@ -264,9 +317,9 @@ async def stt(audio: UploadFile = File(..., description="audio/webm 또는 audio
     t0 = time.time()
     if not S.loaded:
         return fail("MODEL_NOT_READY", "model loading", t0)
-    kiosk = S.kiosks.get(kiosk_id)
-    if not kiosk:
-        return fail("KIOSK_NOT_FOUND", f"unknown kiosk_id {kiosk_id}", t0)
+    origin, err = resolve_origin(kiosk_id)
+    if err:
+        return fail(err, f"unknown kiosk_id {kiosk_id}", t0)
     raw = await audio.read()
     if len(raw) > MAX_BYTES:
         return fail("AUDIO_TOO_LONG", f"{len(raw)} bytes > {MAX_BYTES}", t0)
@@ -288,7 +341,7 @@ async def stt(audio: UploadFile = File(..., description="audio/webm 또는 audio
     raw_text, conf = S.rc.transcribe(wave)
     t_stt = int((time.time() - t2) * 1000)
     t3 = time.time()
-    res = S.rc.correct(wave, raw_text, conf, (kiosk["x"], kiosk["y"]), use_rag=use_rag)
+    res = S.rc.correct(wave, raw_text, conf, (origin["x"], origin["y"]), use_rag=use_rag)
     t_rag = int((time.time() - t3) * 1000)
     if not raw_text.strip():
         return fail("EMPTY_AUDIO", "empty transcript", t0)
@@ -305,10 +358,10 @@ def resolve(req: ResolveRequest):
     t0 = time.time()
     if S.kb is None:
         return fail("MODEL_NOT_READY", "kb loading", t0)
-    kiosk = S.kiosks.get(req.kiosk_id)
-    if not kiosk:
-        return fail("KIOSK_NOT_FOUND", f"unknown kiosk_id {req.kiosk_id}", t0)
-    xy = (kiosk["x"], kiosk["y"])
+    origin, err = resolve_origin(req.kiosk_id)
+    if err:
+        return fail(err, f"unknown kiosk_id {req.kiosk_id}", t0)
+    xy = (origin["x"], origin["y"])
     text = req.text.strip()
     if not text:
         return fail("VALIDATION_ERROR", "text is empty", t0)
@@ -355,16 +408,28 @@ def resolve(req: ResolveRequest):
                "destination_candidates": out}, t0)
 
 
-@router.get("/pois", summary="손으로 고르기 화면용 목적지 목록 (키오스크에서 가까운 지하철역)")
+@router.post("/location", summary="키오스크가 현재 위치를 알린다 (가까운 정류장·역에 맞춘 출발지를 돌려준다)")
+def location(req: LocationReport):
+    """명세 v0.1 에는 없는 프론트 연동용. 화면이 브라우저 위치(GPS)를 알리면 서버가 이 키오스크의 출발지로 기억하고,
+    첫 화면에 보여 줄 '지금 계신 곳' 문구를 돌려준다. 좌표가 주소(URL)와 접속 로그에 남지 않도록 본문으로 받는다.
+    x·y 를 비웠거나 쓸 수 없는 위치면 설정된 고정 위치로 돌아간다 (source=KIOSK, fallback_reason 에 이유)."""
+    t0 = time.time()
+    origin, reason, err = report_location(req.kiosk_id, req.x, req.y, req.accuracy)
+    if err:
+        return fail(err, f"unknown kiosk_id {req.kiosk_id}", t0)
+    return ok({**origin, "fallback_reason": reason, "easy_text": f"지금 계신 곳: {origin['name']}"}, t0)
+
+
+@router.get("/pois", summary="손으로 고르기 화면용 목적지 목록 (출발지에서 가까운 지하철역)")
 def pois(kiosk_id: str, limit: int = 12):
     """명세 v0.1 에는 없는 프론트 연동용 조회. 목록 기준(가까운 지하철역)은 임시이며 팀에서 정하면 바꾼다."""
     t0 = time.time()
     if S.kb is None:
         return fail("MODEL_NOT_READY", "kb loading", t0)
-    kiosk = S.kiosks.get(kiosk_id)
-    if not kiosk:
-        return fail("KIOSK_NOT_FOUND", f"unknown kiosk_id {kiosk_id}", t0)
-    rows = S.kb.nearest((kiosk["x"], kiosk["y"]), poi_type="SUBWAY_STATION", limit=max(1, min(limit, 30)))
+    origin, err = resolve_origin(kiosk_id)
+    if err:
+        return fail(err, f"unknown kiosk_id {kiosk_id}", t0)
+    rows = S.kb.nearest((origin["x"], origin["y"]), poi_type="SUBWAY_STATION", limit=max(1, min(limit, 30)))
     return ok({"pois": [to_candidate({**r, "score": None}) for r in rows]}, t0)
 
 
@@ -381,25 +446,34 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(title="Senior Voice STT API", version=VERSION, lifespan=lifespan,
-              description="어르신 음성 → 전사(RAG 보정) → 의도·목적지 후보. 명세 v0.1 의 /stt, /resolve, /health")
-app.include_router(router)
-
-# 화면을 다른 주소에서 띄울 때(vite 개발 서버 등)만 필요하다. 같은 출처(아래 정적 서빙, vite proxy)면 쓰이지 않는다
-_origins = [o.strip() for o in os.environ.get("STT_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
-app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["GET", "POST"], allow_headers=["*"])
-
-# 키오스크 화면(frontend 의 빌드 결과물)이 있으면 같은 서버에서 함께 내보낸다 → http://localhost:8000 하나로 접속.
-# 마이크는 같은 출처의 https 또는 localhost 에서만 열리므로, 시연은 이 방식이 가장 간단하다.
-# /api, /docs 는 위에서 먼저 등록됐으므로 이 마운트보다 우선한다.
-_dist = os.environ.get("FRONTEND_DIST") or os.path.join(os.path.dirname(HERE), "frontend", "dist")
-if os.path.isdir(_dist):
-    app.mount("/", StaticFiles(directory=_dist, html=True), name="frontend")
-
-
-@app.exception_handler(Exception)
 async def on_error(request: Request, exc: Exception):
     return fail("INTERNAL_ERROR", f"{type(exc).__name__}: {exc}", time.time())
+
+
+def create_app(extra_routers=(), title="Senior Voice STT API",
+               description="어르신 음성 → 전사(RAG 보정) → 의도·목적지 후보. 명세 v0.1 의 /stt, /resolve, /health"):
+    """앱을 조립한다. 서버 파트(server/app.py)는 extra_routers 로 /route 등을 더해 같은 앱을 만든다.
+    정적 화면 마운트('/')는 모든 경로를 받으므로 반드시 라우터를 다 붙인 뒤 마지막에 한다."""
+    new_app = FastAPI(title=title, version=VERSION, lifespan=lifespan, description=description)
+    new_app.include_router(router)
+    for extra in extra_routers:
+        new_app.include_router(extra)
+    new_app.add_exception_handler(Exception, on_error)
+
+    # 화면을 다른 주소에서 띄울 때(vite 개발 서버 등)만 필요하다. 같은 출처(아래 정적 서빙, vite proxy)면 쓰이지 않는다
+    origins = [o.strip() for o in os.environ.get("STT_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",")
+               if o.strip()]
+    new_app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["*"])
+
+    # 키오스크 화면(frontend 의 빌드 결과물)이 있으면 같은 서버에서 함께 내보낸다 → http://localhost:8000 하나로 접속.
+    # 마이크는 같은 출처의 https 또는 localhost 에서만 열리므로, 시연은 이 방식이 가장 간단하다.
+    dist = os.environ.get("FRONTEND_DIST") or os.path.join(os.path.dirname(HERE), "frontend", "dist")
+    if os.path.isdir(dist):
+        new_app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
+    return new_app
+
+
+app = create_app()   # STT 만 단독으로 띄울 때. 경로 안내까지 포함한 전체 서버는 server/app.py
 
 
 if __name__ == "__main__":

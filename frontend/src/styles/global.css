@@ -222,6 +222,11 @@ body {
   color: var(--color-text-sub);
 }
 
+/* 첫 화면의 '지금 계신 곳' 한 줄. 본문과 같은 크기에 굵게 */
+.screen .location {
+  font-weight: 700;
+}
+
 /* 오류 문구: UNAVAILABLE 이유, 목록·QR 불러오기 실패. 빨강은 오류에만 쓴다 */
 .screen .error {
   color: var(--color-error);

@@ -68,6 +68,10 @@ rag:                                   # 교통 고유명사 보정 (kb/ + stt/r
   kiosks:                              # 키오스크 위치 (서버 kiosk 테이블과 맞출 것). x=경도, y=위도
     KIOSK_JONGNO_01: {name: 종로3가역 키오스크, x: 126.9918, y: 37.5704}
     KIOSK_CHEONGNYANGNI_01: {name: 청량리역 버스정류장 키오스크, x: 127.0458, y: 37.5802}
+  location:                            # 화면이 브라우저 위치(GPS)를 보냈을 때 출발지를 정하는 기준 (kb/origin.py)
+    snap_m: 150                        # 이 거리 안의 정류장·역은 '그곳에 있다' 고 보고 출발 좌표를 그곳으로 맞춘다
+    max_accuracy_m: 1000               # 브라우저가 알려 준 오차 반경이 이보다 크면 위 kiosks 의 고정 위치를 쓴다
+    max_distance_m: 2000               # 가장 가까운 정류장·역이 이보다 멀면 안내 범위 밖으로 보고 고정 위치를 쓴다
 
 eval:
   batch_size: 8

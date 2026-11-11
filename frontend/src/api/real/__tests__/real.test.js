@@ -7,6 +7,9 @@ import { health } from '../health.js'
 import { stt } from '../stt.js'
 import { resolve } from '../resolve.js'
 import { getPois } from '../pois.js'
+import { route } from '../route.js'
+import { createQr } from '../qr.js'
+import { getLocation } from '../location.js'
 import { toPoi } from '../poi.js'
 
 const ok = (data) => ({ success: true, data, latency_ms: 1 })
@@ -146,6 +149,61 @@ describe('real API', () => {
     })
   })
 
+  describe('route / createQr', () => {
+    const ROUTE_DATA = {
+      summary_text: '선릉역까지 가는 길을 1가지 찾았어요.',
+      destination: { poi_id: 'SUB_0220_2호선', name: '선릉역', x: 127.048, y: 37.504 },
+      landing_url: 'https://map.kakao.com/link/by/traffic/a,37.57,126.99/b,37.50,127.04',
+      routes: [
+        {
+          rank: 1,
+          path_type: 'SUBWAY',
+          total_min: 31,
+          transfers: 1,
+          walk_m: 130,
+          fare: 1400,
+          headline: '31분 · 1번 갈아타요 · 130미터 걸어요',
+          summary: '지하철 3호선 → 지하철 2호선',
+          steps: [{ order: 1, mode: 'WALK', minutes: 1, distance_m: 40, easy_text: '종로3가역까지 40미터 걸어가세요.' }],
+        },
+      ],
+    }
+
+    it('서버 경로를 화면 모양으로 바꾸고 kiosk_id·dest_poi_id 로 조회한다', async () => {
+      const fetchFn = mockFetch(ok(ROUTE_DATA))
+      const result = await route('SUB_0220_2호선')
+      expect(fetchFn.mock.calls[0][0]).toBe(`/api/v1/route?kiosk_id=KIOSK_JONGNO_01&dest_poi_id=${encodeURIComponent('SUB_0220_2호선')}`)
+      expect(result.routes).toHaveLength(1)
+      expect(result.routes[0]).toMatchObject({
+        id: 'SUB_0220_2호선#1',
+        rank: 1,
+        summary: '지하철 3호선 → 지하철 2호선',
+        durationMin: 31,
+        transfers: 1,
+        walkM: 130,
+      })
+      expect(result.routes[0].steps[0]).toMatchObject({ mode: 'WALK', distanceM: 40, easyText: '종로3가역까지 40미터 걸어가세요.' })
+    })
+    it('경로 조회 뒤에는 휴대폰으로 보낼 카카오맵 주소를 돌려준다', async () => {
+      mockFetch(ok(ROUTE_DATA))
+      await route('SUB_0220_2호선')
+      expect(await createQr('SUB_0220_2호선#1')).toEqual({ url: ROUTE_DATA.landing_url })
+    })
+    it('ROUTE_NOT_FOUND 는 빈 목록, 그 뒤 createQr 는 QR_ERROR', async () => {
+      mockFetch(fail('ROUTE_NOT_FOUND', '가는 길을 찾지 못했어요.'), 404)
+      expect(await route('BUS_1')).toEqual({ routes: [] })
+      await expect(createQr('BUS_1#1')).rejects.toThrow('QR_ERROR')
+    })
+    it('너무 가까우면 서버의 쉬운 문장으로 throw 한다', async () => {
+      mockFetch(fail('ROUTE_TOO_CLOSE', '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.'), 422)
+      await expect(route('SUB_0130_1호선')).rejects.toThrow('약 300미터예요')
+    })
+    it('지도 서버 오류도 쉬운 문장으로 throw 한다', async () => {
+      mockFetch(fail('UPSTREAM_ERROR', '지금은 길 안내를 받아올 수 없어요. 잠시 후 다시 해 주세요.'), 502)
+      await expect(route('SUB_0220_2호선')).rejects.toThrow('지금은 길 안내를 받아올 수 없어요')
+    })
+  })
+
   describe('getPois', () => {
     it('서버 목록을 Poi 배열로 바꾼다', async () => {
       const fetchFn = mockFetch(ok({ pois: [SUBWAY] }))
@@ -156,5 +214,71 @@ describe('real API', () => {
       mockFetch(fail('KIOSK_NOT_FOUND', '기기 설정에 문제가 있어요.'), 404)
       await expect(getPois()).rejects.toThrow('기기 설정에 문제가 있어요')
     })
+  })
+})
+
+describe('real API: getLocation (현재 위치)', () => {
+  const HERE = { coords: { longitude: 127.0383, latitude: 37.5786, accuracy: 18 } }
+  const stubGeolocation = (impl) => vi.stubGlobal('navigator', impl ? { geolocation: { getCurrentPosition: impl } } : {})
+  const sentBody = (fetchFn) => JSON.parse(fetchFn.mock.calls[0][1].body)
+
+  beforeEach(() => {
+    vi.spyOn(console, 'info').mockImplementation(() => {})
+  })
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('브라우저 위치를 본문으로 알리고, 서버가 맞춘 정류장 이름을 돌려준다', async () => {
+    stubGeolocation((onOk) => onOk(HERE))
+    const fetchFn = mockFetch(
+      ok({ source: 'GPS', name: '경동시장앞 정류장', snapped: true, accuracy_m: 18, fallback_reason: null, easy_text: '지금 계신 곳: 경동시장앞 정류장' }),
+    )
+
+    expect(await getLocation()).toEqual({
+      name: '경동시장앞 정류장',
+      text: '지금 계신 곳: 경동시장앞 정류장',
+      source: 'GPS',
+      snapped: true,
+      accuracyM: 18,
+      reason: null,
+    })
+    const [url, init] = fetchFn.mock.calls[0]
+    expect(url).toBe('/api/v1/location') // 좌표는 주소에 싣지 않는다
+    expect(init.method).toBe('POST')
+    expect(sentBody(fetchFn)).toEqual({ kiosk_id: 'KIOSK_JONGNO_01', x: 127.0383, y: 37.5786, accuracy: 18 })
+  })
+
+  it('위치 사용을 거절하면 좌표 없이 알리고, 고정 위치와 그 이유를 돌려준다', async () => {
+    stubGeolocation((_onOk, onError) => onError({ code: 1 }))
+    const fetchFn = mockFetch(
+      ok({ source: 'KIOSK', name: '종로3가역 키오스크', snapped: false, accuracy_m: null, fallback_reason: 'NO_POSITION', easy_text: '지금 계신 곳: 종로3가역 키오스크' }),
+    )
+
+    expect(await getLocation()).toMatchObject({ name: '종로3가역 키오스크', source: 'KIOSK', reason: 'PERMISSION_DENIED' })
+    expect(sentBody(fetchFn)).toEqual({ kiosk_id: 'KIOSK_JONGNO_01' })
+  })
+
+  it('위치 기능이 없는 브라우저(보안 연결이 아닌 경우 포함)에서도 고정 위치로 동작한다', async () => {
+    stubGeolocation(null)
+    const fetchFn = mockFetch(ok({ source: 'KIOSK', name: '종로3가역 키오스크', fallback_reason: 'NO_POSITION', easy_text: '지금 계신 곳: 종로3가역 키오스크' }))
+
+    expect(await getLocation()).toMatchObject({ source: 'KIOSK', reason: 'NO_GEOLOCATION', text: '지금 계신 곳: 종로3가역 키오스크' })
+    expect(sentBody(fetchFn)).toEqual({ kiosk_id: 'KIOSK_JONGNO_01' })
+  })
+
+  it('서버가 받은 위치를 쓸 수 없다고 하면(오차가 큼·범위 밖) 그 이유를 싣는다', async () => {
+    stubGeolocation((onOk) => onOk({ coords: { longitude: 127.0383, latitude: 37.5786, accuracy: 5000 } }))
+    mockFetch(ok({ source: 'KIOSK', name: '종로3가역 키오스크', fallback_reason: 'LOW_ACCURACY', easy_text: '지금 계신 곳: 종로3가역 키오스크' }))
+
+    expect(await getLocation()).toMatchObject({ source: 'KIOSK', reason: 'LOW_ACCURACY' })
+  })
+
+  it('서버 호출이 실패하면 서버의 쉬운 문장으로 Error 를 던진다', async () => {
+    stubGeolocation((onOk) => onOk(HERE))
+    mockFetch(fail('KIOSK_NOT_FOUND', '기기 설정에 문제가 있어요. 직원에게 알려 주세요.'), 404)
+
+    await expect(getLocation()).rejects.toThrow('기기 설정에 문제가 있어요')
   })
 })
