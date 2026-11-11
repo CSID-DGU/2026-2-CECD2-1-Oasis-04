@@ -1,11 +1,16 @@
-"""STT 파트 API (명세 v0.1 의 /health, /stt, /resolve). FastAPI 라우터 + 단독 실행.
+"""STT 파트 API (명세 v0.1 의 /health, /stt, /resolve + 프론트 연동용 /pois). FastAPI 라우터 + 단독 실행.
 
 서버 파트는 이 라우터를 마운트하면 된다 (FastAPI lifespan 안에서 startup() 호출):
     from stt.api import router, startup
     app.include_router(router)   # 서버의 lifespan 에서 startup() 을 한 번 부른다
 단독 실행 (Swagger: http://localhost:8000/docs):
-    cd ~/senior-voice && .venv/bin/python -m stt.api  --또는--  .venv/bin/uvicorn stt.api:app --port 8000
-환경변수: STT_CONFIG(기본 stt/config.yaml), STT_ADAPTER(LoRA 어댑터 폴더, 없으면 기본 Whisper), STT_MODEL(기본 모델 덮어쓰기)
+    cd ~/senior-voice && .venv/bin/python stt/api.py
+환경변수:
+    STT_CONFIG        설정 파일 (기본 stt/config.yaml)
+    STT_ADAPTER       LoRA 어댑터 폴더 (없으면 기본 Whisper)
+    STT_MODEL         기본 모델 덮어쓰기
+    FRONTEND_DIST     키오스크 화면 빌드 폴더 (기본 ../frontend/dist). 있으면 / 에서 함께 서빙한다
+    STT_CORS_ORIGINS  다른 출처에서 부를 때 허용할 주소 (쉼표 구분. 기본: vite 개발 서버 http://localhost:5173)
 
 음성은 메모리에서만 처리하고 디스크에 저장하지 않는다 (NFR-04).
 """
@@ -45,11 +50,13 @@ EASY = {
     "KIOSK_NOT_FOUND": "기기 설정에 문제가 있어요. 직원에게 알려 주세요.",
     "MODEL_NOT_READY": "준비 중이에요. 잠시 후 다시 말씀해 주세요.",
     "NO_CANDIDATE": "어디로 가실지 잘 못 알아들었어요. 한 번 더 말씀해 주세요.",
+    "OUT_OF_SCOPE": "이 키오스크에서는 서울 안의 길만 안내할 수 있어요.",
     "VALIDATION_ERROR": "잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.",
     "INTERNAL_ERROR": "잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.",
 }
 HTTP = {"EMPTY_AUDIO": 400, "AUDIO_TOO_LONG": 413, "UNSUPPORTED_AUDIO": 415, "KIOSK_NOT_FOUND": 404,
-        "MODEL_NOT_READY": 503, "NO_CANDIDATE": 200, "VALIDATION_ERROR": 400, "INTERNAL_ERROR": 500}
+        "MODEL_NOT_READY": 503, "NO_CANDIDATE": 200, "OUT_OF_SCOPE": 200, "VALIDATION_ERROR": 400,
+        "INTERNAL_ERROR": 500}
 
 
 def fail(code: str, message: str, t0: float):
@@ -192,7 +199,9 @@ class ResolveRequest(BaseModel):
 def display_name(p: dict) -> str:
     if p["poi_type"] == "SUBWAY_STATION":
         line = (p.get("line_info") or "").split("/")[0].strip()
-        base = p["name"] if p["name"].endswith("역") else p["name"] + "역"
+        # 역 이름의 괄호 부제는 화면에서 뺀다: '광화문(세종문화회관)' → '광화문역'
+        plain = __import__("re").sub(r"\s*\(.*?\)", "", p["name"]).strip() or p["name"]
+        base = plain if plain.endswith("역") else plain + "역"
         return f"{base} ({line})" if line else base
     if p["poi_type"] == "BUS_STOP":
         return f"{p['name']} 정류장"
@@ -330,6 +339,10 @@ def resolve(req: ResolveRequest):
             return ok({"intent": ctl, "need_confirm": False, "confirm_text": None, "destination_candidates": []}, t0)
 
     if not groups:
+        # 안내 범위(지식베이스) 밖의 실제 역 이름을 말한 경우: '못 알아들음' 이 아니라 '안내할 수 없는 곳' 으로 알린다
+        outside = S.rc.find_out_of_area(text) if S.rc is not None else []
+        if outside:
+            return fail("OUT_OF_SCOPE", f"outside service area: {', '.join(outside)}", t0)
         intent = "NAVIGATE" if req.input_mode == "TOUCH" else classify(text, has_place=False)
         if intent == "NAVIGATE":
             return fail("NO_CANDIDATE", "no destination candidate", t0)
@@ -342,8 +355,24 @@ def resolve(req: ResolveRequest):
                "destination_candidates": out}, t0)
 
 
+@router.get("/pois", summary="손으로 고르기 화면용 목적지 목록 (키오스크에서 가까운 지하철역)")
+def pois(kiosk_id: str, limit: int = 12):
+    """명세 v0.1 에는 없는 프론트 연동용 조회. 목록 기준(가까운 지하철역)은 임시이며 팀에서 정하면 바꾼다."""
+    t0 = time.time()
+    if S.kb is None:
+        return fail("MODEL_NOT_READY", "kb loading", t0)
+    kiosk = S.kiosks.get(kiosk_id)
+    if not kiosk:
+        return fail("KIOSK_NOT_FOUND", f"unknown kiosk_id {kiosk_id}", t0)
+    rows = S.kb.nearest((kiosk["x"], kiosk["y"]), poi_type="SUBWAY_STATION", limit=max(1, min(limit, 30)))
+    return ok({"pois": [to_candidate({**r, "score": None}) for r in rows]}, t0)
+
+
 # ---------------------------------------------------------------- app
 from contextlib import asynccontextmanager  # noqa: E402
+
+from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
+from fastapi.staticfiles import StaticFiles  # noqa: E402
 
 
 @asynccontextmanager
@@ -355,6 +384,17 @@ async def lifespan(_app: FastAPI):
 app = FastAPI(title="Senior Voice STT API", version=VERSION, lifespan=lifespan,
               description="어르신 음성 → 전사(RAG 보정) → 의도·목적지 후보. 명세 v0.1 의 /stt, /resolve, /health")
 app.include_router(router)
+
+# 화면을 다른 주소에서 띄울 때(vite 개발 서버 등)만 필요하다. 같은 출처(아래 정적 서빙, vite proxy)면 쓰이지 않는다
+_origins = [o.strip() for o in os.environ.get("STT_CORS_ORIGINS", "http://localhost:5173,http://127.0.0.1:5173").split(",") if o.strip()]
+app.add_middleware(CORSMiddleware, allow_origins=_origins, allow_methods=["GET", "POST"], allow_headers=["*"])
+
+# 키오스크 화면(frontend 의 빌드 결과물)이 있으면 같은 서버에서 함께 내보낸다 → http://localhost:8000 하나로 접속.
+# 마이크는 같은 출처의 https 또는 localhost 에서만 열리므로, 시연은 이 방식이 가장 간단하다.
+# /api, /docs 는 위에서 먼저 등록됐으므로 이 마운트보다 우선한다.
+_dist = os.environ.get("FRONTEND_DIST") or os.path.join(os.path.dirname(HERE), "frontend", "dist")
+if os.path.isdir(_dist):
+    app.mount("/", StaticFiles(directory=_dist, html=True), name="frontend")
 
 
 @app.exception_handler(Exception)

@@ -1,7 +1,4 @@
-// POST /qr 의 실제 구현 자리. 백엔드가 준비되면 여기에 fetch 를 채운다 (계획서 7절 합의 사항 참고).
-// 응답 형식이 mock 과 다르면 이 파일 안에서 변환해서 화면·reducer·effect 는 손대지 않는다.
-// 베이스 URL 은 import.meta.env.VITE_API_BASE_URL 에서 읽을 예정.
+// POST /qr 의 실제 구현 자리. QR 을 서버가 만들지 프론트가 만들지 정해지지 않아(계획서 6절 2번) 당분간 mock 을 그대로 쓴다.
+// 정해지면 이 파일만 바꾼다.
 
-export async function createQr() {
-  throw new Error('Not implemented: createQr (POST /qr)')
-}
+export { createQr } from '../mock/qr.js'

@@ -74,6 +74,24 @@ class TransitKB:
             self._poi_cache[poi_id] = dict(r) if r else None
         return self._poi_cache[poi_id]
 
+    def nearest(self, kiosk_xy, poi_type="SUBWAY_STATION", limit=12):
+        """키오스크에서 가까운 순으로 장소를 돌려준다. 같은 이름(노선만 다른 역)은 가장 가까운 하나만."""
+        with self._lock:
+            rows = [dict(r) for r in self.con.execute("SELECT * FROM transit_poi WHERE poi_type=?", (poi_type,))]
+        for r in rows:
+            r["distance_m"] = int(haversine_m(kiosk_xy[0], kiosk_xy[1], r["x"], r["y"]))
+        rows.sort(key=lambda r: r["distance_m"])
+        seen, out = set(), []
+        for r in rows:
+            key = r["name_norm"][:-1] if r["name_norm"].endswith("역") and len(r["name_norm"]) > 2 else r["name_norm"]
+            if key in seen:
+                continue
+            seen.add(key)
+            out.append(r)
+            if len(out) >= limit:
+                break
+        return out
+
     def search(self, query, kiosk_xy=None, k=5, str_limit=150, emb_limit=30):
         from rapidfuzz import fuzz, process
         q = normalize_name(query)

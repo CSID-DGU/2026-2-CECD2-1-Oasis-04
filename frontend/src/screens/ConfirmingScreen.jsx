@@ -26,6 +26,8 @@ export default function ConfirmingScreen() {
   const { state, dispatch } = useKiosk()
   const candidates = candidatesOf(state.resolve)
   const confirm = (poi) => dispatch({ type: EVENTS.DESTINATION_CONFIRMED, poi })
+  // 실제 마이크에서는 reducer 의 transcript 가 비어 있다 (글자를 아는 것은 서버뿐). 서버가 해석한 문장을 대신 보여 준다
+  const heard = state.transcript || state.resolve?.transcript
 
   return (
     <ScreenFrame
@@ -42,7 +44,7 @@ export default function ConfirmingScreen() {
         </>
       }
     >
-      {state.transcript && <p>들은 말: "{state.transcript}"</p>}
+      {heard && <p>들은 말: "{heard}"</p>}
 
       {candidates.length === 0 && <p>후보 목적지를 찾지 못했어요</p>}
 

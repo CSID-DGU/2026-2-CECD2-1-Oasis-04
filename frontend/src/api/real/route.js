@@ -1,7 +1,6 @@
-// POST /route 의 실제 구현 자리. 백엔드가 준비되면 여기에 fetch 를 채운다 (계획서 7절 합의 사항 참고).
-// 응답 형식이 mock 과 다르면 이 파일 안에서 변환해서 화면·reducer·effect 는 손대지 않는다.
-// 베이스 URL 은 import.meta.env.VITE_API_BASE_URL 에서 읽을 예정.
+// POST /route 의 실제 구현 자리. 경로 서버(ODsay 연동)가 아직 없어서 당분간 mock 을 그대로 쓴다.
+// → 실제 모드에서도 목적지 확정 뒤의 경로 3개는 가짜 데이터다 (어느 목적지를 골라도 같은 경로).
+// 백엔드의 /route 가 준비되면 이 파일만 fetch 구현으로 바꾼다. 응답 형식이 다르면 여기서 변환한다.
+// 넘어오는 poiId 는 서버 지식베이스의 ID(예: 'SUB_0220_2호선', 'BUS_105000101')다.
 
-export async function route() {
-  throw new Error('Not implemented: route (POST /route)')
-}
+export { route } from '../mock/route.js'

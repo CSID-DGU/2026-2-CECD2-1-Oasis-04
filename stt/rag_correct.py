@@ -67,6 +67,9 @@ LINE_NAME = re.compile(r"(호선|분당선|경의선|중앙선|경춘선|수인�
 
 
 ROADLIKE = re.compile(r".{2,}(대로|로|길|동)$")
+# 다른 도시의 역 이름이지만 일반 명사로도 쓰이는 말. '공항 가려면' 을 범위 밖으로 단정하지 않는다
+AMBIGUOUS_STATION_NAMES = {"공항", "공항역", "중앙", "중앙역", "시청", "시청역", "대학", "병원", "시장", "터미널", "공원",
+                           "남부", "북부", "동부", "서부", "신도시", "시민공원", "종합운동장", "월드컵경기장"}
 
 
 def _word_core(w: str) -> str:
@@ -101,6 +104,12 @@ class RagCorrector:
         if os.path.exists(nn_path):
             with open(nn_path, encoding="utf-8") as f:
                 self.national_names = set(json.load(f))
+        # 그중 도시철도 역 이름. 정류장 이름과 달리 일반 명사와 겹치는 일이 드물어 '안내 범위 밖' 판단에 쓴다
+        self.national_stations = set()
+        ns_path = os.path.join(self.kb.dir, "national_stations.json")
+        if os.path.exists(ns_path):
+            with open(ns_path, encoding="utf-8") as f:
+                self.national_stations = set(json.load(f)) - AMBIGUOUS_STATION_NAMES
 
     # ---------------------------------------------------------- 1차 인식 + 신뢰도
     @torch.inference_mode()
@@ -205,6 +214,32 @@ class RagCorrector:
             kept.append(s)
         kept.sort(key=lambda s: s["start"])
         return kept
+
+    def find_out_of_area(self, text):
+        """안내 범위(지식베이스) 밖의 실제 역 이름을 길찾기 맥락에서 말했으면 그 이름들을 돌려준다.
+        예) '수원역 가려면 어떻게 가' → ['수원역'].  /resolve 가 '못 알아들음' 과 '안내할 수 없는 곳' 을 구분하는 데 쓴다."""
+        words = text.split()
+        found = []
+        for i, w in enumerate(words):
+            full = normalize_name(w)
+            stripped = PARTICLES.sub("", full)
+            particle = full[len(stripped):]
+            if len(stripped) < 2 or stripped in STOPWORDS or stripped in self.common_words:
+                continue
+            if stripped in self.kb.term_to_pois or full in self.kb.term_to_pois:
+                continue
+            if stripped in self.national_stations:
+                name = stripped
+            elif stripped + "역" in self.national_stations:
+                name = stripped + "역"
+            else:
+                continue
+            prv = words[i - 1] if i > 0 else ""
+            nxt = words[i + 1] if i + 1 < len(words) else ""
+            if (CUE_IN.search(stripped) or particle in DIRECTIONAL or CUE_AFTER.match(nxt)
+                    or CUE_BEFORE.search(_word_core(prv))):
+                found.append(name)
+        return found
 
     # ---------------------------------------------------------- 보정
     def correct(self, audio, raw_text, confidence, kiosk_xy=None, use_rag=True):

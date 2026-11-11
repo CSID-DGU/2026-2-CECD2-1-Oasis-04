@@ -24,4 +24,6 @@ export const config = {
   silenceMs: num(import.meta.env.VITE_SILENCE_MS, 2500),
   /** 조작 화면 6곳: 무입력 시 IDLE 로 복귀하는 시간 (운영 60초) */
   inactivityMs: num(import.meta.env.VITE_INACTIVITY_MS, 60000),
+  /** LISTENING(실제 마이크): 말하는 중이어도 녹음을 끝내는 상한 (운영 25초. 서버는 30초까지 받는다) */
+  maxRecordMs: num(import.meta.env.VITE_MAX_RECORD_MS, 25000),
 }

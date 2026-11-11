@@ -33,6 +33,10 @@ tensorboard/
 .env
 .env.*
 !.env.example
+# 프론트의 vite 모드 파일은 비밀 정보가 없는 설정값이라 올린다 (키·토큰을 넣지 말 것)
+!frontend/.env.development
+!frontend/.env.production
+!frontend/.env.real
 *.key
 *.pem
 

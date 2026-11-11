@@ -14,6 +14,7 @@ import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { recorder } from '../devices/recorder.js'
+import { USE_MOCK } from '../api/index.js'
 import { config } from '../config.js'
 import { SCREEN_TITLES } from './titles.js'
 
@@ -48,24 +49,31 @@ export default function ListeningScreen() {
     >
       <p>듣고 있어요</p>
 
-      <label>
-        <span className="hint">말씀 대신 글로 입력 (mock 마이크)</span>
-        <br />
-        <input
-          type="text"
-          className="text-input"
-          value={text}
-          onChange={onChange}
-          // 화면이 열리면 바로 타이핑할 수 있게 커서를 둔다. 상태가 LISTENING 으로 바뀔 때마다 새로 마운트되므로 매번 적용된다.
-          autoFocus
-          placeholder="예: 서울역 / 병원 / 웅얼 / 하와이 / 에러"
-          aria-label="말씀 대신 글로 입력"
-        />
-      </label>
-      <p className="hint">
-        (개발용) 아무 입력 없이 {toSeconds(config.noSpeechMs)}초가 지나거나, 입력을 멈추고{' '}
-        {toSeconds(config.silenceMs)}초가 지나면 자동으로 넘어가요
-      </p>
+      {/* 실제 마이크(USE_MOCK=false)에서는 글 입력창이 필요 없다. 말이 끝나면 recorder 가 알아서 넘긴다 */}
+      {USE_MOCK ? (
+        <>
+          <label>
+            <span className="hint">말씀 대신 글로 입력 (mock 마이크)</span>
+            <br />
+            <input
+              type="text"
+              className="text-input"
+              value={text}
+              onChange={onChange}
+              // 화면이 열리면 바로 타이핑할 수 있게 커서를 둔다. 상태가 LISTENING 으로 바뀔 때마다 새로 마운트되므로 매번 적용된다.
+              autoFocus
+              placeholder="예: 서울역 / 병원 / 웅얼 / 하와이 / 에러"
+              aria-label="말씀 대신 글로 입력"
+            />
+          </label>
+          <p className="hint">
+            (개발용) 아무 입력 없이 {toSeconds(config.noSpeechMs)}초가 지나거나, 입력을 멈추고{' '}
+            {toSeconds(config.silenceMs)}초가 지나면 자동으로 넘어가요
+          </p>
+        </>
+      ) : (
+        <p className="hint">가실 곳을 말씀해 주세요. 말씀이 끝나면 자동으로 넘어가요</p>
+      )}
     </ScreenFrame>
   )
 }

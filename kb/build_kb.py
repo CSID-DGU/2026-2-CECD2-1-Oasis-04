@@ -27,6 +27,7 @@ from normalize import make_aliases, normalize_name, to_jamo  # noqa: E402
 
 DEFAULT_REGIONS = "서울"   # MVP 는 서울 소재만. 수도권으로 넓히려면 --regions 서울,인천,경기
 ALL_NAMES: set = set()     # 지역 필터와 무관한 전국 역·정류장 이름 (서울 밖 실제 지명을 오보정하지 않기 위한 목록)
+ALL_STATION_NAMES: set = set()   # 그중 도시철도 역 이름만 ('수원역 가려면' → 안내 범위 밖으로 알리는 데 쓴다)
 
 
 # ------------------------------------------------------------ file reading
@@ -180,8 +181,9 @@ def load_subway(path, regions):
             region_text = r[ci["op"]] if ci["op"] is not None else ""
         nm = normalize_name(r[ci["name"]])
         if nm:
-            ALL_NAMES.add(nm)
-            ALL_NAMES.add(nm + "역" if not nm.endswith("역") else nm[:-1])
+            other = nm + "역" if not nm.endswith("역") else nm[:-1]
+            ALL_NAMES.update((nm, other))
+            ALL_STATION_NAMES.update((nm, other))
         if regions and not any(k in region_text for k in regions):
             continue
         x, y = to_float(r[ci["x"]]), to_float(r[ci["y"]])
@@ -334,7 +336,10 @@ def main():
     national = sorted(n for n in ALL_NAMES if n not in kb_term_set and len(n) >= 2)
     with open(os.path.join(out_dir, "national_names.json"), "w", encoding="utf-8") as f:
         json.dump(national, f, ensure_ascii=False)
-    print(f"national names outside KB: {len(national)}")
+    stations_outside = sorted(n for n in ALL_STATION_NAMES if n not in kb_term_set and len(n) >= 2)
+    with open(os.path.join(out_dir, "national_stations.json"), "w", encoding="utf-8") as f:
+        json.dump(stations_outside, f, ensure_ascii=False)
+    print(f"national names outside KB: {len(national)} (stations: {len(stations_outside)})")
 
     # 일반 단어 사전: 전사에 자주 나오지만 지식베이스 표기와 같지 않은 단어 (작동, 역사, 도움 …)
     n_common = 0

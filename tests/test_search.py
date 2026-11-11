@@ -33,6 +33,21 @@ def test_seoul_file_merges_and_drops_cross_source_duplicates(kb_dir_merged):
     assert ars == "06210"
 
 
+def test_national_station_list_holds_stations_outside_region(kb_dir):
+    stations = set(json.load(open(os.path.join(kb_dir, "national_stations.json"), encoding="utf-8")))
+    assert {"강남대", "강남대역"} <= stations      # 경기 용인 → 서울 지식베이스 밖
+    assert "선릉역" not in stations and "선릉" not in stations
+
+
+def test_nearest_lists_closest_stations_without_duplicate_names(kb_dir):
+    kb = TransitKB(kb_dir, use_embedding=False)
+    rows = kb.nearest(JONGNO, poi_type="SUBWAY_STATION", limit=5)
+    assert rows[0]["name"] == "종로3가" and rows[0]["distance_m"] < 300
+    names = [r["name"] for r in rows]
+    assert sum(n.startswith("선릉") for n in names) == 1       # 2호선 '선릉' 과 분당선 '선릉역' 은 한 번만
+    assert [r["distance_m"] for r in rows] == sorted(r["distance_m"] for r in rows)
+
+
 def test_exact_name_is_top(kb_dir):
     kb = TransitKB(kb_dir, use_embedding=False)
     res = kb.search("경동시장", JONGNO, k=3)
