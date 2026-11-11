@@ -18,6 +18,21 @@ def test_build_filters_to_seoul_and_writes_tables(kb_dir):
     assert {"당고개", "당고개역", "불암산역"} <= aliases  # 옛 이름 별칭표 적용
 
 
+def test_seoul_file_merges_and_drops_cross_source_duplicates(kb_dir_merged):
+    con = sqlite3.connect(os.path.join(kb_dir_merged, "transit.db"))
+    rows = con.execute("SELECT poi_id, name FROM transit_poi WHERE poi_type='BUS_STOP'").fetchall()
+    names = [r[1] for r in rows]
+    # 서울시 파일 4개(선착장 제외) + 전국 파일 8개 중 겹치는 3개(경동시장앞, 선릉역 2곳) 제거 = 9
+    assert len(rows) == 9
+    assert "한강버스.잠실선착장" not in names
+    assert {"청량리역환승센터", "서울숲입구"} <= set(names)
+    assert names.count("경동시장앞") == 1 and names.count("선릉역") == 1
+    ids = {r[0] for r in rows if r[1] in ("경동시장앞", "선릉역")}
+    assert ids == {"BUS_105000101", "BUS_122000201"}   # 남은 쪽은 서울시 파일의 NODE_ID
+    ars = con.execute("SELECT ars_id FROM transit_poi WHERE poi_id='BUS_105000101'").fetchone()[0]
+    assert ars == "06210"
+
+
 def test_exact_name_is_top(kb_dir):
     kb = TransitKB(kb_dir, use_embedding=False)
     res = kb.search("경동시장", JONGNO, k=3)

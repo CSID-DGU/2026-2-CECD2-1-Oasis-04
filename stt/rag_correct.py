@@ -48,6 +48,9 @@ STOPWORDS = {
     "지연", "운행", "정차", "방향", "상행", "하행", "좌석", "분실물", "유실물", "보관함", "스크린도어", "안내방송",
     # '…역' 꼴의 일반 명사 (도착역→동작역, 목적지역→삼각지역 방지)
     "도착역", "목적지역", "출발역", "환승역", "종착역", "현재역", "그역", "하차역", "승차역", "내릴역", "탈역", "갈아탈역",
+    # 교통수단·시설을 가리키는 일반 명사 (전철역→이대전철역, 공항전철역→공덕전철역 방지)
+    "전철역", "지하철역", "기차역", "철도역", "공항전철", "공항전철역", "공항철도", "공항철도역", "버스정류장", "버스정류소",
+    "택시정류장", "택시승강장", "버스터미널", "터미널", "정거장", "승차장", "하차장", "매표소", "개표구",
 }
 # 조사: 방향·범위 조사(까지/으로/행/방면…)는 장소 단서로 치고, 그 밖의 일반 조사(을/를/이/가/은/는/에…)는 단서가 아니다
 PARTICLES = re.compile(r"(까지|으로|로|에서|에게|한테|이랑|하고|보다|이요|예요|이에요|은|는|이|가|을|를|에|요|도|와|과|랑|행|방면|쪽)$")
@@ -61,6 +64,9 @@ CUE_AFTER = re.compile(r"^(까지|으로|로|에서|행|방면|쪽|가는|가려
 
 
 LINE_NAME = re.compile(r"(호선|분당선|경의선|중앙선|경춘선|수인선|신설선|신림선|서해선|경강선|공항철도|골드라인|에버라인|선$)")
+
+
+ROADLIKE = re.compile(r".{2,}(대로|로|길|동)$")
 
 
 def _word_core(w: str) -> str:
@@ -122,6 +128,8 @@ class RagCorrector:
     def _search(self, core, kiosk_xy):
         key = (core, kiosk_xy)
         if key not in self._search_cache:
+            if len(self._search_cache) > 50000:   # 오래 떠 있는 서버에서 캐시가 끝없이 커지지 않게
+                self._search_cache.clear()
             self._search_cache[key] = self.kb.search(core, kiosk_xy, k=5)
         return self._search_cache[key]
 
@@ -137,34 +145,54 @@ class RagCorrector:
         for n in (3, 2, 1):
             for i in range(len(words) - n + 1):
                 chunk = " ".join(words[i:i + n])
-                core = PARTICLES.sub("", normalize_name(chunk))
-                if len(core) < 2 or core in STOPWORDS or core in self.common_words or not re.search(r"[가-힣]", core):
+                full = normalize_name(chunk)
+                stripped = PARTICLES.sub("", full)
+                particle = full[len(stripped):]
+                if not re.search(r"[가-힣]", full):
                     continue
-                if core in self.national_names or (core + "역") in self.national_names:
-                    continue  # 서울 밖 실제 역·정류장 이름 → 범위 밖이지 오인식이 아니다
-                if LINE_NAME.search(core):
-                    continue  # 노선 이름(분당선, 4호선)은 장소가 아니다 → "분당선→신분당선" 같은 치환 방지
+                # 조사처럼 보이는 끝 글자까지 합친 형태가 지식베이스 표기와 똑같으면 그것이 이름이다 (여의도, 대학로, 을지로)
+                full_exact = bool(particle) and full in self.kb.term_to_pois and full not in STOPWORDS
+                if not full_exact:
+                    if stripped in STOPWORDS or stripped in self.common_words:
+                        continue
+                    if stripped in self.national_names or (stripped + "역") in self.national_names:
+                        continue  # 서울 밖 실제 역·정류장 이름 → 범위 밖이지 오인식이 아니다
+                    if LINE_NAME.search(stripped):
+                        continue  # 노선 이름(분당선, 4호선)은 장소가 아니다 → "분당선→신분당선" 같은 치환 방지
                 if n > 1 and any(normalize_name(w) in STOPWORDS or _word_core(w) in STOPWORDS
                                  or _word_core(w) in self.common_words for w in words[i:i + n]):
                     continue  # "선능력 어느 출구에" 처럼 일반 단어가 섞인 구간은 보지 않는다 ('급행'은 조사 제거 전 형태로도 검사)
+                if n > 1 and any(len(normalize_name(w)) <= 1 and normalize_name(w) != "역" for w in words[i:i + n]):
+                    continue  # "분에 이 역에서" 처럼 한 글자 단어(이, 몇 …)가 낀 구간은 장소가 아니다 ("선는 역"의 '역'은 허용)
                 # 단서: 구간이 역/정류장 등으로 끝나거나, 방향 조사(까지/으로/행…)가 붙었거나, 앞뒤 단어가 교통 표현.
                 # 을/를/이/가 같은 일반 조사는 어떤 명사에나 붙으므로 단서로 치지 않는다 (작동을→학동 방지)
                 prv = words[i - 1] if i > 0 else ""
                 nxt = words[i + n] if i + n < len(words) else ""
-                m = PARTICLES.search(normalize_name(chunk))
-                has_cue = bool(CUE_IN.search(core) or (m and m.group(0) in DIRECTIONAL)
-                               or CUE_AFTER.match(nxt) or CUE_BEFORE.search(_word_core(prv)))
-                if not has_cue and len(core) < 3:
-                    continue  # 단서 없는 두 글자(가야, 수서, 역사 …)는 장소로 보지 않는다
-                cands = self._search(core, kiosk_xy)
-                if not cands:
+                other_cue = bool(CUE_AFTER.match(nxt) or CUE_BEFORE.search(_word_core(prv)))
+                # 조사처럼 보이는 끝 글자가 이름의 일부일 수 있다 (을지로, 여의도, 종로3가).
+                # 조사를 뗀 형태와 떼지 않은 형태를 모두 찾아보고 지식베이스와 더 잘 맞는 쪽을 쓴다 (같으면 떼지 않은 쪽)
+                options = [(full, "")] if full_exact else [(stripped, particle)] + ([(full, "")] if particle else [])
+                best = None
+                for c_core, c_part in options:
+                    if len(c_core) < 2 or c_core in STOPWORDS or c_core in self.common_words:
+                        continue
+                    if c_core in self.national_names or LINE_NAME.search(c_core):
+                        continue
+                    c_cue = bool(other_cue or CUE_IN.search(c_core) or c_part in DIRECTIONAL)
+                    if not c_cue and len(c_core) < 3:
+                        continue  # 단서 없는 두 글자(가야, 수서, 역사 …)는 장소로 보지 않는다
+                    c = self._search(c_core, kiosk_xy)
+                    if not c or c[0]["jamo_sim"] < (self.span_min if c_cue else self.span_min_nocue):
+                        continue
+                    if best is None or c[0]["jamo_sim"] > best[0][0]["jamo_sim"] or \
+                            (c[0]["jamo_sim"] == best[0][0]["jamo_sim"] and not c_part):
+                        best = (c, c_core, c_part, c_cue)
+                if best is None:
                     continue
-                need = self.span_min if has_cue else self.span_min_nocue
-                if cands[0]["jamo_sim"] < need:
-                    continue
+                cands, core, part, has_cue = best
                 start = starts[i]
                 end = starts[i + n - 1] + len(words[i + n - 1])
-                spans.append({"span": text[start:end], "core": core, "start": start, "end": end,
+                spans.append({"span": text[start:end], "core": core, "particle": part, "start": start, "end": end,
                               "candidates": cands, "words": (i, i + n), "cue": has_cue})
         # 겹치는 구간은 문자열 유사도가 높은 것만 (같으면 긴 구간)
         spans.sort(key=lambda s: (-s["candidates"][0]["jamo_sim"], -(s["words"][1] - s["words"][0])))
@@ -238,10 +266,13 @@ class RagCorrector:
                 top = s["candidates"][0]
                 # 서울 밖 실제 지명은 위에서 전국 이름 목록으로 걸렀으므로, "…역" 구간도 같은 기준으로 치환한다
                 need = self.sub_min
+                # 도로·동 이름 꼴(세종로, 테헤란로, ○○동, ○○길)은 지식베이스에 없는 실제 지명일 가능성이 높다.
+                # 비슷한 정류장(세종초)으로 바꾸지 않고 그대로 둔다 (후보는 entities 로 남아 /resolve 가 확인 질문을 한다)
+                if ROADLIKE.search(s["core"]):
+                    continue
                 # 발음 키만으로 비슷한 경우(인천→신정)는 치환하지 않는다: 순수 자모 유사도도 어느 정도 있어야 함
                 if top["jamo_sim"] >= need and top.get("jamo_only", 1.0) >= 0.7:
-                    m = PARTICLES.search(normalize_name(s["span"]))
-                    particle = m.group(0) if m else ""
+                    particle = s.get("particle", "")   # 구간 추출 때 정한 조사 (이름의 일부로 판단됐으면 빈 문자열)
                     tail = re.search(r"[^\w가-힣]+$", s["span"])
                     punct = tail.group(0) if tail else ""
                     corrected = corrected[: s["start"]] + top["matched"] + particle + punct + corrected[s["end"]:]

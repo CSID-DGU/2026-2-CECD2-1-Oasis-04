@@ -13,6 +13,17 @@ for sub in ("kb", "stt"):
 
 FIXTURE_BUS = os.path.join(ROOT, "tests", "fixtures", "bus_stops_sample.csv")
 FIXTURE_SUBWAY = os.path.join(ROOT, "tests", "fixtures", "subway_stations_sample.csv")
+FIXTURE_BUS_SEOUL = os.path.join(ROOT, "tests", "fixtures", "seoul_bus_stops_sample.csv")
+
+
+@pytest.fixture(scope="session")
+def kb_dir_merged(tmp_path_factory):
+    """전국 파일 + 서울시 파일을 함께 넣은 지식베이스 (겹치는 정류장 제거 확인용)."""
+    out = tmp_path_factory.mktemp("kb_merged")
+    subprocess.run([sys.executable, os.path.join(ROOT, "kb", "build_kb.py"), "--bus", FIXTURE_BUS,
+                    "--bus-seoul", FIXTURE_BUS_SEOUL, "--subway", FIXTURE_SUBWAY, "--regions", "서울",
+                    "--out", str(out), "--no-embedding"], check=True, capture_output=True)
+    return str(out)
 
 
 @pytest.fixture(scope="session")

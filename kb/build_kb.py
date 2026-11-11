@@ -1,15 +1,17 @@
 """교통 지식베이스 구축: 공공데이터 → SQLite(transit_poi, poi_alias) + 임베딩 색인(FAISS) + 자모 색인.
 
 입력 (모두 선택, 하나 이상):
-  --bus     국토교통부_전국 버스정류장 위치정보 (CSV; 정류장번호, 정류장명, 위도, 경도, 도시명, 관리도시명 ...)
-  --subway  전국도시철도역사정보표준데이터 (XLSX/CSV; 역사명, 노선명, 역위도, 역경도, 운영기관명 ...)
-  --facility 직접 만든 주요 시설 목록 (CSV; name, x, y, region, aliases(세미콜론 구분))
-  --regions 포함할 지역 키워드 (쉼표). 버스는 도시명/관리도시명, 지하철은 운영기관명/주소와 부분 일치. 기본: 서울,인천,경기
-  --out     출력 폴더 (기본 ~/data/kb)
+  --bus       국토교통부_전국 버스정류장 위치정보 (CSV; 정류장번호, 정류장명, 위도, 경도, 도시명, 관리도시명 ...)
+  --bus-seoul 서울시 버스정류소 위치정보 (XLSX; NODE_ID, ARS_ID, 정류소명, X좌표, Y좌표, 정류소타입).
+              전국 파일에는 서울 정류장이 일부만 있어서 함께 넣는다. 겹치는 정류장은 서울시 파일 쪽을 남긴다
+  --subway    전국도시철도역사정보표준데이터 (XLSX/CSV; 역사명, 노선명, 역위도, 역경도, 운영기관명 ...)
+  --facility  직접 만든 주요 시설 목록 (CSV; name, x, y, region, aliases(세미콜론 구분))
+  --regions   포함할 지역 키워드 (쉼표). 버스는 도시명/관리도시명, 지하철은 역 주소와 부분 일치. 기본: 서울
+  --out       출력 폴더 (기본 ~/data/kb)
 
 열 이름은 부분 일치로 찾으므로 파일 버전이 조금 달라도 동작한다. 찾은 열을 출력하니 확인할 것.
 usage:
-  python build_kb.py --bus ~/Downloads/전국버스정류장위치정보.csv --subway ~/Downloads/전국도시철도역사정보표준데이터.xlsx --out ~/data/kb
+  python build_kb.py --bus 전국버스정류장.csv --bus-seoul 서울시버스정류소.xlsx --subway 도시철도역사정보.xlsx --out ~/data/kb_seoul
 """
 import argparse
 import csv
@@ -53,11 +55,14 @@ def read_table(path):
 
 
 def find_col(header, *keywords, required=True):
-    """header 에서 키워드 중 하나를 포함하는 첫 열 인덱스"""
-    norm = [h.replace(" ", "") for h in header]
+    """header 에서 키워드 중 하나를 포함하는 첫 열 인덱스 (공백·밑줄·대소문자 무시: NODE_ID == nodeid)"""
+    def n(s):
+        return str(s).replace(" ", "").replace("_", "").lower()
+
+    norm = [n(h) for h in header]
     for kw in keywords:
         for i, h in enumerate(norm):
-            if kw in h:
+            if n(kw) in h:
                 return i
     if required:
         raise KeyError(f"열을 찾을 수 없음: {keywords} / header={header}")
@@ -72,24 +77,38 @@ def to_float(s):
 
 
 # ------------------------------------------------------------ loaders
-def load_bus(path, regions):
+EXCLUDE_STOP_TYPES = {"한강선착장", "가상정류장"}   # 버스 정류장이 아닌 유형 (서울시 파일의 정류소타입)
+
+
+def load_bus(path, regions, default_city="", source="national"):
+    """버스정류장 파일 적재. 두 형식을 열 이름으로 구분한다.
+    - 국토교통부 전국 파일: 정류장번호, 정류장명, 위도, 경도, 모바일단축번호, 도시명, 관리도시명
+    - 서울시 버스정류소 위치정보: NODE_ID, ARS_ID, 정류소명, X좌표, Y좌표, 정류소타입 (도시 열 없음 → default_city)
+    """
     header, rows = read_table(path)
     ci = {
         "id": find_col(header, "정류장번호", "정류소번호", "nodeid"),
-        "name": find_col(header, "정류장명", "정류소명", "nodenm"),
-        "y": find_col(header, "위도", "gpslati"),
-        "x": find_col(header, "경도", "gpslong"),
+        "name": find_col(header, "정류장명", "정류소명", "nodenm", "sttnnm"),
+        "y": find_col(header, "위도", "gpslati", "Y좌표", "crdnty"),
+        "x": find_col(header, "경도", "gpslong", "X좌표", "crdntx"),
         "city": find_col(header, "도시명", "관리도시명", required=False),
         "mcity": find_col(header, "관리도시명", required=False),
-        "ars": find_col(header, "모바일단축번호", "정류소ID", required=False),
+        "ars": find_col(header, "모바일단축번호", "arsid", "sttnno", required=False),
+        "type": find_col(header, "정류소타입", "정류소유형", "sttnty", required=False),
     }
-    print("bus columns:", {k: (header[v] if v is not None else None) for k, v in ci.items()})
-    out, skipped = [], 0
+    print(f"bus[{source}] columns:", {k: (header[v] if v is not None else None) for k, v in ci.items()})
+    out, skipped, excluded = [], 0, 0
     for r in rows:
         if len(r) <= max(v for v in ci.values() if v is not None):
             skipped += 1
             continue
-        city = (r[ci["city"]] if ci["city"] is not None else "") + " " + (r[ci["mcity"]] if ci["mcity"] is not None else "")
+        if ci["city"] is None and ci["mcity"] is None:
+            city = default_city
+        else:
+            city = (r[ci["city"]] if ci["city"] is not None else "") + " " + (r[ci["mcity"]] if ci["mcity"] is not None else "")
+        if ci["type"] is not None and r[ci["type"]].strip() in EXCLUDE_STOP_TYPES:
+            excluded += 1
+            continue
         nm = normalize_name(r[ci["name"]])
         if nm:
             ALL_NAMES.add(nm)
@@ -103,10 +122,36 @@ def load_bus(path, regions):
         out.append({
             "poi_id": f"BUS_{r[ci['id']].strip()}", "name": name, "poi_type": "BUS_STOP",
             "line_info": "", "ars_id": r[ci["ars"]].strip() if ci["ars"] is not None else "",
-            "x": x, "y": y, "region": city.strip(),
+            "x": x, "y": y, "region": city.strip(), "source": source,
         })
-    print(f"bus: {len(out)} kept, {skipped} skipped")
+    print(f"bus[{source}]: {len(out)} kept, {skipped} skipped, {excluded} excluded by type")
     return out
+
+
+def drop_cross_source_duplicates(pois, primary="seoul", radius_m=100.0):
+    """같은 정류장이 두 파일에 다 있으면 primary 쪽만 남긴다 (이름이 같고 radius_m 안).
+    같은 파일 안의 상·하행 정류장은 서로 다른 정류장이므로 그대로 둔다."""
+    import math
+
+    def dist(a, b):
+        kx = 111320.0 * math.cos(math.radians((a["y"] + b["y"]) / 2))
+        return math.hypot((a["x"] - b["x"]) * kx, (a["y"] - b["y"]) * 110540.0)
+
+    by_name = {}
+    for p in pois:
+        if p["poi_type"] == "BUS_STOP" and p.get("source") == primary:
+            by_name.setdefault(normalize_name(p["name"]), []).append(p)
+    kept, dropped = [], 0
+    for p in pois:
+        if p["poi_type"] == "BUS_STOP" and p.get("source") != primary:
+            same = by_name.get(normalize_name(p["name"]), ())
+            if any(dist(p, q) <= radius_m for q in same):
+                dropped += 1
+                continue
+        kept.append(p)
+    if dropped:
+        print(f"dropped {dropped} duplicates already present in the {primary} file")
+    return kept
 
 
 def load_subway(path, regions):
@@ -181,7 +226,8 @@ def load_facility(path):
 # ------------------------------------------------------------ build
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--bus")
+    ap.add_argument("--bus", help="국토교통부 전국 버스정류장 위치정보 (CSV)")
+    ap.add_argument("--bus-seoul", help="서울시 버스정류소 위치정보 (XLSX/CSV). 전국 파일과 겹치는 정류장은 이쪽을 남긴다")
     ap.add_argument("--subway")
     ap.add_argument("--facility")
     ap.add_argument("--extra-aliases", default=os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", "extra_aliases.csv"),
@@ -194,15 +240,19 @@ def main():
     ap.add_argument("--embedding-model", default="jhgan/ko-sroberta-multitask")
     ap.add_argument("--no-embedding", action="store_true", help="임베딩 색인 생략 (자모 검색만)")
     args = ap.parse_args()
-    if not (args.bus or args.subway or args.facility):
-        sys.exit("--bus / --subway / --facility 중 하나 이상 필요")
+    if not (args.bus or args.bus_seoul or args.subway or args.facility):
+        sys.exit("--bus / --bus-seoul / --subway / --facility 중 하나 이상 필요")
     regions = [r.strip() for r in args.regions.split(",") if r.strip()]
     out_dir = os.path.expanduser(args.out)
     os.makedirs(out_dir, exist_ok=True)
 
     pois = []
+    if args.bus_seoul:
+        pois += load_bus(args.bus_seoul, regions, default_city="서울특별시", source="seoul")
     if args.bus:
-        pois += load_bus(args.bus, regions)
+        pois += load_bus(args.bus, regions, source="national")
+    if args.bus_seoul and args.bus:
+        pois = drop_cross_source_duplicates(pois, primary="seoul")
     if args.subway:
         pois += load_subway(args.subway, regions)
     if args.facility:
@@ -303,8 +353,10 @@ def main():
                         core = particles.sub("", normalize_name(w))
                         if len(core) >= 2:
                             cnt[core] += 1
+        # 실제 역·정류장 이름(지식베이스 표기 + 전국 이름)만 빼고 나머지는 일반 단어로 본다.
+        # '전철역', '도착역' 처럼 '역'으로 끝나도 실제 이름이 아니면 일반 단어다
         common = sorted(w for w, c in cnt.items() if c >= args.common_min_count and w not in kb_terms
-                        and re.search(r"[가-힣]", w) and not any(w.endswith(s) for s in ("역", "정류장", "정류소")))
+                        and w not in ALL_NAMES and re.search(r"[가-힣]", w))
         with open(os.path.join(out_dir, "common_words.json"), "w", encoding="utf-8") as f:
             json.dump(common, f, ensure_ascii=False)
         n_common = len(common)
@@ -314,7 +366,7 @@ def main():
         "built_at": time.strftime("%Y-%m-%d %H:%M"), "pois": len(pois), "aliases": len(alias_rows), "common_words": n_common,
         "by_type": {t: sum(1 for p in pois if p["poi_type"] == t) for t in ("BUS_STOP", "SUBWAY_STATION", "FACILITY")},
         "regions": regions, "embedding_model": None if args.no_embedding else args.embedding_model,
-        "sources": {"bus": args.bus, "subway": args.subway, "facility": args.facility},
+        "sources": {"bus": args.bus, "bus_seoul": args.bus_seoul, "subway": args.subway, "facility": args.facility},
     }
     with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)
