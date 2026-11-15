@@ -1,4 +1,4 @@
-// 시간 설정값을 한 곳에서 읽는다 (Spring의 @ConfigurationProperties 역할).
+// 시간 설정값을 한 곳에서 읽는다
 // env(VITE_*_MS)가 있으면 그 값을, 없으면 운영 기본값을 쓴다.
 // 개발 중에는 .env.development 에서 짧게 줄여서 쓴다.
 // effect 핸들러와 recorder는 숫자를 직접 쓰지 않고 반드시 이 객체만 본다.

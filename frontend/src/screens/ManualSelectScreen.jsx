@@ -15,6 +15,10 @@
 // 버튼: 목적지 → POI_SELECTED({ poi })  (reducer 가 poi 객체 전체를 selectedPoi 에 저장. ROUTING 이 .id, 화면이 .name 을 쓴다)
 //       '말로 하기' → SWITCH_TO_VOICE (reducer 가 failCount 를 0 으로)
 //       '처음으로' → GO_HOME (ScreenFrame 의 showHome 이 그린다)
+//
+// '말로 하기' 숨김: 시작 점검 결과(state.health)에서 mic 또는 stt 가 false 면 버튼을 그리지 않는다.
+//   IDLE_REDUCED(마이크·STT 불가) → 손으로 고르기 로 들어온 경우, 말로 하기를 눌러도 LISTENING 에서 실패할 뿐이기 때문.
+//   화면 표시만 바꾸며 상태 전이·reducer 는 그대로다. health 가 아직 없거나(null) 값이 null 이면 "모름" 으로 보고 버튼을 보인다.
 
 import { useEffect, useState } from 'react'
 import ScreenFrame from '../components/ScreenFrame.jsx'
@@ -27,7 +31,8 @@ import { SCREEN_TITLES } from './titles.js'
 const LOAD_ERROR_MESSAGE = '목록을 불러올 수 없어요'
 
 export default function ManualSelectScreen() {
-  const { dispatch } = useKiosk()
+  const { state, dispatch } = useKiosk()
+  const voiceAvailable = state.health?.mic !== false && state.health?.stt !== false
   // 불러오기 진행 상태와 결과. 한 객체로 묶어 두면 "status 는 ready 인데 pois 는 비어 있는" 어긋난 순간이 생기지 않는다.
   const [load, setLoad] = useState({ status: 'loading', pois: [] })
 
@@ -59,9 +64,11 @@ export default function ManualSelectScreen() {
       title={SCREEN_TITLES[STATES.MANUAL_SELECT]}
       showHome
       actions={
-        <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.SWITCH_TO_VOICE })}>
-          말로 하기
-        </button>
+        voiceAvailable ? (
+          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.SWITCH_TO_VOICE })}>
+            말로 하기
+          </button>
+        ) : null
       }
     >
       {load.status === 'loading' && <p>불러오는 중이에요</p>}

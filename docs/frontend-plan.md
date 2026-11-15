@@ -241,7 +241,7 @@ export function routingHandler(state, dispatch, api) {
 | `ROUTING` | `RoutingScreen.jsx` | "가는 길 찾는 중..." 스피너 | 없음 |
 | `REASKING` | `ReaskingScreen.jsx` | "잘 못 알아들었어요, 다시 말씀해 주세요" + 다시 말하기 / 손으로 고르기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `RETRY_SPEECH`, `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + error 메시지 + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. 무입력 60초 복귀 | `POI_SELECTED`(poi), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. `state.health`의 `mic` 또는 `stt`가 `false`면 '말로 하기'를 숨긴다 (전이 변경 없음). 무입력 60초 복귀 | `POI_SELECTED`(poi), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 1순위 크게 + 2·3순위 작게, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 자리(텍스트/URL) 표시 + 처음으로. 무입력 60초 복귀 | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 
