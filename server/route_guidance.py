@@ -27,11 +27,18 @@ class GuidedTransitRoute(TransitRoute):
             "examples": [["출발 정류장에서 101번, 102번 버스 중 한 대를 타세요. 도착 정류장에서 내리세요."]],
         }
     )
+    walking_duration_seconds: int | None = field(
+        metadata={
+            "description": "카카오맵이 제공한 도보 구간 소요 시간의 합계(초). 도보 구간 정보가 없으면 null.",
+            "examples": [180],
+        }
+    )
 
     @model_serializer(mode="wrap")
     def _serialize_guidance_first(self, serialize: SerializerFunctionWrapHandler):
         route = serialize(self)
-        guidance = {name: route.pop(name) for name in ("summary", "instructions") if name in route}
+        first_fields = ("summary", "instructions", "walking_duration_seconds")
+        guidance = {name: route.pop(name) for name in first_fields if name in route}
         return {**guidance, **route}
 
 
@@ -79,6 +86,7 @@ def add_route_guidance(route: TransitRoute) -> GuidedTransitRoute:
     mode = ROUTE_MODE_SENTENCES.get(route.type, "")
     duration = _format_duration(route.duration_seconds)
     transfers = f"{route.transfers}번 갈아타요." if route.transfers else "갈아타지 않아요."
+    walking_durations = [step.duration_seconds for step in route.steps if step.type == "WALKING"]
     return GuidedTransitRoute(
         type=route.type,
         duration_seconds=route.duration_seconds,
@@ -87,4 +95,5 @@ def add_route_guidance(route: TransitRoute) -> GuidedTransitRoute:
         steps=route.steps,
         summary=f"{mode} 약 {duration} 걸려요. {transfers}".lstrip(),
         instructions=[_step_instruction(step) for step in route.steps],
+        walking_duration_seconds=sum(walking_durations) if walking_durations else None,
     )

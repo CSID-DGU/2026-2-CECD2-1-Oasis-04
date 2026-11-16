@@ -92,6 +92,7 @@ def get_transit_routes(
     경로별로 전체 소요 시간(초), 거리(미터), 환승 횟수와 이동 구간 목록을 반환한다.
     `summary`는 교통수단·소요 시간·환승 횟수의 요약이고,
     `instructions`는 `steps` 순서에 맞춘 한국어 안내다.
+    `walking_duration_seconds`는 카카오맵이 제공한 도보 구간의 시간 합계다.
     `steps`의 `guidance`는 카카오맵이 제공한 원본 문구다.
     목적지까지의 마지막 도보 구간은 카카오맵 응답에 들어 있는 경우에만 반환된다.
     """
