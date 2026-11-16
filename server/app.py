@@ -7,12 +7,12 @@ from fastapi import FastAPI, HTTPException, Query, Request
 
 from kakao_transit import (
     KakaoTransitConfigurationError,
-    TransitRoute,
     fetch_public_transit_routes,
     parse_public_transit_routes,
 )
 from place_search import PlaceSearch
 from places import Place, load_places
+from route_guidance import GuidedTransitRoute, add_route_guidance
 
 
 @dataclass
@@ -73,8 +73,8 @@ def search_places(
 @app.get(
     "/routes/transit",
     tags=["길찾기"],
-    summary="대중교통 경로 조회",
-    response_description="카카오맵이 반환한 순서의 경로 후보 목록. 조회된 경로가 없으면 빈 배열.",
+    summary="대중교통 경로 및 한국어 안내 조회",
+    response_description="카카오맵이 반환한 순서의 경로 후보와 한국어 안내. 조회된 경로가 없으면 빈 배열.",
     responses={
         422: {"model": TransitValidationError, "description": "필수 좌표 누락, 유효하지 않은 좌표 또는 출발·도착 좌표가 동일함"},
         502: {"model": TransitError, "description": "카카오맵 대중교통 경로를 조회하거나 응답을 처리하지 못함"},
@@ -86,11 +86,13 @@ def get_transit_routes(
     start_longitude: Annotated[float, Query(ge=-180, le=180, description="출발지 경도(WGS84 십진도)", examples=[126.991])],
     end_latitude: Annotated[float, Query(ge=-90, le=90, description="도착지 위도(WGS84 십진도)", examples=[37.505])],
     end_longitude: Annotated[float, Query(ge=-180, le=180, description="도착지 경도(WGS84 십진도)", examples=[127.049])],
-) -> list[TransitRoute]:
+) -> list[GuidedTransitRoute]:
     """출발지와 도착지의 위도·경도로 카카오맵 대중교통 경로를 조회한다.
 
     경로별로 전체 소요 시간(초), 거리(미터), 환승 횟수와 이동 구간 목록을 반환한다.
-    구간별 `guidance`는 카카오맵이 제공한 안내 문구다.
+    `summary`는 교통수단·소요 시간·환승 횟수의 요약이고,
+    `instructions`는 `steps` 순서에 맞춘 한국어 안내다.
+    `steps`의 `guidance`는 카카오맵이 제공한 원본 문구다.
     목적지까지의 마지막 도보 구간은 카카오맵 응답에 들어 있는 경우에만 반환된다.
     """
     if (start_latitude, start_longitude) == (end_latitude, end_longitude):
@@ -103,8 +105,10 @@ def get_transit_routes(
             end_latitude=end_latitude,
             end_longitude=end_longitude,
         )
-        return parse_public_transit_routes(payload)
+        routes = parse_public_transit_routes(payload)
     except KakaoTransitConfigurationError as exc:
         raise HTTPException(status_code=503, detail="대중교통 길찾기 서비스가 설정되지 않았습니다.") from exc
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="카카오맵에서 대중교통 경로를 가져오지 못했습니다.") from exc
+
+    return [add_route_guidance(route) for route in routes]
