@@ -12,10 +12,6 @@ class KakaoTransitConfigurationError(ValueError):
     """카카오맵 REST API 키가 설정되지 않았을 때 발생한다."""
 
 
-class KakaoTransitResponseError(ValueError):
-    """카카오맵 응답에서 경로를 읽을 수 없을 때 발생한다."""
-
-
 @dataclass(frozen=True, slots=True)
 class TransitStep:
     """대중교통 경로의 이동 구간 한 건."""
@@ -89,31 +85,26 @@ def _parse_step(step: dict[str, Any]) -> TransitStep:
 
 def parse_public_transit_routes(payload: dict[str, Any]) -> list[TransitRoute]:
     """카카오맵 응답을 경로와 이동 구간으로 변환한다."""
-    if not isinstance(payload, dict):
-        raise KakaoTransitResponseError("Invalid Kakao transit response")
-    status = payload.get("status")
+    status = payload["status"]
     if status in ("NO_RESULTS", "STARTNODES_NULL", "ENDNODES_NULL"):
         return []
     if status != "OK":
-        raise KakaoTransitResponseError(f"Kakao transit search failed: {status}")
+        raise ValueError(f"Kakao transit search failed: {status}")
 
-    raw_routes = payload.get("routes")
+    raw_routes = payload["routes"]
     if not isinstance(raw_routes, list):
-        raise KakaoTransitResponseError("Invalid Kakao transit route list")
+        raise ValueError("Invalid Kakao transit route list")
 
     routes = []
-    try:
-        for route in raw_routes:
-            properties = route["properties"]
-            routes.append(
-                TransitRoute(
-                    type=properties["type"],
-                    duration_seconds=properties["totalTime"],
-                    distance_meters=properties["totalDistance"],
-                    transfers=properties["transfers"],
-                    steps=[_parse_step(step) for step in route["steps"]],
-                )
+    for route in raw_routes:
+        properties = route["properties"]
+        routes.append(
+            TransitRoute(
+                type=properties["type"],
+                duration_seconds=properties["totalTime"],
+                distance_meters=properties["totalDistance"],
+                transfers=properties["transfers"],
+                steps=[_parse_step(step) for step in route["steps"]],
             )
-    except (KeyError, TypeError) as exc:
-        raise KakaoTransitResponseError("Invalid Kakao transit route data") from exc
+        )
     return routes

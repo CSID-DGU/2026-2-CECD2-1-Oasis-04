@@ -13,9 +13,6 @@ def vectorize(text: str) -> dict[str, float]:
     cleaned = "".join(char for char in folded if char.isalnum())
 
     counts = Counter(cleaned[start : start + size] for size in range(1, 4) for start in range(len(cleaned) - size + 1))
-    if not counts:
-        return {}
-
     magnitude = sqrt(sum(count**2 for count in counts.values()))
     return {ngram: count / magnitude for ngram, count in counts.items()}
 
