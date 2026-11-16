@@ -12,6 +12,8 @@ from jamo import h2j, j2hcj
 _PAREN = re.compile(r"[\(\[（【][^\)\]）】]*[\)\]）】]")
 _NONWORD = re.compile(r"[^0-9A-Za-z가-힣]")
 _SPLIT = re.compile(r"[.·/,]")
+# 괄호 안에 있어도 장소 이름이 아닌 것: 노선('1호선', '경의선'), 구분('지하'), 숫자
+_NOT_A_NAME = re.compile(r"(호선|선$|^지하$|^지상$|급행|미정차|공항철도|^[0-9]+$)")
 # 음성 인식은 "종로삼가", "사호선" 처럼 한글 숫자로 적는 경우가 많다 → 표기를 숫자로 통일 (종로3가, 4호선)
 _NUM = {"일": "1", "이": "2", "삼": "3", "사": "4", "오": "5", "육": "6", "칠": "7", "팔": "8", "구": "9", "십": "10"}
 _KNUM = re.compile(r"(십[일이삼사오육칠팔구]|[일이삼사오육칠팔구]십[일이삼사오육칠팔구]?|[일이삼사오육칠팔구십])"
@@ -84,6 +86,21 @@ def to_phonetic(name: str) -> str:
     return "".join(out).translate(_PHON_MAP)
 
 
+def paren_aliases(name: str, poi_type: str) -> set[str]:
+    """지하철역 이름의 괄호 부기에서 나온 별칭: "성신여대입구(돈암)" → {"돈암", "돈암역"}. 노선·구분 표기는 뺀다.
+    근처 시설이나 옛 이름이라 목적지 해석에는 쓰지만, 짧고 흔한 말이 많아 음성 보정의 유사 검색에는 넣지 않는다."""
+    out = set()
+    if poi_type != "SUBWAY_STATION":
+        return out
+    raw = unicodedata.normalize("NFC", name or "").strip()
+    for inner in _PAREN.findall(raw):
+        a = normalize_name(inner[1:-1])
+        if len(a) >= 2 and not _NOT_A_NAME.search(a):
+            out.add(a)
+            out.add(a[:-1] if a.endswith("역") and len(a) > 2 else a + "역")
+    return out
+
+
 def make_aliases(name: str, poi_type: str) -> set[str]:
     """원래 이름을 제외한 별칭 집합. 모두 normalize_name 형태로 돌려준다."""
     out = set()
@@ -122,6 +139,7 @@ def make_aliases(name: str, poi_type: str) -> set[str]:
             if long in c:
                 out.add(c.replace(long, short))
 
+    out |= paren_aliases(raw, poi_type)     # "성신여대입구(돈암)" 의 '돈암', "동작(현충원)" 의 '현충원'
     out.discard(base)
     return {a for a in out if len(a) >= 2}
 

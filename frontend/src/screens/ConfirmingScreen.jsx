@@ -62,7 +62,8 @@ export default function ConfirmingScreen() {
 
       {candidates.length > 1 && (
         <>
-          <p>가시려는 곳을 하나 골라 주세요</p>
+          {/* 서버가 되묻는 질문("종로 몇 가로 가세요?", "○○과 △△ 중 어디로 가세요?")이 있으면 그것을 보여 준다 */}
+          <p>{state.resolve?.confirmText || '가시려는 곳을 하나 골라 주세요'}</p>
           <ul className="btn-list">
             {candidates.map((poi) => (
               // key: React 가 목록의 각 항목을 구분하는 이름표. 서버가 준 고유 id 를 쓴다 (인덱스 X).

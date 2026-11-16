@@ -23,7 +23,7 @@ import sys
 import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from normalize import make_aliases, normalize_name, to_jamo  # noqa: E402
+from normalize import make_aliases, normalize_name, paren_aliases, to_jamo  # noqa: E402
 
 DEFAULT_REGIONS = "서울"   # MVP 는 서울 소재만. 수도권으로 넓히려면 --regions 서울,인천,경기
 ALL_NAMES: set = set()     # 지역 필터와 무관한 전국 역·정류장 이름 (서울 밖 실제 지명을 오보정하지 않기 위한 목록)
@@ -278,15 +278,23 @@ def main():
         p["name_norm"] = normalize_name(p["name"])
         p["name_jamo"] = to_jamo(p["name"])
         aliases = make_aliases(p["name"], p["poi_type"]) | set(p.pop("extra_aliases", []))
+        # 정확히 같을 때만 쓰는 별칭: 괄호 부기와 extra_aliases.csv 의 통칭·옛 이름.
+        # 짧고 흔한 말이 많아서(성내, 서강, 한성대 …) 음성 보정의 유사 검색에 끼면 잘못 들은 말을 끌어당긴다
+        loose = paren_aliases(p["name"], p["poi_type"])
         # "불암산(당고개)" 처럼 괄호 안에 옛 이름이 있는 경우도 있으니 괄호 제거형과 원형 둘 다로 조회
         for key in {p["name_norm"], normalize_name(p["name"].split("(")[0])}:
             for a in extra.get(key, ()):
                 aliases.add(a)
+                loose.add(a)
                 if p["poi_type"] == "SUBWAY_STATION" and not a.endswith("역"):
                     aliases.add(a + "역")
+                    loose.add(a + "역")
         for a in aliases:
-            alias_rows.append((p["poi_id"], a, to_jamo(a)))
-    print(f"pois: {len(pois)}  aliases: {len(alias_rows)}")
+            alias_rows.append((p["poi_id"], a, to_jamo(a), a in loose))
+    # 다른 곳의 정식 이름이나 일반 별칭이기도 한 표기는 평소처럼 유사 검색에 쓴다
+    strict_terms = {p["name_norm"] for p in pois} | {a for _, a, _, lo in alias_rows if not lo}
+    exact_only = {a for _, a, _, lo in alias_rows if lo} - strict_terms
+    print(f"pois: {len(pois)}  aliases: {len(alias_rows)}  exact-only terms: {len(exact_only)}")
 
     # SQLite (API 명세 5장 테이블)
     db_path = os.path.join(out_dir, "transit.db")
@@ -305,14 +313,18 @@ def main():
     con.executemany("INSERT OR REPLACE INTO transit_poi VALUES (?,?,?,?,?,?,?,?,?,?)",
                     [(p["poi_id"], p["name"], p["name_norm"], p["name_jamo"], p["poi_type"], p["line_info"],
                       p["ars_id"], p["x"], p["y"], p["region"]) for p in pois])
-    con.executemany("INSERT INTO poi_alias (poi_id, alias, alias_jamo, alias_type) VALUES (?,?,?,'AUTO')", alias_rows)
+    con.executemany("INSERT INTO poi_alias (poi_id, alias, alias_jamo, alias_type) VALUES (?,?,?,?)",
+                    [(pid, a, j, "EXACT_ONLY" if a in exact_only else "AUTO") for pid, a, j, _ in alias_rows])
     con.commit()
 
     # 검색 단위: (표기, poi_id) — 이름 + 별칭 전부. 자모 문자열과 함께 저장
-    terms = [(p["name_norm"], p["poi_id"], p["name_jamo"]) for p in pois] + [(a, pid, j) for pid, a, j in alias_rows]
+    terms = [(p["name_norm"], p["poi_id"], p["name_jamo"]) for p in pois] + [(a, pid, j) for pid, a, j, _ in alias_rows]
     with open(os.path.join(out_dir, "terms.jsonl"), "w", encoding="utf-8") as f:
         for t, pid, j in terms:
-            f.write(json.dumps({"term": t, "poi_id": pid, "jamo": j}, ensure_ascii=False) + "\n")
+            row = {"term": t, "poi_id": pid, "jamo": j}
+            if t in exact_only:
+                row["exact_only"] = True
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
     # 임베딩 색인: 중복 이름은 한 번만 임베딩 (이름 → poi 목록은 terms.jsonl 로 복원)
     if not args.no_embedding:

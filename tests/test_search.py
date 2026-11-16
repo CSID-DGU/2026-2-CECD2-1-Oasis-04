@@ -10,7 +10,7 @@ JONGNO = (126.9918, 37.5704)
 def test_build_filters_to_seoul_and_writes_tables(kb_dir):
     meta = json.load(open(os.path.join(kb_dir, "meta.json"), encoding="utf-8"))
     assert meta["by_type"]["BUS_STOP"] == 8        # 인천·안동 정류장 제외
-    assert meta["by_type"]["SUBWAY_STATION"] == 7  # 경기 용인 강남대 제외 (주소 기준)
+    assert meta["by_type"]["SUBWAY_STATION"] == 8  # 경기 용인 강남대 제외 (주소 기준). 종로5가는 되묻기 테스트용으로 추가
     con = sqlite3.connect(os.path.join(kb_dir, "transit.db"))
     names = {r[0] for r in con.execute("SELECT name FROM transit_poi WHERE poi_type='SUBWAY_STATION'")}
     assert "강남대" not in names and "불암산" in names

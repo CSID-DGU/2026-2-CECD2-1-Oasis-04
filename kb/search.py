@@ -40,10 +40,13 @@ class TransitKB:
         self._lock = threading.Lock()
         # 표기(term) → poi_id 목록. 같은 이름의 정류장이 여럿이라 표기 단위로 비교해야 후보가 중복으로 차지 않는다
         self.term_to_pois = {}
+        self.exact_only = set()   # 정확히 같을 때만 후보가 되는 표기 (통칭·옛 이름·괄호 부기). 비슷한 말 찾기에서는 뺀다
         with open(os.path.join(self.dir, "terms.jsonl"), encoding="utf-8") as f:
             for line in f:
                 o = json.loads(line)
                 self.term_to_pois.setdefault(o["term"], set()).add(o["poi_id"])
+                if o.get("exact_only"):
+                    self.exact_only.add(o["term"])
         self.uniq = sorted(self.term_to_pois)          # build_kb.py 의 terms_uniq.json 과 같은 순서
         self.term_index = {t: i for i, t in enumerate(self.uniq)}
         self.jamo_list = [to_jamo(t) for t in self.uniq]
@@ -144,6 +147,10 @@ class TransitKB:
                 if t not in emb_sim:
                     vec = self.index.reconstruct(self.term_index[t])
                     emb_sim[t] = float(np.dot(v[0], vec))
+
+        # 통칭·옛 이름 같은 표기는 질의와 정확히 같을 때만 후보로 남긴다 ('설렁역' 이 '성내역' 으로 끌려가는 것을 막는다)
+        if self.exact_only:
+            term_sim = {t: s for t, s in term_sim.items() if s >= 0.999 or t not in self.exact_only}
 
         # 3) 표기 → POI 전개, 종합 점수
         results = []

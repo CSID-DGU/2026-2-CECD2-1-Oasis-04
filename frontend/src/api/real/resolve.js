@@ -17,14 +17,24 @@
 import { apiFetch, errorMessageOf, KIOSK_ID } from './http.js'
 import { toPoi } from './poi.js'
 
+// 되묻기 이어가기: 서버가 "종로 몇 가로 가세요?" 처럼 물으면(ask.type === 'NUMBER') 그 ask 를 기억해 두었다가
+// 다음 호출에 context 로 돌려보낸다. 그러면 "삼가요" 같은 짧은 답을 서버가 '종로3가' 로 이어서 해석한다.
+// 한 번 쓰면 지운다 (그다음 말은 새 목적지로 본다).
+let pendingAsk = null
+
+/** 기억해 둔 되묻기를 지운다 (테스트와 처음 화면 복귀용) */
+export function clearResolveContext() {
+  pendingAsk = null
+}
+
 export async function resolve(text) {
   const query = (text ?? '').trim()
   if (query === '') return { status: 'NOT_UNDERSTOOD' }
 
-  const body = await apiFetch('/resolve', {
-    method: 'POST',
-    json: { text: query, kiosk_id: KIOSK_ID, input_mode: 'VOICE' },
-  })
+  const json = { text: query, kiosk_id: KIOSK_ID, input_mode: 'VOICE' }
+  if (pendingAsk) json.context = pendingAsk
+  pendingAsk = null
+  const body = await apiFetch('/resolve', { method: 'POST', json })
 
   if (!body.success) {
     const code = body.error?.code
@@ -39,7 +49,9 @@ export async function resolve(text) {
     return { status: 'NOT_UNDERSTOOD', transcript: query, intent: d.intent ?? null }
   }
   if (d.need_confirm) {
-    return { status: 'OK', needConfirm: true, candidates, confirmText: d.confirm_text ?? null, transcript: query }
+    if (d.ask?.type === 'NUMBER') pendingAsk = d.ask
+    // confirmText: 화면에 보여 줄 질문. 후보가 여럿이면 "○○과 △△ 중 어디로 가세요?", 줄기만 말했으면 "종로 몇 가로 가세요?"
+    return { status: 'OK', needConfirm: true, candidates, confirmText: d.confirm_text ?? null, ask: d.ask ?? null, transcript: query }
   }
   return { status: 'OK', needConfirm: false, poi: candidates[0], candidates, transcript: query }
 }

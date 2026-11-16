@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { health } from '../health.js'
 import { stt } from '../stt.js'
-import { resolve } from '../resolve.js'
+import { resolve, clearResolveContext } from '../resolve.js'
 import { getPois } from '../pois.js'
 import { route } from '../route.js'
 import { createQr } from '../qr.js'
@@ -280,5 +280,48 @@ describe('real API: getLocation (현재 위치)', () => {
     mockFetch(fail('KIOSK_NOT_FOUND', '기기 설정에 문제가 있어요. 직원에게 알려 주세요.'), 404)
 
     await expect(getLocation()).rejects.toThrow('기기 설정에 문제가 있어요')
+  })
+})
+
+describe('real API: resolve 되묻기 (ask · context)', () => {
+  const sentBody = (fetchFn, i = 0) => JSON.parse(fetchFn.mock.calls[i][1].body)
+  const JONGNO3 = { poi_id: 'SUB_0130_1호선', name: '종로3가', display_name: '종로3가역 (1호선)', poi_type: 'SUBWAY_STATION', x: 126.99, y: 37.57, score: 1 }
+  const JONGNO5 = { poi_id: 'SUB_0129_1호선', name: '종로5가', display_name: '종로5가역 (1호선)', poi_type: 'SUBWAY_STATION', x: 127.0, y: 37.57, score: 1 }
+  const ASK = { type: 'NUMBER', stem: '종로', unit: '가', numbers: [1, 2, 3, 4, 5, 6], text: '종로 몇 가로 가세요? 1가부터 6가까지 있어요.' }
+
+  beforeEach(() => clearResolveContext())
+  afterEach(() => {
+    vi.unstubAllGlobals()
+    vi.restoreAllMocks()
+  })
+
+  it('서버가 되물으면 질문 문장과 선택지를 그대로 전달한다', async () => {
+    mockFetch(ok({ intent: 'NAVIGATE', need_confirm: true, confirm_text: ASK.text, ask: ASK, destination_candidates: [JONGNO3, JONGNO5] }))
+    const r = await resolve('종로 가려는데요')
+    expect(r).toMatchObject({ status: 'OK', needConfirm: true, confirmText: ASK.text, ask: ASK })
+    expect(r.candidates.map((c) => c.name)).toEqual(['종로3가역', '종로5가역'])
+  })
+
+  it("'몇 가' 질문 뒤의 다음 말에는 context 를 붙여 보내고, 한 번 쓰면 지운다", async () => {
+    mockFetch(ok({ intent: 'NAVIGATE', need_confirm: true, confirm_text: ASK.text, ask: ASK, destination_candidates: [JONGNO3, JONGNO5] }))
+    await resolve('종로 가려는데요')
+
+    const second = mockFetch(ok({ intent: 'NAVIGATE', need_confirm: false, confirm_text: null, destination_candidates: [JONGNO3] }))
+    const r = await resolve('삼가요')
+    expect(sentBody(second).context).toEqual(ASK)
+    expect(r).toMatchObject({ status: 'OK', needConfirm: false })
+
+    const third = mockFetch(ok({ intent: 'NAVIGATE', need_confirm: false, confirm_text: null, destination_candidates: [JONGNO5] }))
+    await resolve('종로5가 가려는데요')
+    expect(sentBody(third).context).toBeUndefined()
+  })
+
+  it('고르기 질문(CHOICE)은 이어 보낼 context 를 남기지 않는다', async () => {
+    const choice = { type: 'CHOICE', text: '종로3가역과 종로5가역 중 어디로 가세요?' }
+    mockFetch(ok({ intent: 'NAVIGATE', need_confirm: true, confirm_text: choice.text, ask: choice, destination_candidates: [JONGNO3, JONGNO5] }))
+    await resolve('종로')
+    const next = mockFetch(ok({ intent: 'NAVIGATE', need_confirm: false, confirm_text: null, destination_candidates: [JONGNO3] }))
+    await resolve('종로3가')
+    expect(sentBody(next).context).toBeUndefined()
   })
 })

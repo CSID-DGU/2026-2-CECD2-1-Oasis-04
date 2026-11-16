@@ -32,6 +32,8 @@ from pydantic import BaseModel, Field
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(os.path.dirname(HERE), "kb"))
+from destination import (apply_context, category_question, choice_text, exact_candidates,  # noqa: E402
+                         number_families, number_question, outside_region)
 from intent import classify, confirm_text  # noqa: E402
 from normalize import normalize_name  # noqa: E402
 from origin import MAX_ACCURACY_M, MAX_DISTANCE_M, SNAP_M, locate  # noqa: E402
@@ -211,6 +213,8 @@ class ResolveRequest(BaseModel):
     kiosk_id: str
     input_mode: str = Field("VOICE", description="VOICE / TOUCH")
     entities: Optional[list[Entity]] = Field(None, description="/stt 응답의 entities 를 그대로 넘기면 재검색을 줄인다")
+    # 직전 응답의 ask 를 그대로 돌려보낸다. '종로 몇 가로 가세요?' 뒤의 '삼가요' 같은 짧은 답을 잇는 데 쓴다
+    context: Optional[dict] = Field(None, description="직전 /resolve 응답의 ask (되묻기에 대한 짧은 답을 이을 때)")
 
 
 def display_name(p: dict) -> str:
@@ -365,6 +369,7 @@ def resolve(req: ResolveRequest):
     text = req.text.strip()
     if not text:
         return fail("VALIDATION_ERROR", "text is empty", t0)
+    text = apply_context(text, req.context)    # 되묻기에 대한 짧은 답: '삼가요' + {stem: 종로} → '종로3가'
 
     # 후보: /stt 가 넘긴 entities 재사용 → 없으면 장소 구간 추출(단서·유사도 조건) → 터치 입력은 문장 전체로 검색
     cands = []
@@ -374,6 +379,23 @@ def resolve(req: ResolveRequest):
                 p = S.kb.poi(c.poi_id)
                 if p:
                     cands.append({**p, "score": c.score, "distance_m": None, "matched": c.matched})
+    if not cands:
+        # 지식베이스 표기·별칭과 정확히 같은 말이 있으면 그것이 목적지다 ('시청', '고터', 옛 이름 '신천역' 등)
+        cands = exact_candidates(text, S.kb, xy)
+    # 되묻기 1: 'N가' 가 여럿인 이름의 줄기만 말했다 ('종로 가려는데요') → "종로 몇 가로 가세요?"
+    question = None
+    if not req.entities and (not cands or cands[0].get("matched") in number_families(S.kb)):
+        question = number_question(text, S.kb, xy)
+    region = outside_region(text) if not cands and question is None else None
+    if region:
+        # '대전시청', '부산역'처럼 서울 밖 지역을 말했다. 비슷한 서울 정류장을 억지로 내놓지 않는다
+        return fail("OUT_OF_SCOPE", f"outside service area: {region}", t0)
+    # 되묻기 2: 종류만 말했다 ('터미널 가려는데요') → "어느 터미널로 가세요?"
+    if question is None and not cands:
+        question = category_question(text, S.kb, xy)
+    if question:
+        return ok({"intent": "NAVIGATE", "need_confirm": True, "confirm_text": question["ask"]["text"], "ask": question["ask"],
+                   "destination_candidates": [to_candidate(c) for c in question["candidates"]]}, t0)
     if not cands and S.rc is not None:
         for s in S.rc.extract_spans(text, xy):
             cands.extend(s["candidates"])
@@ -404,7 +426,11 @@ def resolve(req: ResolveRequest):
     top = groups[0]
     need = top["score"] < CONFIRM_THRESHOLD or (len(groups) > 1 and top["score"] - groups[1]["score"] < CONFIRM_MARGIN)
     out = [to_candidate(c) for c in groups]
-    return ok({"intent": "NAVIGATE", "need_confirm": need, "confirm_text": confirm_text(confirm_name(out[0]["display_name"])),
+    names = [confirm_name(c["display_name"]) for c in out]
+    several = need and len(out) > 1
+    # 후보가 여럿이면 하나를 골라 "맞으세요?" 하지 않고 "○○과 △△ 중 어디로 가세요?" 하고 묻는다
+    ask = {"type": "CHOICE" if several else "CONFIRM", "text": choice_text(names) if several else confirm_text(names[0])}
+    return ok({"intent": "NAVIGATE", "need_confirm": need, "confirm_text": ask["text"], "ask": ask,
                "destination_candidates": out}, t0)
 
 
