@@ -76,7 +76,78 @@ def search_places(
     summary="대중교통 경로 및 한국어 안내 조회",
     response_description="환승 횟수, 총 소요 시간 순으로 오름차순 정렬한 경로와 한국어 안내. 경로가 없으면 빈 배열.",
     responses={
-        422: {"model": TransitValidationError, "description": "필수 좌표 누락, 유효하지 않은 좌표 또는 출발·도착 좌표가 동일함"},
+        200: {
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "bus_route": {
+                            "summary": "환승 없는 버스 경로",
+                            "value": [
+                                {
+                                    "summary": "버스만 이용해요. 약 20분 걸려요. 갈아타지 않아요.",
+                                    "instructions": [
+                                        "출발 정류장까지 약 100미터 걸으세요.",
+                                        "출발 정류장에서 101번, 102번 버스 중 한 대를 타세요. 도착 정류장에서 내리세요.",
+                                    ],
+                                    "walking_duration_seconds": 90,
+                                    "type": "BUS",
+                                    "duration_seconds": 1200,
+                                    "distance_meters": 4200,
+                                    "transfers": 0,
+                                    "steps": [
+                                        {
+                                            "type": "WALKING",
+                                            "guidance": "출발 정류장까지 도보 이동",
+                                            "duration_seconds": 90,
+                                            "distance_meters": 100,
+                                            "stop_names": ["출발 정류장"],
+                                            "vehicle_names": [],
+                                        },
+                                        {
+                                            "type": "BUS",
+                                            "guidance": "버스 101, 102 (출발 > 도착)",
+                                            "duration_seconds": 1110,
+                                            "distance_meters": 4100,
+                                            "stop_names": ["출발", "도착"],
+                                            "vehicle_names": ["101", "102"],
+                                        },
+                                    ],
+                                }
+                            ],
+                        },
+                        "no_routes": {"summary": "조회된 경로 없음", "value": []},
+                    }
+                }
+            }
+        },
+        422: {
+            "model": TransitValidationError,
+            "description": "필수 좌표 누락, 유효하지 않은 좌표 또는 출발·도착 좌표가 동일함",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "out_of_range": {
+                            "summary": "출발지 위도가 허용 범위를 벗어남",
+                            "value": {
+                                "detail": [
+                                    {
+                                        "type": "less_than_equal",
+                                        "loc": ["query", "start_latitude"],
+                                        "msg": "Input should be less than or equal to 90",
+                                        "input": "91",
+                                        "ctx": {"le": 90.0},
+                                    }
+                                ]
+                            },
+                        },
+                        "same_coordinates": {
+                            "summary": "출발지와 도착지 좌표가 같음",
+                            "value": {"detail": "출발지와 도착지 좌표는 달라야 합니다."},
+                        },
+                    }
+                }
+            },
+        },
         502: {"model": TransitError, "description": "카카오맵 대중교통 경로를 조회하거나 응답을 처리하지 못함"},
         503: {"model": TransitError, "description": "서버에 카카오맵 REST API 키가 설정되지 않음"},
     },
@@ -95,6 +166,7 @@ def get_transit_routes(
     `summary`는 교통수단·소요 시간·환승 횟수의 요약이고,
     `instructions`는 `steps` 순서에 맞춘 한국어 안내다.
     `walking_duration_seconds`는 카카오맵이 제공한 도보 구간의 시간 합계다.
+    도보 구간 정보가 없으면 `null`이 반환된다. 실제 도보 시간이 0초라는 의미가 아니다.
     `steps`의 `guidance`는 카카오맵이 제공한 원본 문구다.
     목적지까지의 마지막 도보 구간은 카카오맵 응답에 들어 있는 경우에만 반환된다.
     """
