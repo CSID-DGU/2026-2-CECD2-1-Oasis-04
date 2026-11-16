@@ -1,11 +1,13 @@
 """STT 파트 API (명세 v0.1 의 /health, /stt, /resolve + 프론트 연동용 /pois, /location). FastAPI 라우터 + 단독 실행.
 
-서버 파트는 이 라우터를 마운트하면 된다 (FastAPI lifespan 안에서 startup() 호출):
-    from stt.api import router, startup
-    app.include_router(router)   # 서버의 lifespan 에서 startup() 을 한 번 부른다
-단독 실행 (Swagger: http://localhost:8000/docs):
+대중교통 경로는 경로 서버(server/app.py, 기본 8000번 포트)가 따로 맡는다. 이 서버는 그와 겹치지 않게 8001번을 쓴다.
+단독 실행 (Swagger: http://localhost:8001/docs):
     cd ~/senior-voice && .venv/bin/python stt/api.py
+다른 FastAPI 앱에 붙이려면 이 라우터를 마운트한다 (그 앱의 lifespan 안에서 startup() 을 한 번 호출):
+    from stt.api import router, startup
+    app.include_router(router)
 환경변수:
+    PORT              단독 실행할 때의 포트 (기본 8001)
     STT_CONFIG        설정 파일 (기본 stt/config.yaml)
     STT_ADAPTER       LoRA 어댑터 폴더 (없으면 기본 Whisper)
     STT_MODEL         기본 모델 덮어쓰기
@@ -278,7 +280,8 @@ def report_location(kiosk_id: str, x: Optional[float] = None, y: Optional[float]
                     accuracy: Optional[float] = None):
     """키오스크가 알린 브라우저 위치를 반영한다 → (지금부터 쓸 출발지, 고정 위치를 쓰게 된 이유 또는 None, 오류 코드 또는 None).
 
-    쓸 만한 위치면 가장 가까운 정류장·역에 맞춰 기억해 두고, 이후 /stt·/resolve·/pois·/route 가 그 위치를 출발지로 쓴다.
+    쓸 만한 위치면 가장 가까운 정류장·역에 맞춰 기억해 두고, 이후 /stt·/resolve·/pois 가 그 위치를 출발지로 쓴다.
+    화면은 돌려받은 출발지 좌표(x, y)를 경로 서버(server/app.py)에 경로를 물을 때 출발지로 쓴다.
     위치가 없거나 쓸 수 없으면(오차가 큼·안내 범위 밖) 기억해 둔 위치를 지우고 설정 파일의 고정 위치로 돌아간다.
     """
     reason = "NO_POSITION"
@@ -310,7 +313,7 @@ def health():
         "stt": {"loaded": S.loaded, "engine": S.engine, "model": S.model_name},
         "knowledge_base": {"loaded": S.kb is not None, "poi_count": S.kb_meta.get("pois", 0),
                            "base_date": S.kb_meta.get("built_at", "")},
-        "route": getattr(S, "route_info", None),  # 경로 안내까지 띄운 전체 서버(server/app.py)에서 채운다
+        "route": getattr(S, "route_info", None),  # 이 라우터를 경로 안내와 함께 띄운 앱이 채운다. 단독 실행이면 null
     }
     return ok(data, t0)
 
@@ -478,7 +481,7 @@ async def on_error(request: Request, exc: Exception):
 
 def create_app(extra_routers=(), title="Senior Voice STT API",
                description="어르신 음성 → 전사(RAG 보정) → 의도·목적지 후보. 명세 v0.1 의 /stt, /resolve, /health"):
-    """앱을 조립한다. 서버 파트(server/app.py)는 extra_routers 로 /route 등을 더해 같은 앱을 만든다.
+    """앱을 조립한다. 다른 라우터를 함께 띄우려면 extra_routers 로 넘긴다.
     정적 화면 마운트('/')는 모든 경로를 받으므로 반드시 라우터를 다 붙인 뒤 마지막에 한다."""
     new_app = FastAPI(title=title, version=VERSION, lifespan=lifespan, description=description)
     new_app.include_router(router)
@@ -491,17 +494,18 @@ def create_app(extra_routers=(), title="Senior Voice STT API",
                if o.strip()]
     new_app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["GET", "POST"], allow_headers=["*"])
 
-    # 키오스크 화면(frontend 의 빌드 결과물)이 있으면 같은 서버에서 함께 내보낸다 → http://localhost:8000 하나로 접속.
-    # 마이크는 같은 출처의 https 또는 localhost 에서만 열리므로, 시연은 이 방식이 가장 간단하다.
+    # 키오스크 화면(frontend 의 빌드 결과물)이 있으면 같은 서버에서 함께 내보낸다 → http://localhost:8001 로 접속.
+    # 마이크는 같은 출처의 https 또는 localhost 에서만 열린다. 이 방식에서 경로 조회는 다른 출처(경로 서버)로 가므로
+    # 화면을 빌드할 때 VITE_ROUTE_API_BASE_URL 에 경로 서버 주소를 적고, 경로 서버가 이 출처를 허용(CORS)해야 한다.
     dist = os.environ.get("FRONTEND_DIST") or os.path.join(os.path.dirname(HERE), "frontend", "dist")
     if os.path.isdir(dist):
         new_app.mount("/", StaticFiles(directory=dist, html=True), name="frontend")
     return new_app
 
 
-app = create_app()   # STT 만 단독으로 띄울 때. 경로 안내까지 포함한 전체 서버는 server/app.py
+app = create_app()   # STT 서버. 대중교통 경로는 경로 서버(server/app.py)가 따로 맡는다
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8000")))
+    uvicorn.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", "8001")))

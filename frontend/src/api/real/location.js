@@ -2,8 +2,9 @@
 //
 // 1) 브라우저 위치 기능(navigator.geolocation: GPS·와이파이 추정)으로 좌표를 받는다.
 //    localhost 나 https 에서만 동작하고, 처음 한 번 브라우저가 위치 허용을 묻는다.
-// 2) 좌표를 서버에 알린다. 서버는 가장 가까운 정류장·역에 맞춘 출발지를 이 키오스크의 현재 위치로 기억하고,
-//    이후 /stt·/resolve·/pois·/route 에서 그 위치를 쓴다. 그래서 다른 real/*.js 는 좌표를 따로 보내지 않는다.
+// 2) 좌표를 STT 서버에 알린다. 서버는 가장 가까운 정류장·역에 맞춘 출발지를 이 키오스크의 현재 위치로 기억하고,
+//    이후 /stt·/resolve·/pois 에서 그 위치를 쓴다. 그래서 그 호출들은 좌표를 따로 보내지 않는다.
+//    경로 조회만은 다른 서버(server/app.py)가 맡아서, 서버가 돌려준 출발지 좌표를 여기서 기억해 두고 route.js 가 꺼내 쓴다.
 // 3) 위치를 못 받았거나 서버가 쓸 수 없다고 판단하면(오차가 큼·서울 밖) 서버 설정의 키오스크 고정 위치가 쓰인다.
 //    좌표 없이도 서버에 알리는 이유: 전에 기억해 둔 위치를 지우고 고정 위치로 돌아가게 하려는 것.
 //
@@ -19,6 +20,18 @@ import { apiFetch, errorMessageOf, KIOSK_ID } from './http.js'
 
 const POSITION_TIMEOUT_MS = 8000
 const GEO_ERROR = { 1: 'PERMISSION_DENIED', 2: 'POSITION_UNAVAILABLE', 3: 'TIMEOUT' }
+
+let lastOrigin = null
+
+/** 서버가 마지막으로 정해 준 출발지 { name, x(경도), y(위도) }. 아직 위치를 알린 적이 없으면 null (route.js 전용) */
+export function getOrigin() {
+  return lastOrigin
+}
+
+/** 기억해 둔 출발지를 지운다 (테스트용) */
+export function clearOrigin() {
+  lastOrigin = null
+}
 
 /** 브라우저 위치를 한 번 읽는다. 실패해도 throw 하지 않고 이유를 돌려준다 → { position: {x, y, accuracy} | null, reason } */
 export function readPosition(timeoutMs = POSITION_TIMEOUT_MS) {
@@ -52,6 +65,7 @@ export async function getLocation() {
   if (!body.success) throw new Error(errorMessageOf(body, 'LOCATION_ERROR'))
 
   const d = body.data ?? {}
+  if (Number.isFinite(d.x) && Number.isFinite(d.y)) lastOrigin = { name: d.name ?? '', x: d.x, y: d.y }
   const result = {
     name: d.name ?? '',
     text: d.easy_text ?? (d.name ? `지금 계신 곳: ${d.name}` : ''),

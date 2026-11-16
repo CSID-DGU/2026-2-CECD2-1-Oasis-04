@@ -8,7 +8,7 @@
   @OUT  = 안내 범위 밖이라고 답해야 함 (후보를 내면 오답)
   @NONE = 목적지로 잡지 않아야 함 (네·아니요 같은 대화)
 
-usage:  python stt/eval_destinations.py [--base http://localhost:8000] [--out runs/eval/destinations.json]
+usage:  python stt/eval_destinations.py [--base http://localhost:8001] [--out runs/eval/destinations.json]
 """
 import argparse
 import collections
@@ -51,7 +51,7 @@ def resolve(base: str, text: str, kiosk: str) -> dict:
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--base", default="http://localhost:8000")
+    ap.add_argument("--base", default="http://localhost:8001")
     ap.add_argument("--cases", default=CASES)
     ap.add_argument("--kiosk", default="KIOSK_JONGNO_01")
     ap.add_argument("--out", default="")

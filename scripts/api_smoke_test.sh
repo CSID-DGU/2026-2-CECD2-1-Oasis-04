@@ -1,6 +1,7 @@
 #!/bin/bash
 # STT API 동작 확인: /health, /stt (wav, webm), /resolve
-BASE=http://localhost:8000/api/v1
+HOST=${STT_SERVER_URL:-http://localhost:8001}
+BASE=$HOST/api/v1
 PY=~/senior-voice/.venv/bin/python
 T=/tmp/stt_test; mkdir -p "$T"
 
@@ -41,5 +42,5 @@ done
 echo "== /resolve TOUCH =="
 curl -s -X POST "$BASE/resolve" -H "Content-Type: application/json" -d '{"text": "서울대병원", "kiosk_id": "KIOSK_JONGNO_01", "input_mode": "TOUCH"}' | "$PY" -m json.tool --no-ensure-ascii | head -30
 echo "== /docs =="
-curl -s -o /dev/null -w "docs HTTP %{http_code}\n" http://localhost:8000/docs
-curl -s http://localhost:8000/openapi.json | "$PY" -c "import sys,json; d=json.load(sys.stdin); print('openapi paths:', list(d['paths']))"
+curl -s -o /dev/null -w "docs HTTP %{http_code}\n" "$HOST/docs"
+curl -s "$HOST/openapi.json" | "$PY" -c "import sys,json; d=json.load(sys.stdin); print('openapi paths:', list(d['paths']))"
