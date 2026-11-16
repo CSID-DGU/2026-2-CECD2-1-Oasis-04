@@ -1,15 +1,11 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
-from typing import Annotated, Any, Literal
+from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, Query, Request
 
-from kakao_transit import (
-    KakaoTransitConfigurationError,
-    fetch_public_transit_routes,
-    parse_public_transit_routes,
-)
+from kakao_transit import fetch_public_transit_routes, parse_public_transit_routes
 from place_search import PlaceSearch
 from places import Place, load_places
 from route_guidance import GuidedTransitRoute, add_route_guidance
@@ -18,16 +14,6 @@ from route_guidance import GuidedTransitRoute, add_route_guidance
 @dataclass
 class HealthStatus:
     status: Literal["ok"]
-
-
-@dataclass
-class TransitError:
-    detail: str
-
-
-@dataclass
-class TransitValidationError:
-    detail: str | list[dict[str, Any]]
 
 
 @asynccontextmanager
@@ -108,36 +94,6 @@ def search_places(
                 }
             }
         },
-        422: {
-            "model": TransitValidationError,
-            "description": "필수 좌표 누락, 유효하지 않은 좌표 또는 출발·도착 좌표가 동일함",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "out_of_range": {
-                            "summary": "출발지 위도가 허용 범위를 벗어남",
-                            "value": {
-                                "detail": [
-                                    {
-                                        "type": "less_than_equal",
-                                        "loc": ["query", "start_latitude"],
-                                        "msg": "Input should be less than or equal to 90",
-                                        "input": "91",
-                                        "ctx": {"le": 90.0},
-                                    }
-                                ]
-                            },
-                        },
-                        "same_coordinates": {
-                            "summary": "출발지와 도착지 좌표가 같음",
-                            "value": {"detail": "출발지와 도착지 좌표는 달라야 합니다."},
-                        },
-                    }
-                }
-            },
-        },
-        502: {"model": TransitError, "description": "카카오맵 대중교통 경로를 조회하거나 응답을 처리하지 못함"},
-        503: {"model": TransitError, "description": "서버에 카카오맵 REST API 키가 설정되지 않음"},
     },
 )
 def get_transit_routes(
@@ -156,21 +112,12 @@ def get_transit_routes(
     `steps`의 `guidance`는 카카오맵이 제공한 원본 문구다.
     목적지까지의 마지막 도보 구간은 카카오맵 응답에 들어 있는 경우에만 반환된다.
     """
-    if (start_latitude, start_longitude) == (end_latitude, end_longitude):
-        raise HTTPException(status_code=422, detail="출발지와 도착지 좌표는 달라야 합니다.")
-
-    try:
-        payload = fetch_public_transit_routes(
-            start_latitude=start_latitude,
-            start_longitude=start_longitude,
-            end_latitude=end_latitude,
-            end_longitude=end_longitude,
-        )
-        routes = parse_public_transit_routes(payload)
-    except KakaoTransitConfigurationError as exc:
-        raise HTTPException(status_code=503, detail="대중교통 길찾기 서비스가 설정되지 않았습니다.") from exc
-    except (OSError, ValueError, KeyError, TypeError) as exc:
-        raise HTTPException(status_code=502, detail="카카오맵에서 대중교통 경로를 가져오지 못했습니다.") from exc
-
+    payload = fetch_public_transit_routes(
+        start_latitude=start_latitude,
+        start_longitude=start_longitude,
+        end_latitude=end_latitude,
+        end_longitude=end_longitude,
+    )
+    routes = parse_public_transit_routes(payload)
     routes.sort(key=lambda route: (route.transfers, route.duration_seconds))
     return [add_route_guidance(route) for route in routes]

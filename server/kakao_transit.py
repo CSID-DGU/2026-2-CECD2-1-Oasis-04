@@ -1,15 +1,11 @@
 import json
 from dataclasses import dataclass, field
-from os import getenv
+from os import environ
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 PUBLIC_TRANSIT_URL = "https://dapi.kakao.com/v2/routing/publictraffic"
-
-
-class KakaoTransitConfigurationError(ValueError):
-    """카카오맵 REST API 키가 설정되지 않았을 때 발생한다."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -50,9 +46,7 @@ def fetch_public_transit_routes(
     api_key: str | None = None,
 ) -> dict[str, Any]:
     """출발지와 도착지 좌표로 카카오맵 대중교통 경로를 조회한다."""
-    key = (api_key if api_key is not None else getenv("KAKAO_REST_API_KEY", "")).strip()
-    if not key:
-        raise KakaoTransitConfigurationError("KAKAO_REST_API_KEY is not configured")
+    key = api_key if api_key is not None else environ["KAKAO_REST_API_KEY"]
 
     params = urlencode(
         {
@@ -85,18 +79,11 @@ def _parse_step(step: dict[str, Any]) -> TransitStep:
 
 def parse_public_transit_routes(payload: dict[str, Any]) -> list[TransitRoute]:
     """카카오맵 응답을 경로와 이동 구간으로 변환한다."""
-    status = payload["status"]
-    if status in ("NO_RESULTS", "STARTNODES_NULL", "ENDNODES_NULL"):
+    if payload["status"] in ("NO_RESULTS", "STARTNODES_NULL", "ENDNODES_NULL"):
         return []
-    if status != "OK":
-        raise ValueError(f"Kakao transit search failed: {status}")
-
-    raw_routes = payload["routes"]
-    if not isinstance(raw_routes, list):
-        raise ValueError("Invalid Kakao transit route list")
 
     routes = []
-    for route in raw_routes:
+    for route in payload["routes"]:
         properties = route["properties"]
         routes.append(
             TransitRoute(

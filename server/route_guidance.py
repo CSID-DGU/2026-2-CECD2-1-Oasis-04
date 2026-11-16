@@ -71,11 +71,11 @@ def _step_instruction(step: TransitStep) -> str:
         end = f"{stops[-1].removesuffix(stop_suffix).rstrip()}{separator}{stop_suffix}"
         return f"{start}에서 {boarding} {end}에서 내리세요."
 
-    return step.guidance.strip() or "이 구간의 상세 안내를 확인해 주세요."
+    return step.guidance
 
 
 def add_route_guidance(route: TransitRoute) -> GuidedTransitRoute:
-    mode = ROUTE_MODE_SENTENCES.get(route.type, "")
+    mode = ROUTE_MODE_SENTENCES[route.type]
     duration = _format_duration(route.duration_seconds)
     transfers = f"{route.transfers}번 갈아타요." if route.transfers else "갈아타지 않아요."
     return GuidedTransitRoute(
@@ -84,6 +84,6 @@ def add_route_guidance(route: TransitRoute) -> GuidedTransitRoute:
         distance_meters=route.distance_meters,
         transfers=route.transfers,
         steps=route.steps,
-        summary=f"{mode} 약 {duration} 걸려요. {transfers}".lstrip(),
+        summary=f"{mode} 약 {duration} 걸려요. {transfers}",
         instructions=[_step_instruction(step) for step in route.steps],
     )
