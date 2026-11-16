@@ -22,7 +22,11 @@ def vectorize(text: str) -> dict[str, float]:
 
 class PlaceSearch:
     def __init__(self, places: Iterable[Place]) -> None:
-        self._entries = [(place, vectorize(place.name)) for place in places]
+        unique_places: dict[tuple[str, str], Place] = {}
+        for place in places:
+            unique_places.setdefault((place.name, place.type), place)
+
+        self._entries = [(place, vectorize(place.name)) for place in unique_places.values()]
 
     def search(self, text: str) -> list[Place]:
         """코사인 유사도 상위 5개를 반환한다. 동점이면 로딩 순서를 유지한다."""
