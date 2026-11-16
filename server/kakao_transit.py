@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import getenv
 from typing import Any
 from urllib.parse import urlencode
@@ -18,21 +18,31 @@ class KakaoTransitResponseError(ValueError):
 
 @dataclass(frozen=True, slots=True)
 class TransitStep:
-    type: str
-    guidance: str
-    duration_seconds: int
-    distance_meters: int
-    stop_names: list[str]
-    vehicle_names: list[str]
+    """대중교통 경로의 이동 구간 한 건."""
+
+    type: str = field(metadata={"description": "구간 유형. `BUS`(버스), `SUBWAY`(전철), `WALKING`(도보).", "examples": ["BUS"]})
+    guidance: str = field(
+        metadata={"description": "카카오맵 원본 구간 안내 문구. 제공되지 않으면 빈 문자열.", "examples": ["간선 101 (출발 정류장 > 도착 정류장)"]}
+    )
+    duration_seconds: int = field(metadata={"description": "이 구간의 예상 소요 시간(초)", "examples": [1200]})
+    distance_meters: int = field(metadata={"description": "이 구간의 이동 거리(미터)", "examples": [4200]})
+    stop_names: list[str] = field(
+        metadata={"description": "카카오맵 순서의 정류장·역 이름 목록. 값이 없으면 빈 배열.", "examples": [["출발 정류장", "도착 정류장"]]}
+    )
+    vehicle_names: list[str] = field(
+        metadata={"description": "버스 번호·전철 노선 이름 목록. 중복 이름이 있을 수 있으며 값이 없으면 빈 배열.", "examples": [["101", "102"]]}
+    )
 
 
 @dataclass(frozen=True, slots=True)
 class TransitRoute:
-    type: str
-    duration_seconds: int
-    distance_meters: int
-    transfers: int
-    steps: list[TransitStep]
+    """카카오맵 대중교통 경로 후보 한 건."""
+
+    type: str = field(metadata={"description": "경로 유형. `BUS`(버스만), `SUBWAY`(전철만), `BUS_AND_SUBWAY`(버스+전철).", "examples": ["BUS"]})
+    duration_seconds: int = field(metadata={"description": "카카오맵이 반환한 경로 전체 예상 소요 시간(초)", "examples": [1200]})
+    distance_meters: int = field(metadata={"description": "카카오맵이 반환한 경로 전체 이동 거리(미터)", "examples": [4200]})
+    transfers: int = field(metadata={"description": "카카오맵이 반환한 전체 환승 횟수. 0이면 환승 없음.", "examples": [0]})
+    steps: list[TransitStep] = field(metadata={"description": "승객의 이동 순서대로 정렬된 경로 구간 목록"})
 
 
 def fetch_public_transit_routes(

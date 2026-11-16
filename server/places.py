@@ -1,5 +1,5 @@
 import csv
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
 
@@ -9,11 +9,13 @@ PlaceType = Literal["bus_stop", "subway_station"]
 
 @dataclass(frozen=True, slots=True)
 class Place:
-    type: PlaceType
-    id: str
-    name: str
-    latitude: float
-    longitude: float
+    """버스정류장 또는 지하철역 검색 결과 한 건."""
+
+    type: PlaceType = field(metadata={"description": "`bus_stop`은 버스정류장, `subway_station`은 지하철역", "examples": ["bus_stop"]})
+    id: str = field(metadata={"description": "원본 CSV의 장소 ID. 앞에 붙은 0까지 보존하는 문자열.", "examples": ["100000001"]})
+    name: str = field(metadata={"description": "버스정류장 또는 지하철역 이름", "examples": ["종로2가사거리"]})
+    latitude: float = field(metadata={"description": "장소 위도(십진도)", "examples": [37.5698055407]})
+    longitude: float = field(metadata={"description": "장소 경도(십진도)", "examples": [126.9877522923]})
 
 
 def _read_places(filename: str, place_type: PlaceType, id_column: str, name_column: str) -> list[Place]:
