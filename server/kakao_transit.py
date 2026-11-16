@@ -8,6 +8,10 @@ from urllib.request import Request, urlopen
 PUBLIC_TRANSIT_URL = "https://dapi.kakao.com/v2/routing/publictraffic"
 
 
+class KakaoTransitConfigurationError(ValueError):
+    """카카오맵 REST API 키가 설정되지 않았을 때 발생한다."""
+
+
 class KakaoTransitResponseError(ValueError):
     """카카오맵 응답에서 경로를 읽을 수 없을 때 발생한다."""
 
@@ -42,7 +46,7 @@ def fetch_public_transit_routes(
     """출발지와 도착지 좌표로 카카오맵 대중교통 경로를 조회한다."""
     key = (api_key if api_key is not None else getenv("KAKAO_REST_API_KEY", "")).strip()
     if not key:
-        raise ValueError("KAKAO_REST_API_KEY is not configured")
+        raise KakaoTransitConfigurationError("KAKAO_REST_API_KEY is not configured")
 
     params = urlencode(
         {
