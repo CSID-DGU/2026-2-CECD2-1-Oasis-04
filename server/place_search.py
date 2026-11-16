@@ -8,11 +8,7 @@ def vectorize(text: str) -> dict[str, float]:
     folded = normalize("NFKC", text).casefold()
     cleaned = "".join(char for char in folded if char.isalnum())
 
-    counts = Counter(
-        cleaned[start : start + size]
-        for size in range(1, 4)
-        for start in range(len(cleaned) - size + 1)
-    )
+    counts = Counter(cleaned[start : start + size] for size in range(1, 4) for start in range(len(cleaned) - size + 1))
     if not counts:
         return {}
 
