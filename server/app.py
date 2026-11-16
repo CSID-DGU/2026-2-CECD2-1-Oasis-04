@@ -74,7 +74,7 @@ def search_places(
     "/routes/transit",
     tags=["길찾기"],
     summary="대중교통 경로 및 한국어 안내 조회",
-    response_description="카카오맵이 반환한 순서의 경로 후보와 한국어 안내. 조회된 경로가 없으면 빈 배열.",
+    response_description="환승 횟수, 총 소요 시간 순으로 오름차순 정렬한 경로와 한국어 안내. 경로가 없으면 빈 배열.",
     responses={
         422: {"model": TransitValidationError, "description": "필수 좌표 누락, 유효하지 않은 좌표 또는 출발·도착 좌표가 동일함"},
         502: {"model": TransitError, "description": "카카오맵 대중교통 경로를 조회하거나 응답을 처리하지 못함"},
@@ -90,6 +90,8 @@ def get_transit_routes(
     """출발지와 도착지의 위도·경도로 카카오맵 대중교통 경로를 조회한다.
 
     경로별로 전체 소요 시간(초), 거리(미터), 환승 횟수와 이동 구간 목록을 반환한다.
+    환승 횟수가 적은 경로가 먼저 나오며, 같은 경우 총 소요 시간이 짧은 경로가 먼저 나온다.
+    두 값이 모두 같으면 카카오맵 응답의 순서를 따른다.
     `summary`는 교통수단·소요 시간·환승 횟수의 요약이고,
     `instructions`는 `steps` 순서에 맞춘 한국어 안내다.
     `walking_duration_seconds`는 카카오맵이 제공한 도보 구간의 시간 합계다.
@@ -112,4 +114,5 @@ def get_transit_routes(
     except (OSError, ValueError) as exc:
         raise HTTPException(status_code=502, detail="카카오맵에서 대중교통 경로를 가져오지 못했습니다.") from exc
 
+    routes.sort(key=lambda route: (route.transfers, route.duration_seconds))
     return [add_route_guidance(route) for route in routes]
