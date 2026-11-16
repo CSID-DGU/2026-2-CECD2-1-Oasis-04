@@ -1,5 +1,7 @@
 from dataclasses import dataclass, field
 
+from pydantic import SerializerFunctionWrapHandler, model_serializer
+
 from kakao_transit import TransitRoute, TransitStep
 
 ROUTE_MODE_SENTENCES = {
@@ -25,6 +27,12 @@ class GuidedTransitRoute(TransitRoute):
             "examples": [["출발 정류장에서 101번, 102번 버스 중 한 대를 타세요. 도착 정류장에서 내리세요."]],
         }
     )
+
+    @model_serializer(mode="wrap")
+    def _serialize_guidance_first(self, serialize: SerializerFunctionWrapHandler):
+        route = serialize(self)
+        guidance = {name: route.pop(name) for name in ("summary", "instructions") if name in route}
+        return {**guidance, **route}
 
 
 def _format_duration(seconds: int) -> str:
