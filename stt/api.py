@@ -9,7 +9,8 @@
 환경변수:
     PORT              단독 실행할 때의 포트 (기본 8001)
     STT_CONFIG        설정 파일 (기본 stt/config.yaml)
-    STT_ADAPTER       LoRA 어댑터 폴더 (없으면 기본 Whisper)
+    STT_ADAPTER       LoRA 어댑터 폴더. 주지 않으면 설정 파일의 models.adapter 를 쓴다. none 이면 기본 Whisper
+                      (지금 쓰는 어댑터를 /health 의 stt.model 로 확인할 수 있다)
     STT_MODEL         기본 모델 덮어쓰기
     FRONTEND_DIST     키오스크 화면 빌드 폴더 (기본 ../frontend/dist). 있으면 / 에서 함께 서빙한다
     STT_CORS_ORIGINS  다른 출처에서 부를 때 허용할 주소 (쉼표 구분. 기본: vite 개발 서버 http://localhost:5173)
@@ -97,6 +98,24 @@ class State:
 S = State()
 
 
+def pick_adapter(env_value: Optional[str], cfg_value: Optional[str]) -> str:
+    """쓸 LoRA 어댑터 폴더를 정한다. 없으면 '' (기본 모델).
+
+    환경변수 STT_ADAPTER 가 있으면 그것을, 없으면 설정 파일의 models.adapter 를 쓴다.
+    STT_ADAPTER 를 'none' 이나 빈 값으로 주면 설정 파일에 적혀 있어도 기본 모델로 뜬다.
+    어댑터 파일은 깃에 없어서 받지 않은 PC도 있으므로, 폴더가 없으면 멈추지 않고 알린 뒤 기본 모델로 뜬다.
+    """
+    chosen = cfg_value if env_value is None else env_value
+    chosen = (chosen or "").strip()
+    if chosen.lower() in ("", "none", "base"):
+        return ""
+    path = os.path.expanduser(chosen)
+    if not os.path.isfile(os.path.join(path, "adapter_config.json")):
+        print(f"[stt] 어댑터를 찾지 못해 기본 모델로 뜹니다: {path}", flush=True)
+        return ""
+    return path
+
+
 def startup():
     import torch
     from transformers import WhisperForConditionalGeneration, WhisperProcessor
@@ -112,18 +131,22 @@ def startup():
     S.kb_meta = json.load(open(os.path.join(S.kb.dir, "meta.json"), encoding="utf-8"))
 
     model_id = os.environ.get("STT_MODEL") or S.cfg["models"]["finetune_base"]
-    adapter = os.environ.get("STT_ADAPTER", "")
+    # 설정 파일의 어댑터는 설정 파일의 기본 모델에 맞춘 것이라, STT_MODEL 로 다른 모델을 고르면 쓰지 않는다
+    cfg_adapter = S.cfg["models"].get("adapter") if model_id == S.cfg["models"]["finetune_base"] else None
+    adapter = pick_adapter(os.environ.get("STT_ADAPTER"), cfg_adapter)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     dtype = torch.float16 if device == "cuda" else torch.float32
     processor = WhisperProcessor.from_pretrained(model_id)
     model = WhisperForConditionalGeneration.from_pretrained(model_id, dtype=dtype)
+    S.engine = "base"
     if adapter:
         from peft import PeftModel
-        model = PeftModel.from_pretrained(model, os.path.expanduser(adapter)).merge_and_unload()
+        model = PeftModel.from_pretrained(model, adapter).merge_and_unload()
         S.engine = "finetuned"
     model = model.to(device).eval()
     S.rc = RagCorrector(S.cfg, model, processor, device, kb=S.kb)
     S.model_name = model_id.split("/")[-1] + (f" + {os.path.basename(adapter.rstrip('/'))}" if adapter else "")
+    print(f"[stt] model: {S.model_name} ({S.engine}, {device})", flush=True)
     S.loaded = True
     # 워밍업 (첫 요청 지연 제거)
     S.rc.transcribe(np.zeros(16000, dtype=np.float32))

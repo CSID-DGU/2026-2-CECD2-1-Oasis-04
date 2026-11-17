@@ -27,6 +27,7 @@ models:
     - openai/whisper-medium
     - openai/whisper-large-v3-turbo
   finetune_base: openai/whisper-large-v3-turbo
+  adapter: ~/senior-voice/adapters/senior-voice-lora   # STT 서버가 얹어 쓸 LoRA 어댑터 폴더. 폴더가 없으면 기본 모델로 뜬다 (파일은 깃에 올리지 않는다)
   language: ko
   task: transcribe
 
