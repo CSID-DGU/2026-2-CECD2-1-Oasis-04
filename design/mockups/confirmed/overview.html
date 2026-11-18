@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>확정 시안 모아 보기</title>
+    <!-- 글꼴(Pretendard)과 색 토큰은 확정 파일과 같은 실제 앱의 global.css 에서 가져온다. 외부 CDN 없음 -->
+    <link rel="stylesheet" href="../../../frontend/src/styles/global.css" />
+    <style>
+      /* 확정 시안 모아 보기 (2026-11-17, CONFIRMING·MANUAL_SELECT 추가 2026-11-18).
+       *   확정 파일을 복사하지 않고 iframe 으로 불러온다. 확정본을 고치면 이 페이지도 바로 바뀐다
+       *   각 iframe 은 1920×1080 그대로 그리고 통째로 줄인다(transform). 그래서 화면 안 배치는 실제와 같다
+       *   화면을 누르면 그 화면만 창에 맞춰 크게 보인다(1920×1080 창이면 실제 크기). Esc 닫기, ← → 앞뒤 화면
+       *   화면 목록은 아래 SCREENS 하나만 고치면 된다. wip/ 의 파일은 넣지 않는다 */
+      html,
+      body {
+        height: auto;
+        background: var(--color-bg-group);
+      }
+      body {
+        font-size: 18px;
+        line-height: 1.5;
+      }
+      main {
+        max-width: 1800px;
+        margin: 0 auto;
+        padding: 40px 40px 80px;
+      }
+      h1 {
+        margin: 0 0 8px;
+        font-size: 36px;
+      }
+      .lead {
+        margin: 0 0 24px;
+        color: var(--color-text-sub);
+      }
+
+      /* ---------- 요약 ---------- */
+      .summary {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 24px 40px;
+        align-items: start;
+        margin-bottom: 40px;
+        padding: 24px 32px;
+        background: var(--color-bg);
+        border-radius: var(--radius);
+      }
+      .count {
+        margin: 0;
+        font-size: 20px;
+        color: var(--color-text-sub);
+      }
+      .count strong {
+        display: block;
+        font-size: 64px;
+        line-height: 1.1;
+        color: var(--color-text);
+      }
+      .summary h2 {
+        margin: 0 0 8px;
+        font-size: 20px;
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin: 0 0 16px;
+        padding: 0;
+        list-style: none;
+      }
+      .chips li {
+        padding: 4px 12px;
+        border: 2px solid var(--color-text-sub);
+        border-radius: 999px;
+        font-size: 16px;
+        font-weight: 700;
+      }
+      .chips.is-done li {
+        border-color: var(--color-primary);
+        background: var(--color-bg-highlight);
+      }
+      .summary p {
+        margin: 0;
+        font-size: 16px;
+        color: var(--color-text-sub);
+      }
+
+      /* ---------- 화면 목록: 한 줄에 2개 ---------- */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 40px 32px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      .tile-head {
+        margin-bottom: 10px;
+      }
+      .tile-name {
+        margin: 0;
+        font-size: 22px;
+        font-weight: 700;
+      }
+      .tile-name code {
+        font-family: inherit;
+      }
+      .tile-name .no {
+        display: inline-block;
+        min-width: 32px;
+        margin-right: 6px;
+        color: var(--color-text-sub);
+        font-weight: 400;
+      }
+      .tile-name .variant {
+        margin-left: 8px;
+        font-weight: 400;
+        color: var(--color-text-sub);
+      }
+      .tile-desc {
+        margin: 2px 0 0;
+      }
+      .tile-foot {
+        display: flex;
+        justify-content: space-between;
+        gap: 16px;
+        margin: 8px 0 0;
+        font-size: 15px;
+        color: var(--color-text-sub);
+      }
+      .tile-foot a {
+        color: inherit;
+      }
+
+      /* 화면 칸. 1920:1080 비율을 지키고, 안의 iframe 은 실제 크기로 그린 뒤 줄인다 */
+      .thumb {
+        position: relative;
+        display: block;
+        width: 100%;
+        aspect-ratio: 1920 / 1080;
+        padding: 0;
+        overflow: hidden;
+        border: 0;
+        border-radius: 8px;
+        background: var(--color-bg);
+        box-shadow: 0 0 0 1px #d0d0d0;
+        cursor: zoom-in;
+      }
+      .thumb:hover,
+      .thumb:focus-visible {
+        outline: 4px solid var(--color-primary);
+        outline-offset: 2px;
+      }
+      .thumb iframe,
+      .lightbox iframe {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        transform-origin: 0 0;
+        transform: scale(var(--s, 1));
+      }
+      .thumb iframe {
+        pointer-events: none; /* 누르는 것은 칸(button)이 받는다 */
+      }
+
+      /* 아직 시안이 없는 화면 칸: 화면 칸과 같은 크기의 글자 칸. 글씨는 칸 너비를 따른다(cqw) */
+      .todo-box {
+        container-type: inline-size;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        width: 100%;
+        aspect-ratio: 1920 / 1080;
+        margin: 0;
+        padding: 0 5cqw;
+        border: 2px dashed var(--color-text-sub);
+        border-radius: 8px;
+        background: var(--color-bg);
+        list-style: none;
+      }
+      .todo-box li + li {
+        margin-top: 2.2cqw;
+      }
+      .todo-box strong {
+        display: block;
+        font-size: 3.2cqw;
+      }
+      .todo-box span {
+        display: block;
+        font-size: 2.7cqw;
+        line-height: 1.4;
+        color: var(--color-text-sub);
+      }
+
+      /* ---------- 크게 보기 ---------- */
+      .lightbox {
+        position: fixed;
+        inset: 0;
+        z-index: 10;
+        background: var(--color-text);
+        outline: none; /* 키를 받으려고 포커스만 둔다 */
+      }
+      .lightbox[hidden] {
+        display: none;
+      }
+      .lightbox-stage {
+        position: absolute;
+        overflow: hidden;
+        background: var(--color-bg);
+      }
+      /* 화면 아래 가운데: 모든 확정 화면에서 아래 48px 여백(--screen-padding)은 비어 있어 내용을 가리지 않는다 */
+      .lightbox-bar {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        z-index: 1;
+        display: flex;
+        gap: 8px;
+        opacity: 0.85;
+      }
+      .lightbox-bar button {
+        padding: 2px 14px;
+        border: 0;
+        border-radius: 8px;
+        background: var(--color-text);
+        color: var(--color-on-primary);
+        font: inherit;
+        font-size: 16px;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>확정 시안 모아 보기</h1>
+      <p class="lead">
+        <code>confirmed/</code> 의 확정본만 실제 흐름 순서로 놓았다. 화면을 누르면 크게 보인다 (Esc 닫기, ← → 앞뒤 화면). 움직임은 실제처럼 돈다.
+      </p>
+
+      <section class="summary" aria-label="요약">
+        <p class="count"><strong id="count"></strong>확정된 화면 (상태 기준)</p>
+        <div>
+          <h2>확정</h2>
+          <ul class="chips is-done" id="done"></ul>
+          <h2>아직 시안이 없는 화면</h2>
+          <ul class="chips" id="todo"></ul>
+          <p>
+            <code>band-thin.html</code> 은 얇은 띠 예시라 따로 넣지 않았다. 띠 모양만 참고하고, 목록 배치는 <code>manual-select-final.html</code> 을 따른다. 상태 목록은 <code>docs/kiosk-workflow.md</code> '상태 이름 대응표'.
+          </p>
+        </div>
+      </section>
+
+      <ol class="grid" id="grid"></ol>
+    </main>
+
+    <div class="lightbox" id="lightbox" hidden role="dialog" aria-modal="true" tabindex="-1">
+      <div class="lightbox-bar">
+        <button type="button" data-go="-1">← 앞</button>
+        <button type="button" data-go="1">뒤 →</button>
+        <button type="button" data-close>닫기 (Esc)</button>
+      </div>
+      <div class="lightbox-stage" id="lightbox-stage"></div>
+    </div>
+
+    <script>
+      // 상태 14개 (docs/kiosk-workflow.md '상태 이름 대응표')
+      const ALL_STATES = ['STARTUP_CHECK', 'CHECKING', 'IDLE', 'IDLE_REDUCED', 'LISTENING', 'RESOLVING', 'CONFIRMING', 'FAIL_COUNT_CHECK', 'ROUTING', 'REASKING', 'UNAVAILABLE', 'MANUAL_SELECT', 'ROUTE_GUIDE', 'QR_HANDOFF']
+
+      // 실제 흐름 순서. src 는 확정 파일이 이미 받는 주소 값만 쓴다
+      const SCREENS = [
+        { state: 'IDLE', variant: '지하철역', src: 'idle-final-subway.html', desc: '첫 화면. 말하기를 눌러 가실 곳을 말하게 한다. 큰 띠에 지금 계신 역', doc: '8절 (8-2 본문, 8-3·8-4 띠)' },
+        { state: 'IDLE', variant: '버스정류장', src: 'idle-final-bus.html', desc: '첫 화면. 큰 띠에 정류장 이름과 서는 버스(번호는 예시)', doc: '8절 (8-2 본문, 8-3·8-4 띠)' },
+        { state: 'IDLE', variant: '장소 정보 없음', src: 'idle-final-default.html', desc: '첫 화면. 장소 정보를 받지 못했을 때의 기본 띠', doc: '8절 (8-2 본문, 8-4 띠 규칙)' },
+        { state: 'IDLE_REDUCED', src: 'idle-reduced-final.html', desc: '음성을 쓸 수 없을 때의 첫 화면. 주 버튼이 손으로 고르기 하나', doc: '8-2절' },
+        { state: 'LISTENING', src: 'listening-final.html', desc: '말을 듣는 중. 고리와 음량 막대, 다 말했어요 / 취소 / 처음으로', doc: '10-1절' },
+        { state: 'RESOLVING', src: 'wait-final.html?s=RESOLVING', desc: '기다림. 들은 말을 보여 주며 알아듣는 중', doc: '10-2·10-3절' },
+        { state: 'CONFIRMING', variant: '후보 3개', src: 'confirming-final.html', desc: '목적지 확인. 들은 말 아래 고르는 카드 3개, 누르면 바로 길을 찾는다', doc: '11-1·11-2절' },
+        { state: 'CONFIRMING', variant: '후보 1개', src: 'confirming-final.html?n=1', desc: '목적지 확인. "OO" 맞나요? 바로 아래 \'예\' 주 버튼', doc: '11-1·11-2절' },
+        { state: 'CONFIRMING', variant: '남은 시간 15초', src: 'confirming-final.html?left=15', desc: '무입력 15초 전부터 띠 오른쪽에 남은 시간 알림 (버튼은 그대로)', doc: '11-4절' },
+        { state: 'MANUAL_SELECT', src: 'manual-select-final.html', desc: '손으로 고르기. 목적지 고르는 카드 3열 4줄, 말로 하기 / 처음으로', doc: '11-1·11-3절, 6절' },
+        { state: 'MANUAL_SELECT', variant: '말로 하기 숨김', src: 'manual-select-final.html?voice=0', desc: '마이크·STT 를 쓸 수 없을 때. 말로 하기를 숨기고 처음으로만', doc: '11-3절' },
+        { state: 'MANUAL_SELECT', variant: '남은 시간 15초', src: 'manual-select-final.html?left=15', desc: '무입력 15초 전부터 띠 오른쪽에 남은 시간 알림', doc: '11-4절' },
+        { state: 'ROUTING', src: 'wait-final.html?s=ROUTING', desc: '기다림. 목적지를 보여 주며 가는 길을 찾는 중', doc: '10-2·10-3절' },
+        { state: 'ROUTE_GUIDE', variant: '지하철역, 1순위 선택', src: 'route-guide-final.html?set=subway&pick=1', desc: '경로 안내. 오른쪽 경로 카드 3개, 왼쪽은 고른 경로의 타임라인 (3호선 → 4호선)', doc: '9절, 3-6절' },
+        { state: 'ROUTE_GUIDE', variant: '지하철역, 2순위 선택', src: 'route-guide-final.html?set=subway&pick=2', desc: '경로 안내. 2순위 카드를 고른 상태 (1호선 → 4호선)', doc: '9절, 3-6절' },
+        { state: 'ROUTE_GUIDE', variant: '버스정류장, 버스와 지하철', src: 'route-guide-final.html?pick=2', desc: '경로 안내. 버스정류장에서 출발 (버스 → 걸어서 → 지하철)', doc: '9절, 3-6절' },
+        { state: 'ROUTE_GUIDE', variant: '이름이 긴 경로', src: 'route-guide-final.html?set=long', desc: '경로 안내. 긴 정류장 이름과 환승 2회 경로 (버스 → 지하철 → 버스)', doc: '9-1절 R2' },
+        { state: 'ROUTE_GUIDE', variant: '경로 1개 (요약 판)', src: 'route-guide-final.html?case=one', desc: '경로 안내. 경로가 하나면 카드 대신 요약 판과 버튼을 한 묶음으로 (R3)', doc: '9-1절 R3' },
+        { state: 'STARTUP_CHECK', src: 'wait-final.html?s=STARTUP_CHECK', desc: '기다림. 켜질 때 서버와 마이크를 점검하는 중', doc: '10-2·10-3절' },
+        { state: 'CHECKING', src: 'wait-final.html?s=CHECKING', desc: '기다림. 서버 문제로 남은 초를 세며 다시 해 보기를 기다리는 중', doc: '10-2·10-3절' },
+        { state: 'FAIL_COUNT_CHECK', src: 'wait-final.html?s=FAIL_COUNT_CHECK', desc: '기다림. 못 알아들은 횟수를 확인하는 중', doc: '10-2·10-3절' },
+      ]
+
+      // ---------- 요약 ----------
+      const done = ALL_STATES.filter((s) => SCREENS.some((x) => x.state === s))
+      const todo = ALL_STATES.filter((s) => !done.includes(s))
+      document.getElementById('count').textContent = `${done.length} / ${ALL_STATES.length}`
+      document.getElementById('done').innerHTML = done.map((s) => `<li>${s}</li>`).join('')
+      document.getElementById('todo').innerHTML = todo.map((s) => `<li>${s}</li>`).join('')
+
+      // ---------- 화면 목록 ----------
+      const grid = document.getElementById('grid')
+      grid.innerHTML = SCREENS.map(
+        (x, i) => `
+          <li>
+            <div class="tile-head">
+              <p class="tile-name"><span class="no">${i + 1}</span><code>${x.state}</code>${x.variant ? `<span class="variant">${x.variant}</span>` : ''}</p>
+              <p class="tile-desc">${x.desc}</p>
+            </div>
+            <button type="button" class="thumb" data-index="${i}" aria-label="${x.state} ${x.variant ?? ''} 크게 보기">
+              <iframe src="${x.src}" title="${x.state} ${x.variant ?? ''}" tabindex="-1" loading="eager"></iframe>
+            </button>
+            <p class="tile-foot"><span>디자인 문서 ${x.doc}</span><a href="${x.src}" target="_blank">${x.src}</a></p>
+          </li>`,
+      ).join('')
+
+      // 마지막에 아직 시안이 없는 화면 칸 (글자 칸, 누를 수 없다). 설명은 docs/kiosk-workflow.md 의 대응표·전이 표에서 옮겼다
+      const TODO_DESC = {
+        REASKING: '재질문. 한 번 못 알아들었을 때 다시 말해 달라고 한다. 다시 말하기 / 손으로 고르기',
+        UNAVAILABLE: '안내 불가. 범위 밖 장소, 경로 없음, 서버 오류일 때 안내할 수 없다고 알린다',
+        QR_HANDOFF: 'QR 전달. 고른 경로를 휴대폰으로 받을 QR 을 보인다',
+      }
+      if (todo.length) {
+        grid.insertAdjacentHTML(
+          'beforeend',
+          `<li>
+            <div class="tile-head">
+              <p class="tile-name">아직 시안이 없는 화면 <span class="variant">${todo.length}개</span></p>
+              <p class="tile-desc">흐름에는 있지만 확정 시안이 아직 없다</p>
+            </div>
+            <ul class="todo-box">${todo.map((s) => `<li><strong>${s}</strong><span>${TODO_DESC[s] ?? ''}</span></li>`).join('')}</ul>
+            <p class="tile-foot"><span>상태 설명: docs/kiosk-workflow.md '상태 이름 대응표'</span></p>
+          </li>`,
+        )
+      }
+
+      // 칸 넓이에 맞춰 iframe 배율을 정한다
+      const fitThumbs = () => grid.querySelectorAll('.thumb').forEach((t) => t.style.setProperty('--s', t.clientWidth / 1920))
+      new ResizeObserver(fitThumbs).observe(grid)
+      fitThumbs()
+
+      // ---------- 크게 보기 ----------
+      const box = document.getElementById('lightbox')
+      const stage = document.getElementById('lightbox-stage')
+      let current = -1
+      const fitStage = () => {
+        const s = Math.min(innerWidth / 1920, innerHeight / 1080)
+        Object.assign(stage.style, { width: `${1920 * s}px`, height: `${1080 * s}px`, left: `${(innerWidth - 1920 * s) / 2}px`, top: `${(innerHeight - 1080 * s) / 2}px` })
+        stage.style.setProperty('--s', s)
+      }
+      const open = (i) => {
+        current = (i + SCREENS.length) % SCREENS.length
+        const x = SCREENS[current]
+        stage.innerHTML = `<iframe src="${x.src}" title="${x.state} ${x.variant ?? ''}"></iframe>`
+        box.setAttribute('aria-label', `${x.state} ${x.variant ?? ''}`)
+        box.hidden = false
+        document.body.style.overflow = 'hidden'
+        fitStage()
+        box.focus()
+      }
+      const close = () => {
+        box.hidden = true
+        stage.innerHTML = ''
+        document.body.style.overflow = ''
+        grid.querySelector(`.thumb[data-index="${current}"]`)?.focus()
+        current = -1
+      }
+      grid.addEventListener('click', (e) => {
+        const t = e.target.closest('.thumb')
+        if (t) open(Number(t.dataset.index))
+      })
+      box.addEventListener('click', (e) => {
+        if (e.target.closest('[data-close]') || e.target === box) close()
+        const go = e.target.closest('[data-go]')
+        if (go) open(current + Number(go.dataset.go))
+      })
+      addEventListener('keydown', (e) => {
+        if (box.hidden) return
+        if (e.key === 'Escape') close()
+        if (e.key === 'ArrowRight') open(current + 1)
+        if (e.key === 'ArrowLeft') open(current - 1)
+      })
+      addEventListener('resize', () => box.hidden || fitStage())
+      // 크게 보기의 화면(iframe)을 누르면 포커스가 iframe 으로 가서 이 페이지가 Esc·← → 를 받지 못한다.
+      // 그래서 포커스가 iframe 으로 넘어가면 곧바로 이 페이지로 되돌린다. 누른 것(경로 카드 등)은 iframe 이 이미 받았다.
+      // iframe 안을 들여다보지 않는 방법이라 file:// 로 열어도 같다
+      addEventListener('blur', () => {
+        if (box.hidden) return
+        setTimeout(() => {
+          if (document.activeElement?.tagName === 'IFRAME') box.focus()
+        })
+      })
+    </script>
+  </body>
+</html>

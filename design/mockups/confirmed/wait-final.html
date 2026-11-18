@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>기다림 화면 확정 시안 (ROUTING 외 4개)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/flow.css" />
+    <script src="../shared/brand.js"></script>
+    <link rel="stylesheet" href="wait.css" />
+  </head>
+  <body>
+    <!-- 기다림 화면 5개 확정본 (2026-11-17, 고리는 화면 가운데 = A안). LISTENING 의 고리를 가운데에 두고, 그 아래 머리말 · 큰 글씨 · 안내 한 줄 (wait.css).
+         눈이 가는 순서: 1 큰 글씨(알아들은 것) → 2 도는 호(일하는 중) → 3 안내 한 줄.
+         다섯 화면은 가운데 그림과 문구만 다르다. 문구는 실제 화면(frontend/src/screens/)의 제목과 본문 그대로다.
+           ROUTING(기본)     깃발    가실 곳 / 명동역 / 가는 길을 찾고 있어요
+           RESOLVING         말풍선  들은 말 / “병원” / 말씀을 알아듣는 중이에요
+           STARTUP_CHECK     로고    준비하고 있어요 / 잠시만 기다려 주세요
+           FAIL_COUNT_CHECK  말풍선  잠시만요 / 확인하고 있어요
+           CHECKING          남은 초 잠시만 기다려 주세요 / 잠시 문제가 생겼어요. 3초 뒤에 다시 해 볼게요 (호가 남은 시간만큼 줄어든다)
+         주소에 ?s=RESOLVING 처럼 붙이면 그 화면이 보인다. ?s=RESOLVING&heard= 는 들은 말이 빈 경우(10초 무발화). 스크린샷용: ?freeze=0.5 는 그 시각(초)의 모습으로 멈춘다 -->
+    <script>
+      if (!new URLSearchParams(location.search).get('s')) {
+        document.addEventListener('DOMContentLoaded', () => {
+          document.querySelectorAll('.screen').forEach((el) => (el.hidden = el.dataset.screen !== 'ROUTING'))
+        })
+      }
+    </script>
+
+    <template id="thin">
+      <header class="thin" data-zone="band">
+        <div class="thin-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <service-name></service-name>
+        </div>
+        <div class="thin-place">종로3가</div>
+        <div class="thin-now"><span data-date>11월 17일 화요일</span> <span data-clock>오후 2:30</span></div>
+      </header>
+    </template>
+
+    <!-- 가운데 그림 세 가지. 152 칸에 선 굵기 9.5 로 손으로 그렸다 (wait.css 의 .ring-icon.is-line) -->
+    <template id="icon-flag">
+      <svg class="ring-icon is-line" viewBox="0 0 152 152"><path d="M46 134V22" /><path d="M46 28h66l-14 24 14 24H46" /></svg>
+    </template>
+    <template id="icon-bubble">
+      <svg class="ring-icon is-line" viewBox="0 0 152 152">
+        <path d="M34 30h84a14 14 0 0 1 14 14v52a14 14 0 0 1-14 14H74l-26 22v-22H34a14 14 0 0 1-14-14V44a14 14 0 0 1 14-14Z" />
+        <circle class="is-fill" cx="50" cy="70" r="8" /><circle class="is-fill" cx="76" cy="70" r="8" /><circle class="is-fill" cx="102" cy="70" r="8" />
+      </svg>
+    </template>
+    <template id="icon-logo">
+      <!-- 서비스 로고(고리 안의 점)를 같은 선 굵기로 다시 그린 것. 띠의 로고보다 선이 가늘다 -->
+      <svg class="ring-icon is-line" viewBox="0 0 152 152"><circle cx="76" cy="76" r="50" /><circle class="is-fill" cx="76" cy="76" r="15" /></svg>
+    </template>
+
+    <section class="screen" data-screen="ROUTING" data-icon="flag">
+      <div class="body">
+        <main class="wait" data-zone="content">
+          <div class="wait-ring" data-zone="ring"></div>
+          <p class="wait-label">가실 곳</p>
+          <h1 class="wait-core v3-core" data-zone="core">명동역</h1>
+          <p class="wait-sub">가는 길을 찾고 있어요</p>
+        </main>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="RESOLVING" data-icon="bubble">
+      <div class="body">
+        <main class="wait" data-zone="content">
+          <div class="wait-ring" data-zone="ring"></div>
+          <p class="wait-label">들은 말</p>
+          <h1 class="wait-core v3-core" data-zone="core">“병원”</h1>
+          <p class="wait-sub">말씀을 알아듣는 중이에요</p>
+        </main>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="STARTUP_CHECK" data-icon="logo">
+      <div class="body">
+        <main class="wait" data-zone="content">
+          <div class="wait-ring" data-zone="ring"></div>
+          <h1 class="wait-core v3-core" data-zone="core">준비하고 있어요</h1>
+          <p class="wait-sub">잠시만 기다려 주세요</p>
+        </main>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="FAIL_COUNT_CHECK" data-icon="bubble">
+      <div class="body">
+        <main class="wait" data-zone="content">
+          <div class="wait-ring" data-zone="ring"></div>
+          <h1 class="wait-core v3-core" data-zone="core">잠시만요</h1>
+          <p class="wait-sub">확인하고 있어요</p>
+        </main>
+      </div>
+    </section>
+
+    <section class="screen" data-screen="CHECKING" data-icon="count">
+      <div class="body">
+        <main class="wait" data-zone="content">
+          <div class="wait-ring" data-zone="ring"></div>
+          <h1 class="wait-core v3-core" data-zone="core">잠시만 기다려 주세요</h1>
+          <p class="wait-sub">잠시 문제가 생겼어요. <span data-left>3</span>초 뒤에 다시 해 볼게요</p>
+        </main>
+      </div>
+    </section>
+
+    <script>
+      const RETRY_SECONDS = 3 // CHECKING 의 다시 해 보기까지 남은 시간 (실제 화면 문구의 3초)
+      const query = new URLSearchParams(location.search)
+      const freeze = query.get('freeze') === null ? null : Number(query.get('freeze'))
+
+      // 얇은 띠와 고리는 다섯 화면이 같아서 한 번만 적고 화면마다 넣는다
+      document.querySelectorAll('.screen').forEach((screen) => {
+        screen.prepend(document.getElementById('thin').content.cloneNode(true))
+        const kind = screen.dataset.icon
+        const ring = screen.querySelector('.wait-ring')
+        ring.innerHTML = `<svg viewBox="-170 -170 340 340" aria-hidden="true">
+            <circle class="ring-halo" /><circle class="ring-arc ${kind === 'count' ? '' : 'is-spinning'}" pathLength="100" /><circle class="ring-core" />
+          </svg>`
+        if (kind === 'count') ring.insertAdjacentHTML('beforeend', `<span class="ring-count">${RETRY_SECONDS}</span>`)
+        else ring.querySelector('svg').append(document.getElementById(`icon-${kind}`).content.cloneNode(true).firstElementChild)
+      })
+
+// 고리 가운데 그림의 크기와 자리를 토큰(--ring-icon)에서 읽어 속성으로 넣는다 (flow.css 의 .ring-icon 설명)
+      function placeRingIcons() {
+        const size = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ring-icon'))
+        document.querySelectorAll('svg.ring-icon').forEach((icon) => {
+          for (const [k, v] of Object.entries({ width: size, height: size, x: -size / 2, y: -size / 2 })) icon.setAttribute(k, v)
+        })
+      }
+      placeRingIcons()
+
+      // RESOLVING 에서 들은 말이 비어 있으면(10초 무발화로 온 경우): 머리말과 안내 줄을 빼고 큰 글씨 자리에 "말씀을 알아듣는 중이에요".
+      // 주소에 ?heard= (빈 값)를 붙이면 이 모습이 보인다 (디자인 문서 10-3절)
+      if (query.has('heard') && !query.get('heard')) {
+        const resolving = document.querySelector('[data-screen="RESOLVING"]')
+        resolving.querySelector('.wait-label').remove()
+        resolving.querySelector('.wait-sub').remove()
+        resolving.querySelector('.wait-core').textContent = '말씀을 알아듣는 중이에요'
+      }
+
+      // 큰 글씨가 화면 너비(양쪽 140px 안쪽)에 안 들어가면 8px 씩 72px 까지 줄인다 (문서 3-3절, 7절의 이름 규칙)
+      const rootStyle = getComputedStyle(document.documentElement)
+      const px = (name) => parseFloat(rootStyle.getPropertyValue(name))
+      document.fonts.ready.then(() => {
+        document.querySelectorAll('.wait-core').forEach((core) => {
+          if (!core.getBoundingClientRect().width) return // 숨긴 화면은 재지 않는다
+          let size = px('--font-wait')
+          while (core.scrollWidth > px('--wait-text-max') && size > px('--font-wait-min')) {
+            size -= px('--font-wait-step')
+            core.style.fontSize = size + 'px'
+          }
+          core.dataset.size = size
+        })
+      })
+
+      // 도는 호: 스크린샷용으로 멈출 때는 그 시각의 자리에 세운다
+      if (freeze !== null) {
+        document.querySelectorAll('.ring-arc.is-spinning').forEach((arc) => {
+          arc.style.animationDelay = `-${freeze}s`
+          arc.style.animationPlayState = 'paused'
+        })
+      }
+
+      // CHECKING: 남은 시간만큼 호가 줄어들고 가운데 숫자가 바뀐다. 시안에서는 3초가 지나면 다시 처음부터
+      // 움직임 줄이기 설정에서는 호가 1초에 한 번만 바뀐다 (숫자와 같이)
+      // 이름을 still 로 하면 아래에서 불러오는 shared/v3.js 의 const still 과 겹쳐 v3.js(띠의 날짜·시각)가 멈춘다
+      const countdownStill = matchMedia('(prefers-reduced-motion: reduce)').matches
+      const checking = document.querySelector('[data-screen="CHECKING"]')
+      const arc = checking.querySelector('.ring-arc')
+      const count = checking.querySelector('.ring-count')
+      const left = checking.querySelector('[data-left]')
+      function drawCountdown(elapsed) {
+        const remain = RETRY_SECONDS - (elapsed % RETRY_SECONDS)
+        const shown = Math.ceil(remain)
+        const fraction = countdownStill ? shown / RETRY_SECONDS : remain / RETRY_SECONDS
+        arc.style.strokeDasharray = `${(fraction * 100).toFixed(2)} 100`
+        count.textContent = shown
+        left.textContent = shown
+      }
+      if (freeze !== null) drawCountdown(freeze)
+      else {
+        const start = performance.now()
+        const tick = (now) => {
+          drawCountdown((now - start) / 1000)
+          requestAnimationFrame(tick)
+        }
+        requestAnimationFrame(tick)
+      }
+    </script>
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>

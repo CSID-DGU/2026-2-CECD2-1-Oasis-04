@@ -1,0 +1,33 @@
+/* 시안 공통. 토큰·글꼴·버튼 모양은 실제 앱의 global.css 를 그대로 가져온다 (값을 따로 베끼지 않는다).
+ * 여기에는 "시안 페이지를 보여 주는 데 필요한 것"만 둔다. 방향별 배치는 a.css / b.css / c.css */
+@import url('../../../frontend/src/styles/global.css');
+
+:root {
+  --canvas-width: 1080px;
+  --canvas-height: 1920px;
+  /* 시안 전용 (디자인 문서 '결정 필요' 7번). 기다림·듣는 중 반복 움직임 한 바퀴 길이 */
+  --motion-loop: 1.6s;
+}
+
+/* global.css 는 화면 하나가 창을 꽉 채운다고 가정한다. 시안은 화면 여러 개를 세로로 쌓아 보여 주므로 높이 고정을 푼다 */
+html,
+body {
+  width: var(--canvas-width);
+  height: auto;
+}
+
+.screen {
+  position: relative;
+  width: var(--canvas-width);
+  height: var(--canvas-height);
+  overflow: hidden;
+}
+
+/* 주소에 ?s=IDLE 처럼 화면 이름을 주면 그 화면만 보인다 (mock.js) */
+.screen[hidden] {
+  display: none;
+}
+
+.screen p {
+  margin: 0;
+}

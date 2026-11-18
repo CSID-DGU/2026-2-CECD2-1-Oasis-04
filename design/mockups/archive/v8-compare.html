@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>v7 과 v8 비교</title>
+    <style>
+      /* 비교용 도구 페이지 (키오스크 화면이 아님) */
+      @import url('../../../frontend/src/styles/global.css');
+      html,
+      body {
+        width: auto;
+        height: auto;
+      }
+      body {
+        padding: 24px;
+        font-size: 18px;
+        background: #dddddd;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 26px;
+      }
+      table {
+        border-collapse: separate;
+        border-spacing: 16px;
+        margin-left: -16px;
+      }
+      th {
+        text-align: left;
+        vertical-align: top;
+        white-space: nowrap;
+      }
+      img {
+        display: block;
+        width: 576px;
+        height: 324px;
+        border: 1px solid var(--color-text-sub);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>v7 과 v8 비교 (1920×1080 을 30%로 줄여 봄. 그림을 누르면 실제 크기)</h1>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>v7</th>
+          <th>v8</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <script>
+      const img = (file) => `<td><a href="shots/${file}.png"><img src="shots/${file}.png" alt="${file}" /></a></td>`
+      const row = (name, files) => `<tr><th>${name}</th>${files.map(img).join('')}</tr>`
+      document.getElementById('rows').innerHTML =
+        row('지하철역', ['v7-subway', 'v8-subway']) +
+        row('흐림 blur(12px)', ['v7-subway-blur', 'v8-subway-blur']) +
+        row('v8 다른 두 장', ['v8-bus', 'v8-default'])
+    </script>
+  </body>
+</html>

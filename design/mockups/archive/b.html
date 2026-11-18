@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 B. 카드형</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="b.css" />
+  </head>
+  <body>
+    <!-- 아이콘 묶음: icons/*.svg (Material Symbols) 를 build-sprite.mjs 가 여기에 넣는다. 손으로 고치지 않는다 -->
+    <!--SPRITE:START-->
+    <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+      <symbol id="i-check" viewBox="0 -960 960 960"><path d="M378-246 154-470l43-43 181 181 384-384 43 43-427 427Z"/></symbol>
+      <symbol id="i-close" viewBox="0 -960 960 960"><path d="m249-207-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z"/></symbol>
+      <symbol id="i-directions_bus" viewBox="0 -960 960 960"><path d="M249-120q-13 0-23-7.5T216-147v-84q-29-16-42.5-46T160-341v-397q0-74 76.5-108T481-880q166 0 242.5 34T800-738v397q0 34-13.5 64T744-231v84q0 12-10 19.5t-23 7.5h-19q-14 0-24-7.5T658-147v-55H302v55q0 12-10 19.5t-24 7.5h-19Zm232-644h259-520 261Zm177 293H220h520-82Zm-438-60h520v-173H220v173Zm106 219q23 0 39-16t16-39q0-23-16-39t-39-16q-23 0-39 16t-16 39q0 23 16 39t39 16Zm308 0q23 0 39-16t16-39q0-23-16-39t-39-16q-23 0-39 16t-16 39q0 23 16 39t39 16ZM220-764h520q-24-26-92-41t-167-15q-118 0-181 13.5T220-764Zm82 502h356q35 0 58.5-27t23.5-62v-120H220v120q0 35 23.5 62t58.5 27Z"/></symbol>
+      <symbol id="i-home" viewBox="0 -960 960 960"><path d="M220-180h150v-250h220v250h150v-390L480-765 220-570v390Zm-60 60v-480l320-240 320 240v480H530v-250H430v250H160Zm320-353Z"/></symbol>
+      <symbol id="i-location_on" viewBox="0 -960 960 960"><path d="M480.09-490q28.91 0 49.41-20.59 20.5-20.59 20.5-49.5t-20.59-49.41q-20.59-20.5-49.5-20.5t-49.41 20.59q-20.5 20.59-20.5 49.5t20.59 49.41q20.59 20.5 49.5 20.5ZM480-159q133-121 196.5-219.5T740-552q0-117.79-75.29-192.9Q589.42-820 480-820t-184.71 75.1Q220-669.79 220-552q0 75 65 173.5T480-159Zm0 79Q319-217 239.5-334.5T160-552q0-150 96.5-239T480-880q127 0 223.5 89T800-552q0 100-79.5 217.5T480-80Zm0-480Z"/></symbol>
+      <symbol id="i-mic" viewBox="0 -960 960 960"><path d="M480-423q-43 0-72-30.92-29-30.91-29-75.08v-251q0-41.67 29.44-70.83Q437.88-880 479.94-880t71.56 29.17Q581-821.67 581-780v251q0 44.17-29 75.08Q523-423 480-423Zm0-228Zm-30 531v-136q-106-11-178-89t-72-184h60q0 91 64.29 153t155.5 62q91.21 0 155.71-62Q700-438 700-529h60q0 106-72 184t-178 89v136h-60Zm30-363q18 0 29.5-13.5T521-529v-251q0-17-11.79-28.5T480-820q-17.42 0-29.21 11.5T439-780v251q0 19 11.5 32.5T480-483Z"/></symbol>
+      <symbol id="i-route" viewBox="0 -960 960 960"><path d="M355-120q-65 0-110-45.53T200-275v-349q-35-13-57.5-41.26-22.5-28.27-22.5-64.41Q120-776 152.5-808t78-32q45.5 0 77.5 32.14t32 78.05q0 35.81-22.5 64.31T260-624v349q0 39.19 27.5 67.09Q315-180 355.5-180t67.5-27.91q27-27.9 27-67.09v-410q0-65 45-110t110-45q65 0 110 45t45 110v349q35 13 57.5 41.36Q840-266.27 840-230q0 45-32.08 77.5Q775.83-120 730-120q-45 0-77.5-32.5T620-230q0-36.3 22.5-65.15Q665-324 700-336v-349q0-40-27.5-67.5T605-780q-40 0-67.5 27.5T510-685v410q0 63.94-45 109.47T355-120ZM230.5-680q20.5 0 35-15t14.5-35.5q0-20.5-14.37-35Q251.25-780 230-780q-20 0-35 14.37-15 14.38-15 35.63 0 20 15 35t35.5 15Zm500 500q20.5 0 35-15t14.5-35.5q0-20.5-14.37-35Q751.25-280 730-280q-20 0-35 14.37-15 14.38-15 35.63 0 20 15 35t35.5 15ZM230-730Zm500 500Z"/></symbol>
+      <symbol id="i-schedule" viewBox="0 -960 960 960"><path d="m627-287 45-45-159-160v-201h-60v225l174 181ZM480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-82 31.5-155t86-127.5Q252-817 325-848.5T480-880q82 0 155 31.5t127.5 86Q817-708 848.5-635T880-480q0 82-31.5 155t-86 127.5Q708-143 635-111.5T480-80Zm0-400Zm0 340q140 0 240-100t100-240q0-140-100-240T480-820q-140 0-240 100T140-480q0 140 100 240t240 100Z"/></symbol>
+      <symbol id="i-smartphone" viewBox="0 -960 960 960"><path d="M260-40q-24 0-42-18t-18-42v-760q0-24 18-42t42-18h440q24 0 42 18t18 42v760q0 24-18 42t-42 18H260Zm0-90v30h440v-30H260Zm0-60h440v-580H260v580Zm0-640h440v-30H260v30Zm0 0v-30 30Zm0 700v30-30Z"/></symbol>
+      <symbol id="i-subway" viewBox="0 -960 960 960"><path d="M80-80v-534q0-82 42.5-144T241-850q56-21 119-25.5t120-4.5q57 0 120.5 4.5T720-850q76 30 118 92t42 144v534H80Zm267-60h266l-81-81H428l-81 81Zm-62-288h390v-175H285v175Zm335 127q16.58 0 27.79-11.21T659-340q0-16.58-11.21-27.79T620-379q-16.58 0-27.79 11.21T581-340q0 16.58 11.21 27.79T620-301Zm-280 0q16.58 0 27.79-11.21T379-340q0-16.58-11.21-27.79T340-379q-16.58 0-27.79 11.21T301-340q0 16.58 11.21 27.79T340-301ZM140-140h159v-20l61-61q-38 0-79-29.5T240-340v-263q0-72 67-94.5T480-720q90 0 165 22.5t75 94.5v263q0 56-36.5 87.5T600-221l61 61v20h159v-474q0-66-31.5-109.5t-93.94-69.38Q648-812 591.17-816t-111-4q-54.17 0-110.67 4t-103.06 23.12Q204-767 172-723.5T140-614v474Zm0 0h680-680Z"/></symbol>
+      <symbol id="i-touch_app" viewBox="0 -960 960 960"><path d="M445-80q-29 0-56-12t-45-35L127-403l21-23q14-15 34.5-18.5T221-438l99 53v-365q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v465l-144-77 156 198q10 12 23.76 18 13.76 6 29.24 6h205q38 0 64-26t26-64v-170q0-25.5-17.25-42.75T680-460H460v-60h219.65q50.14 0 85.25 35 35.1 35 35.1 85v170q0 63-43.5 106.5T650-80H445ZM203-665q-11.07-18.75-17.04-40.49-5.96-21.74-5.96-44.76 0-70.75 49.73-120.25Q279.45-920 350-920t120.27 49.74Q520-820.52 520-749.96q0 22.96-5.96 44.62Q508.07-683.68 497-665l-52-30q7-12 11-26t4-29.48Q460-796 427.88-828q-32.12-32-78-32T272-827.92q-32 32.09-32 77.92 0 15 4 29t11 26l-52 30Zm285 335Z"/></symbol>
+      <symbol id="i-warning" viewBox="0 -960 960 960"><path d="m40-120 440-760 440 760H40Zm104-60h672L480-760 144-180Zm340.18-57q12.82 0 21.32-8.68 8.5-8.67 8.5-21.5 0-12.82-8.68-21.32-8.67-8.5-21.5-8.5-12.82 0-21.32 8.68-8.5 8.67-8.5 21.5 0 12.82 8.68 21.32 8.67 8.5 21.5 8.5ZM454-348h60v-224h-60v224Zm26-122Z"/></symbol>
+    </svg>
+    <!--SPRITE:END-->
+
+    <!-- IDLE -->
+    <section class="screen" data-screen="IDLE">
+      <h1 class="screen-title">어디로 가시나요?</h1>
+      <div class="b-card">
+        <p>버튼을 누르고 말씀하시거나, 손으로 골라 주세요</p>
+        <p class="location"><svg class="b-ico"><use href="#i-location_on" /></svg>지금 계신 곳: 종로3가.탑골공원 정류장</p>
+        <button type="button" class="btn btn-primary"><svg class="b-ico"><use href="#i-mic" /></svg>말하기</button>
+      </div>
+      <div class="b-space"></div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-secondary"><svg class="b-ico"><use href="#i-touch_app" /></svg>손으로 고르기</button>
+      </div>
+    </section>
+
+    <!-- LISTENING (실제 마이크 모드: 글 입력창 없음) -->
+    <section class="screen" data-screen="LISTENING">
+      <h1 class="screen-title">말씀해 주세요</h1>
+      <div class="b-card b-card-core">
+        <svg class="b-ico b-ico-lg"><use href="#i-mic" /></svg>
+        <p class="b-core">듣고 있어요</p>
+        <div class="b-bar"></div>
+        <p class="hint">가실 곳을 말씀해 주세요. 말씀이 끝나면 자동으로 넘어가요</p>
+        <button type="button" class="btn btn-primary"><svg class="b-ico"><use href="#i-check" /></svg>다 말했어요</button>
+      </div>
+      <div class="b-space"></div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-secondary"><svg class="b-ico"><use href="#i-close" /></svg>취소</button>
+        <button type="button" class="btn btn-secondary"><svg class="b-ico"><use href="#i-home" /></svg>처음으로</button>
+      </div>
+    </section>
+
+    <!-- ROUTING -->
+    <section class="screen" data-screen="ROUTING">
+      <h1 class="screen-title">가는 길을 찾고 있어요</h1>
+      <div class="b-card">
+        <svg class="b-ico b-ico-lg"><use href="#i-route" /></svg>
+        <p>목적지: 서울병원</p>
+        <div class="b-bar"></div>
+      </div>
+    </section>
+
+    <!-- CHECKING -->
+    <section class="screen" data-screen="CHECKING">
+      <h1 class="screen-title">잠시만 기다려 주세요</h1>
+      <div class="b-card b-card-alert">
+        <svg class="b-ico b-ico-lg"><use href="#i-warning" /></svg>
+        <p class="b-core">잠시 문제가 생겼어요</p>
+        <p><span class="b-count">3</span>초 뒤에 다시 해 볼게요</p>
+      </div>
+    </section>
+
+    <!-- ROUTE_GUIDE -->
+    <section class="screen" data-screen="ROUTE_GUIDE">
+      <h1 class="screen-title">이렇게 가세요</h1>
+      <p><svg class="b-ico"><use href="#i-location_on" /></svg>목적지: 서울병원</p>
+      <div class="b-card b-card-core">
+        <p class="b-core"><svg class="b-ico"><use href="#i-subway" /></svg>지하철 3호선 → 4호선</p>
+        <p><svg class="b-ico"><use href="#i-schedule" /></svg>약 25분 · 환승 1회</p>
+        <button type="button" class="btn btn-primary"><svg class="b-ico"><use href="#i-smartphone" /></svg>휴대폰으로 보내기</button>
+      </div>
+      <div class="b-card">
+        <p class="hint">다른 방법</p>
+        <div class="b-others">
+          <div class="b-row"><span><svg class="b-ico"><use href="#i-directions_bus" /></svg>2. 버스 100번</span><span>약 32분 · 환승 없음</span></div>
+          <div class="b-row"><span><svg class="b-ico"><use href="#i-subway" /></svg>3. 지하철 3호선 → 버스 200번</span><span>약 35분 · 환승 1회</span></div>
+        </div>
+      </div>
+      <div class="b-space"></div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-secondary"><svg class="b-ico"><use href="#i-home" /></svg>처음으로</button>
+      </div>
+    </section>
+
+    <!-- MANUAL_SELECT (목적지 12개) -->
+    <section class="screen" data-screen="MANUAL_SELECT">
+      <h1 class="screen-title">가실 곳을 골라 주세요</h1>
+      <div class="b-card">
+        <ul class="btn-list">
+          <li><button type="button" class="btn btn-primary">서울역 <small>(지하철역)</small></button></li>
+          <li><button type="button" class="btn btn-primary">시청 <small>(지하철역)</small></button></li>
+          <li><button type="button" class="btn btn-primary">동국대학교 <small>(학교)</small></button></li>
+          <li><button type="button" class="btn btn-primary">남산타워 <small>(관광지)</small></button></li>
+          <li><button type="button" class="btn btn-primary">고속터미널 <small>(터미널)</small></button></li>
+          <li><button type="button" class="btn btn-primary">동국대병원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">서울병원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">중앙병원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">국립중앙의료원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">남대문시장 <small>(시장)</small></button></li>
+          <li><button type="button" class="btn btn-primary">광장시장 <small>(시장)</small></button></li>
+          <li><button type="button" class="btn btn-primary">종로구청 <small>(관공서)</small></button></li>
+        </ul>
+      </div>
+      <div class="b-space"></div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-secondary"><svg class="b-ico"><use href="#i-mic" /></svg>말로 하기</button>
+        <button type="button" class="btn btn-secondary"><svg class="b-ico"><use href="#i-home" /></svg>처음으로</button>
+      </div>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+  </body>
+</html>

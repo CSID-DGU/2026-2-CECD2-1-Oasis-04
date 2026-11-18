@@ -1,0 +1,102 @@
+/* v10 (확정판) — v8.css 위에 얹는 것. 띠의 모양은 v8 그대로 두고, 띠 규칙(v10-band.js)에 필요한 스타일과 토큰만 더한다 */
+
+:root {
+  /* 노선 선과 고리의 진하기: 원래 노선색이 남는 비율 (나머지는 흰색). v10-band.js 가 읽는다.
+     주 버튼과 비슷한 파랑(1호선, 간선버스 등)은 -soft 값을 쓴다. 기본값은 옅은 쪽이다 (2026-11-17 결정) */
+  --line-tint: 0.3;
+  --line-tint-soft: 0.2;
+  --ring-tint: 0.6;
+  --ring-tint-soft: 0.45;
+
+  /* 그 밖의 노선색 (모두 임시, 공식 자료로 확인하지 않았다). 토큰이 없는 노선은 회색 선으로 그려진다 */
+  --line-seoul-2: #00a84d;
+  --line-seoul-4: #00a5de;
+  --line-seoul-6: #cd7c2f;
+  --line-seoul-7: #747f00;
+  --line-seoul-8: #e6186c;
+  --line-seoul-9: #bdb092;
+  --line-arex: #0090d2;
+  --line-gyeongui-jungang: #77c4a3;
+  --line-suin-bundang: #fabe00;
+  --line-gtx-a: #9a6292;
+
+  --row-gap: 91px; /* 줄 사이 간격. 줄이 1~2개여도 같은 간격으로 가운데에 모은다 */
+  --group-gap: 20px;
+}
+
+/* 선택 사항: 프로젝터처럼 옅은 색이 날아가는 화면용. 선과 고리를 한 단계 진하게.
+   <html class="is-strong-lines"> 또는 주소에 ?strong=1 */
+:root.is-strong-lines {
+  --line-tint: 0.5;
+  --line-tint-soft: 0.35;
+  --ring-tint: 0.8;
+  --ring-tint-soft: 0.6;
+}
+
+/* 줄 왼쪽 묶음: 노선 표시 + 앞 역 이름 (또는 버스 종류). 왼쪽 여백에서 시작해 나란히 놓는다 */
+.v9-group {
+  position: absolute;
+  left: var(--pad);
+  display: flex;
+  align-items: center;
+  gap: var(--group-gap);
+  transform: translateY(-50%);
+}
+
+.v9-group .v8-tag,
+.v9-group .v8-circle {
+  position: static;
+  transform: none;
+}
+
+.v9-group .v8-circle {
+  width: var(--badge);
+  height: var(--badge);
+}
+
+/* 번호 없는 노선(공항철도, 경의중앙 등): 원에 넣지 않고 평평한 표지로. 왼쪽 색 막대로 노선을 알린다 */
+.v9-linetag {
+  border-left: 10px solid var(--c);
+}
+
+/* 종점 표시: 선이 여기서 끝난다 */
+.v9-end {
+  position: absolute;
+  height: var(--tag-height);
+  padding: 0 14px;
+  font-size: var(--font-sub);
+  line-height: var(--tag-height);
+  background: var(--color-bg);
+  border-radius: 4px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+/* ---------- IDLE_REDUCED ---------- */
+
+.screen .v9-notice {
+  margin: 0;
+  font-size: var(--font-say);
+  line-height: 1.35;
+}
+
+.v9-hand-big {
+  width: var(--mic-size);
+  height: var(--mic-size);
+}
+
+.v9-hand-big svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+/* IDLE_REDUCED 는 버튼이 하나(500 + 턱 12)라서 버튼 묶음 높이가 다르다. 본문 세로 가운데를 다시 잡는다 */
+.screen[data-screen='IDLE_REDUCED'] {
+  --actions-height: 512px;
+  --actions-top: calc(var(--band-height) + (var(--canvas-height) - var(--band-height) - 512px) / 2);
+}
+
+.screen[data-screen='IDLE_REDUCED'] .btn-primary {
+  margin-bottom: var(--btn-depth);
+}

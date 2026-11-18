@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 v2 (C 뼈대, 발표 시연용)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="v2.css" />
+  </head>
+  <body>
+    <!-- IDLE -->
+    <section class="screen" data-screen="IDLE">
+      <header class="v2-band">
+        <div class="v2-brand">
+          <svg class="v2-logo" viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <span>말길</span>
+        </div>
+        <div class="v2-clock">오후 2:30</div>
+        <div class="v2-place">지금 계신 곳<strong>종로3가.탑골공원 정류장</strong></div>
+      </header>
+      <main class="v2-main">
+        <div class="v2-meter" data-mode="rest" aria-hidden="true"></div>
+        <h1 class="v2-core">어디로 가시나요?</h1>
+        <div class="v2-say">
+          <div class="v2-say-label">이렇게 말해 보세요</div>
+          <div class="v2-say-words">“명동 어떻게 가요?”</div>
+        </div>
+        <div class="v2-actions">
+          <button type="button" class="btn btn-primary">말하기</button>
+          <button type="button" class="btn btn-secondary">손으로 고르기</button>
+        </div>
+      </main>
+    </section>
+
+    <!-- LISTENING (실제 마이크 모드) -->
+    <section class="screen" data-screen="LISTENING">
+      <header class="v2-band">
+        <div class="v2-brand">
+          <svg class="v2-logo" viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <span>말길</span>
+        </div>
+        <div class="v2-clock">오후 2:30</div>
+        <div class="v2-place">지금 계신 곳<strong>종로3가.탑골공원 정류장</strong></div>
+      </header>
+      <main class="v2-main">
+        <div class="v2-meter" data-mode="live" aria-hidden="true"></div>
+        <h1 class="v2-core">듣고 있어요</h1>
+        <p>가실 곳을 말씀해 주세요. 말씀이 끝나면 자동으로 넘어가요</p>
+        <div class="v2-actions">
+          <button type="button" class="btn btn-primary">다 말했어요</button>
+          <button type="button" class="btn btn-secondary">취소</button>
+          <button type="button" class="btn btn-secondary">처음으로</button>
+        </div>
+      </main>
+    </section>
+
+    <!-- ROUTING -->
+    <section class="screen" data-screen="ROUTING">
+      <header class="v2-band">
+        <div class="v2-brand">
+          <svg class="v2-logo" viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <span>말길</span>
+        </div>
+        <div class="v2-clock">오후 2:30</div>
+        <div class="v2-place">지금 계신 곳<strong>종로3가.탑골공원 정류장</strong></div>
+      </header>
+      <main class="v2-main">
+        <p>종로3가.탑골공원 정류장에서</p>
+        <svg class="v2-path" viewBox="0 0 280 640" fill="none" stroke="currentColor" aria-hidden="true">
+          <circle cx="140" cy="24" r="20" fill="currentColor" stroke="none" />
+          <path class="v2-flow" d="M140 68V372" stroke-width="16" stroke-linecap="round" stroke-dasharray="1 37" />
+          <circle cx="140" cy="500" r="88" stroke-width="30" />
+          <circle class="v2-seek" cx="140" cy="500" r="126" stroke-width="12" stroke-linecap="round" stroke-dasharray="200 592" />
+        </svg>
+        <p class="v2-core">명동</p>
+        <h1 class="v2-title">가는 길을 찾고 있어요</h1>
+      </main>
+    </section>
+
+    <!-- ROUTE_GUIDE -->
+    <section class="screen" data-screen="ROUTE_GUIDE">
+      <header class="v2-band">
+        <div class="v2-brand">
+          <svg class="v2-logo" viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <span>말길</span>
+        </div>
+        <div class="v2-clock">오후 2:30</div>
+        <div class="v2-place">지금 계신 곳<strong>종로3가.탑골공원 정류장</strong></div>
+      </header>
+      <main class="v2-main is-left">
+        <div class="v2-head">
+          <h1 class="v2-title">이렇게 가세요</h1>
+          <span class="v2-plate is-echo">목적지: 명동</span>
+        </div>
+        <div class="v2-sum">
+          <span>약<span class="v2-figure">12</span>분</span>
+          <span>환승 1회</span>
+        </div>
+        <ol class="v2-line">
+          <li class="v2-stop">
+            <span class="v2-stop-text"><strong>종로3가역</strong><span class="v2-plate">타는 곳</span></span>
+          </li>
+          <li class="v2-seg" style="--line: var(--line-seoul-3)">
+            <span><strong>지하철 3호선</strong>2정거장</span>
+          </li>
+          <li class="v2-stop">
+            <span class="v2-stop-text"><strong>충무로역</strong><span class="v2-plate">갈아타는 곳</span></span>
+          </li>
+          <li class="v2-seg" style="--line: var(--line-seoul-4)">
+            <span><strong>지하철 4호선</strong>1정거장</span>
+          </li>
+          <li class="v2-stop">
+            <span class="v2-stop-text"><strong>명동역</strong><span class="v2-plate">내리는 곳</span></span>
+          </li>
+        </ol>
+        <p class="hint v2-other">다른 방법: 걸어서 약 20분</p>
+        <div class="v2-actions">
+          <button type="button" class="btn btn-primary">휴대폰으로 보내기</button>
+          <button type="button" class="btn btn-secondary">처음으로</button>
+        </div>
+      </main>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+    <script src="v2.js"></script>
+  </body>
+</html>

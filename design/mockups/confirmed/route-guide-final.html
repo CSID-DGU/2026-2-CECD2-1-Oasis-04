@@ -1,0 +1,804 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>ROUTE_GUIDE 확정 시안 (버스정류장: 종로3가.탑골공원)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/flow.css" />
+    <script src="../shared/brand.js"></script>
+    <style>
+      /* ROUTE_GUIDE 확정본 (2026-11-17). 규칙은 docs/design-guidelines.md 3-6절 '경로 안내'.
+       * 구성: 왼쪽 칸 제목 + 선택된 경로의 타임라인, 오른쪽 칸 경로 카드(최대 3개) + 휴대폰으로 보내기 + 처음으로.
+       *
+       * 노선 표시: 지하철은 원(노선 번호), 버스는 둥근 네모(버스 번호만), 번호 없는 노선은 평평한 표지(흰 바탕 + 왼쪽 막대).
+       *   모두 흰 바탕 + 검정 글씨, 높이 52px. 번호 없는 노선의 막대는 노선 ID 가 올 때까지 회색이다
+       * 타임라인 구간 줄: 노선 표시 + "N번째 역(정류장)에서 내려요", 1이면 "다음 역(정류장)에서 내려요"
+       * 역 라벨: 첫 점 "타는 곳"(먼저 걸어가면 "지금 계신 곳"), 다음 차를 타는 곳 "갈아타는 곳", 마지막 차에서 내리는 곳 "내리는 곳",
+       *   목적지가 장소면 마지막 점 "가실 곳". 버스 정류장 이름 뒤에는 "정류장". 이름은 두 줄까지, 점(.) 뒤에서만 줄을 바꾼다
+       *
+       * 경로 규칙
+       *   R1 환승 2회 이하 경로만 보인다(최대 3개). 그런 경로가 없으면 환승이 가장 적은 경로 하나를 요약 판으로 보이고 R2 를 끝까지 쓴다.
+       *      요약 판은 높이가 내용을 따르므로 탈것이 4개 이상이어도 노선 줄을 모두 보인다
+       *   R2 타임라인이 넘치면 ① 촘촘하게(갈아타는 곳 라벨 빼고 간격 줄임) ② 걸어서 갈아타는 곳을 한 줄로("서울역에서 내려 걸어서 3분")
+       *      ③ 두 줄 정류장 이름을 36px ④ 그래도 넘치면 첫 구간과 마지막 구간만 남기고 가운데를 접는다("갈아타기 N번 더 / 자세한 길은 휴대폰으로 보내 드려요")
+       *   R3 경로가 2~3개면 카드는 칸 위쪽부터, 버튼은 아래쪽. 1개면 요약 판(버튼 아님, 소요 시간은 카드처럼 크게)과 버튼을 한 묶음으로 칸 아래쪽에
+       *   R4 걸어서만 가는 경로: 카드에 "걸어서", 타임라인은 지금 계신 곳 → 걸어서 N분 → 가실 곳.
+       *      규칙으로만 둔다. 지금 앱은 가까우면 UNAVAILABLE 로 보낸다
+       *   R5 카드 노선 줄은 두 줄까지 접어 모두 보인다 ("외 N개"로 줄이지 않는다)
+       *   R6 번호 없는 노선(공항철도, 경의중앙 등)은 IDLE 띠와 같은 평평한 표지. 막대 색은 노선 ID 가 올 때까지 회색
+       *   R7 목적지가 장소면 내리는 역에 "내리는 곳"과 출구, 그 뒤 걸어서 N분, 마지막 점에 "가실 곳"
+       *   R8 출구 번호가 없으면 아무것도 쓰지 않는다
+       *
+       * 주소: (없음) 버스정류장 기본, ?set=subway(지하철역 종로3가, 경로 A·B·C), ?set=long(긴 경우), ?pick=2(2순위 선택),
+       *   ?case=transfer3 등(시험 데이터 route-cases.js, 띠는 지하철역), ?label=old 는 없앴다
+       * 띠 이름은 데이터 묶음의 place 에서 가져온다 (지하철역 "종로3가", 버스정류장 "종로3가.탑골공원")
+       * 예시 값: 버스 번호, 정류장 이름, 시간, 출구 번호는 모두 지어낸 값이다. 도착 시각은 지금 시각에 소요 시간을 더한 것이다 */
+      :root {
+        --card-height: 168px;
+        --check-size: 40px;
+        /* 띠와 같은 버스 종류 색 (문서 3-6절, 모두 임시) */
+        --bus-trunk: #0068b7;
+        --bus-branch: #53b332;
+        --bus-express: #e60012;
+        --bus-circular: #f2b70a;
+        --mark-height: 52px;
+      }
+
+      /* ---------- 왼쪽 칸 ---------- */
+      .guide {
+        position: absolute;
+        top: 32px;
+        bottom: var(--pad);
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .guide-title {
+        flex-shrink: 0;
+        margin: 0 0 24px;
+        font-size: var(--font-title);
+        font-weight: 700;
+      }
+      .screen .guide-note {
+        flex-shrink: 0;
+        margin: auto 0 0; /* 칸 맨 아래 */
+        padding-top: 16px;
+        font-size: var(--font-sub);
+        color: var(--color-text-sub);
+      }
+      .timeline {
+        --name-line: 64px;
+        --walk-height: 56px;
+        --ride-height: 112px;
+        position: relative;
+        flex: 0 1 auto;
+        min-height: 0;
+        display: flex;
+        flex-direction: column;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+      }
+      /* 촘촘하게 (규칙 6) */
+      .timeline.is-compact {
+        --name-line: 56px;
+        --walk-height: 48px;
+        --ride-height: 72px;
+      }
+      .timeline.is-compact .stop.is-mid .stop-role {
+        display: none;
+      }
+      .stop,
+      .leg,
+      .walk {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 56px 1fr;
+        column-gap: 28px;
+        align-items: center;
+      }
+      .stop {
+        flex: 0 0 auto;
+      }
+      .walk {
+        flex: 0 0 var(--walk-height);
+      }
+      /* 타는 구간: 정해진 높이(--ride-height). 남는 세로 공간을 나눠 갖지 않는다 (타임라인이 칸 아래까지 늘어지지 않게).
+         칸이 모자라면 글자 높이까지만 줄어든다 */
+      .leg {
+        flex: 0 1 var(--ride-height);
+        min-height: max-content;
+      }
+      .stop-role {
+        grid-column: 2;
+        font-size: var(--font-sub);
+        line-height: 1.2;
+        color: var(--color-text-sub);
+      }
+      .stop-dot {
+        grid-column: 1;
+        grid-row: 2;
+        align-self: start;
+        margin-top: calc((var(--name-line) - 48px) / 2);
+        justify-self: center;
+        position: relative;
+        width: 48px;
+        height: 48px;
+        background: var(--color-bg);
+        border: var(--ring-width) solid var(--color-text);
+        border-radius: 50%;
+      }
+      .stop-main {
+        grid-row: 2;
+      }
+      .stop.no-role .stop-dot,
+      .stop.no-role .stop-main,
+      .timeline.is-compact .stop.is-mid .stop-dot,
+      .timeline.is-compact .stop.is-mid .stop-main {
+        grid-row: 1;
+      }
+      .stop.is-from .stop-dot::after {
+        content: '';
+        position: absolute;
+        inset: 9px;
+        background: var(--color-text);
+        border-radius: 50%;
+      }
+      /* 이름 줄: 이름 + 출구 번호. 이름이 길어 두 줄이 되면 덧붙인 정보는 그 아래로 내려간다 */
+      .stop-main {
+        grid-column: 2;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        column-gap: 24px;
+      }
+      .stop-name {
+        max-width: 100%;
+        font-size: var(--font-title);
+        font-weight: 700;
+        line-height: var(--name-line);
+        word-break: keep-all;
+      }
+      .name-part {
+        white-space: nowrap;
+      }
+      .stop-name.is-small {
+        font-size: var(--font-body);
+      }
+      .stop-name small {
+        font-size: var(--font-body);
+        font-weight: 400;
+        line-height: 1; /* 작은 글씨가 줄 높이를 늘리지 않게 */
+      }
+      .exit {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: var(--font-body);
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .exit b {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 52px;
+        height: 52px;
+        padding: 0 8px;
+        border: 3px solid var(--color-text);
+        border-radius: 6px;
+      }
+      .leg-text {
+        grid-column: 2;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        white-space: nowrap;
+      }
+      .walk-text {
+        grid-column: 2;
+        color: var(--color-text-sub);
+        white-space: nowrap;
+      }
+      /* 구간 줄 (문서 3-6절): 노선 표시 옆에 한 줄 "N번째 역에서 내려요". 지나는 역 이름은 보이지 않는다 */
+      .leg-count {
+        line-height: 1.3;
+      }
+      .rails {
+        position: absolute;
+        inset: 0;
+        z-index: 0;
+        pointer-events: none;
+      }
+      .rail {
+        position: absolute;
+        left: 21px;
+        width: var(--line-width);
+        background: var(--c);
+      }
+      .rail.is-after-walk {
+        border-radius: 7px 7px 0 0;
+      }
+      .rail.is-walk {
+        background: radial-gradient(circle, var(--color-text-sub) 0 5px, transparent 5.5px) center top / 14px 20px repeat-y;
+      }
+
+      /* ---------- 노선 표시 (규칙 1) ---------- */
+      .line-no,
+      .bus-no {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: var(--mark-height);
+        font-size: var(--font-sub);
+        line-height: 1;
+        white-space: nowrap;
+        background: var(--color-bg);
+        border: var(--ring-width) solid var(--c, var(--color-text-sub));
+      }
+      /* 지하철: 원 */
+      .line-no {
+        width: var(--mark-height);
+        font-weight: 400;
+        border-radius: 50%;
+      }
+      /* 버스: 둥근 네모 안에 번호만. 번호는 굵게 (지하철 원의 번호와 같은 30px) */
+      .bus-no {
+        min-width: var(--mark-height);
+        padding: 0 14px;
+        font-weight: 700;
+        border-radius: 12px;
+      }
+
+      /* 번호 없는 노선 (R6): 흰 바탕 + 왼쪽 막대 10px + 검정 글씨. IDLE 띠의 평평한 표지와 같은 모양, 높이는 52px.
+         막대 색은 노선 ID 가 올 때까지 회색(--line-none) */
+      .line-tag {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        height: var(--mark-height);
+        padding: 0 14px;
+        font-size: var(--font-sub);
+        line-height: 1;
+        white-space: nowrap;
+        background: var(--color-bg);
+        border: 2px solid var(--color-text-sub);
+        border-left: 10px solid var(--line-none);
+        border-radius: 4px;
+      }
+      /* 가운데를 접은 줄 (R2-④) */
+      .walk.is-fold {
+        flex: 0 0 auto;
+        padding: 8px 0;
+      }
+      .walk.is-fold .walk-text {
+        color: var(--color-text);
+        line-height: 1.3;
+        white-space: normal;
+      }
+
+      /* ---------- 오른쪽 칸: 경로 카드 ----------
+       * 카드: 체크 자리 | 소요 시간(+ 선택된 카드만 도착 시각) | 노선 줄. 노선 줄은 두 줄까지 접힌다 (R5)
+       * 경로가 2~3개면 카드는 칸 위쪽부터, 버튼은 칸 아래쪽 (R3). 1개면 요약 판과 버튼을 한 묶음으로 칸 아래쪽에 붙인다 */
+      .screen .right.is-top {
+        top: 32px;
+      }
+      .right.is-top .cards {
+        margin-bottom: auto;
+      }
+      .cards {
+        display: flex;
+        flex-direction: column;
+        gap: var(--list-gap);
+        margin: 0 0 8px;
+        padding: 0;
+        list-style: none;
+      }
+      .card {
+        display: grid;
+        grid-template-columns: var(--check-size) auto minmax(0, 1fr);
+        align-content: center;
+        column-gap: 12px;
+        row-gap: 4px;
+        width: 100%;
+        height: var(--card-height);
+        padding: 0 20px 0 16px;
+        font: inherit;
+        color: var(--color-text);
+        text-align: left;
+        background: var(--color-bg);
+        border: 2px solid var(--color-text-sub);
+        border-radius: 24px;
+        cursor: pointer;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
+        transition: background-color var(--motion-press);
+      }
+      .card:active {
+        background: var(--color-secondary-pressed);
+      }
+      .card[aria-pressed='true'] {
+        background: var(--color-bg-highlight);
+        border-color: var(--color-primary);
+        box-shadow: inset 0 0 0 4px var(--color-primary);
+      }
+      .card:focus-visible {
+        outline: 4px solid var(--color-text);
+        outline-offset: 3px;
+      }
+      /* 경로가 1개일 때의 요약 판 (R3): 고를 것이 없으니 버튼이 아니다. 묶음 바탕, 테두리 없음, 도착 시각을 늘 보인다 */
+      .card.is-only {
+        height: auto;
+        min-height: var(--card-height);
+        padding-top: 20px;
+        padding-bottom: 20px;
+        cursor: default;
+        background: var(--color-bg-group);
+        border-color: transparent;
+      }
+      .card-check {
+        grid-column: 1;
+        grid-row: 1 / span 2;
+        align-self: center;
+        width: var(--check-size);
+        height: var(--check-size);
+        fill: currentColor;
+        visibility: hidden;
+      }
+      .card[aria-pressed='true'] .card-check {
+        visibility: visible;
+      }
+      .card-time {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+        font-size: var(--font-body);
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .card-time b {
+        margin: 0 6px;
+        font-size: var(--font-display);
+        letter-spacing: -0.02em;
+      }
+      /* 도착 시각은 소요 시간 칸의 너비를 정하지 않는다(너비 0, 글자는 오른쪽으로 넘쳐 보인다).
+         그래서 노선 줄 자리는 소요 시간 너비만큼만 줄어든다. 노선 줄 둘째 줄과 겹치지 않는지는 checkCards() 가 잰다 */
+      .card-arrive {
+        grid-column: 2;
+        grid-row: 2;
+        width: 0;
+        display: none;
+        font-size: var(--font-body);
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+      .card[aria-pressed='true'] .card-arrive,
+      .card.is-only .card-arrive {
+        display: block;
+      }
+      /* 노선 줄 (R5): 탈것은 최대 3개(R1). 한 줄에 안 들어가면 두 줄로 접는다. 화살표는 다음 탈것과 붙어 다닌다 */
+      .card .lines {
+        grid-column: 3;
+        grid-row: 1 / span 2;
+        align-self: center;
+        justify-self: end;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        row-gap: 8px;
+      }
+      .lines {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .line-step {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .line-step > svg {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      /* 요약 판: 노선 줄은 첫 줄에서만 접히고, 도착 시각은 그 아래 한 줄 전체를 쓴다 (노선 줄과 겹치지 않게. 판 높이가 늘어난다) */
+      .card.is-only .lines {
+        grid-row: 1;
+      }
+      .card.is-only .card-arrive {
+        grid-column: 2 / span 2;
+        width: auto;
+        margin-top: 8px;
+      }
+      /* 걸어서만 가는 경로의 카드 표시 (R4) */
+      .walk-mark {
+        font-size: var(--font-sub);
+        white-space: nowrap;
+      }
+
+      @keyframes appear {
+        from {
+          opacity: 0;
+        }
+      }
+      .is-appearing {
+        animation: appear var(--motion-screen) ease-out;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .is-appearing {
+          animation: none;
+        }
+        .card {
+          transition: none;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="screen" data-screen="ROUTE_GUIDE">
+      <header class="thin" data-zone="band">
+        <div class="thin-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <service-name></service-name>
+        </div>
+        <div class="thin-place" data-place></div>
+        <div class="thin-now"><span data-date>11월 17일 화요일</span> <span data-clock>오후 2:30</span></div>
+      </header>
+
+      <div class="body">
+        <main class="left">
+          <div class="guide" data-zone="content">
+            <h1 class="guide-title">이렇게 가세요</h1>
+            <ol class="timeline v3-core" data-zone="timeline"></ol>
+            <p class="guide-note" data-note></p>
+          </div>
+        </main>
+
+        <div class="right" data-zone="actions">
+          <ul class="cards" data-zone="cards"></ul>
+          <button type="button" class="btn btn-primary" data-zone="primary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M260-40q-24 0-42-18t-18-42v-760q0-24 18-42t42-18h440q24 0 42 18t18 42v760q0 24-18 42t-42 18H260Zm0-90v30h440v-30H260Zm0-60h440v-580H260v580Zm0-640h440v-30H260v30Zm0 0v-30 30Zm0 700v30-30Z" /></svg>
+            <span>휴대폰으로 보내기</span>
+          </button>
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M220-180h150v-250h220v250h150v-390L480-765 220-570v390Zm-60 60v-480l320-240 320 240v480H530v-250H430v250H160Zm320-353Z" /></svg>
+            <span>처음으로</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <script src="../shared/v3.js"></script>
+    <script src="route-cases.js"></script>
+    <script>
+      // 경로 데이터 (모두 예시). 구간 하나 = { mode, ... }
+      //   SUBWAY { lineId, label, via, to }   → 노선 표시 + "N번째 역에서 내려요". label 이 2자를 넘으면 번호 없는 노선 (R6)
+      //   BUS    { kind, number, via, to }    → 버스 번호 네모 + "N번째 정류장에서 내려요"
+      //   WALK   { minutes, to? }             → 점선 + "걸어서 N분". to 가 있으면 다른 곳까지 걷는다(다음 점이 생긴다)
+      // 장소: { name, kind: 'STATION' | 'STOP' | 'PLACE', dir? }. dir(타는 방향)은 선택 항목, 화면에 보이지 않는다
+      // via 는 지나는 역·정류장 이름(마지막이 내리는 곳)이고 개수만 쓴다
+      // 주소: ?case=transfer3 | one | two | walk | longcard | longname | named | place | noexit 는 시험 데이터(route-cases.js)
+      const BUS_KINDS = { TRUNK: ['간선', '--bus-trunk'], BRANCH: ['지선', '--bus-branch'], EXPRESS: ['광역', '--bus-express'], CIRCULAR: ['순환', '--bus-circular'] }
+      const START = { name: '종로3가.탑골공원', kind: 'STOP' }
+      const SETS = {
+        bus: [
+          {
+            id: 'bus-only', durationMin: 14, start: { ...START, dir: 'SAME' },
+            legs: [{ mode: 'BUS', kind: 'TRUNK', number: '472', via: ['종로2가', '종각', '광교', '을지로입구', '명동성당', '명동입구'], to: { name: '명동입구', kind: 'STOP' } }],
+          },
+          {
+            id: 'bus-subway', durationMin: 16, exit: '6', start: { ...START, dir: 'ACROSS' },
+            legs: [
+              { mode: 'BUS', kind: 'BRANCH', number: '7011', via: ['종로3가역', '을지로3가', '충무로역'], to: { name: '충무로역', kind: 'STOP' } },
+              { mode: 'WALK', minutes: 3, to: { name: '충무로역', kind: 'STATION' } },
+              { mode: 'SUBWAY', lineId: 'seoul-4', label: '4', via: ['명동'], to: { name: '명동역', kind: 'STATION' } },
+            ],
+          },
+          {
+            id: 'subway-bus', durationMin: 21, start: START,
+            legs: [
+              { mode: 'WALK', minutes: 4, to: { name: '종로3가역', kind: 'STATION' } },
+              { mode: 'SUBWAY', lineId: 'seoul-1', label: '1', via: ['종각', '시청', '서울역'], to: { name: '서울역', kind: 'STATION' } },
+              { mode: 'WALK', minutes: 3, to: { name: '서울역', kind: 'STOP', dir: 'SAME' } },
+              { mode: 'BUS', kind: 'TRUNK', number: '405', via: ['숭례문', '명동입구'], to: { name: '명동입구', kind: 'STOP' } },
+            ],
+          },
+        ],
+        long: [
+          {
+            id: 'long', durationMin: 38, start: { ...START, dir: 'ACROSS' },
+            legs: [
+              { mode: 'BUS', kind: 'EXPRESS', number: '9401-1', via: ['종로5가', '동대문', '서울특별시립동대문역사문화공원.국립중앙의료원앞'], to: { name: '서울특별시립동대문역사문화공원.국립중앙의료원앞', kind: 'STOP' } },
+              { mode: 'WALK', minutes: 4, to: { name: '동대문역사문화공원역', kind: 'STATION' } },
+              { mode: 'SUBWAY', lineId: 'seoul-4', label: '4', via: ['충무로'], to: { name: '충무로역', kind: 'STATION' } },
+              { mode: 'WALK', minutes: 3, to: { name: '충무로역.매일경제', kind: 'STOP', dir: 'ACROSS' } },
+              { mode: 'BUS', kind: 'BRANCH', number: '7011', via: ['퇴계로3가', '명동입구'], to: { name: '명동입구', kind: 'STOP' } },
+            ],
+          },
+        ],
+      }
+      const query = new URLSearchParams(location.search)
+      const caseName = query.get('case')
+      const CASE = caseName ? window.ROUTE_CASES[caseName] : null
+      // 묶음 = 띠 이름 + 경로. 띠 이름은 묶음에서 가져온다 (지하철역 "종로3가", 버스정류장 "종로3가.탑골공원")
+      const set = query.get('set')
+      const BUNDLE = CASE
+        ? { place: CASE.place, routes: CASE.routes }
+        : set === 'subway'
+          ? window.ROUTE_SUBWAY
+          : set === 'long'
+            ? { place: START.name, routes: [SETS.long[0], SETS.bus[1], SETS.bus[2]] }
+            : { place: START.name, routes: SETS.bus }
+      const given = BUNDLE.routes
+      document.querySelector('[data-place]').textContent = BUNDLE.place
+
+      const rides = (route) => route.legs.filter((leg) => leg.mode !== 'WALK')
+      const transfersOf = (route) => Math.max(0, rides(route).length - 1)
+
+      // R1: 환승 2회 이하 경로만 보인다. 그런 경로가 없으면 환승이 가장 적은 경로 하나를 보이고 R2 를 끝까지 쓴다
+      const fewTransfers = given.filter((r) => transfersOf(r) <= 2)
+      const fallback = fewTransfers.length === 0
+      const ROUTES = fallback ? [...given].sort((a, b) => transfersOf(a) - transfersOf(b)).slice(0, 1) : fewTransfers.slice(0, 3)
+      const single = ROUTES.length === 1 // R3
+
+      // 예시 안내 (시안 전용, 실제 앱에는 넣지 않는다. 문서 9-1절): 보이는 경로에 버스가 하나라도 있으면 버스 번호까지 적는다
+      const hasBus = ROUTES.some((route) => route.legs.some((leg) => leg.mode === 'BUS'))
+      document.querySelector('[data-note]').textContent = hasBus ? '버스 번호, 시간, 출구는 예시예요' : '시간과 출구는 예시예요'
+
+      const clock = (date) => {
+        const h = date.getHours()
+        return `${h < 12 ? '오전' : '오후'} ${h % 12 === 0 ? 12 : h % 12}:${String(date.getMinutes()).padStart(2, '0')}`
+      }
+      const arriveAt = (route) => new Date(Date.now() + route.durationMin * 60_000)
+      const ARROW = '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 14h19M15 6l8 8-8 8" /></svg>'
+      const CHECK = '<svg class="card-check" viewBox="0 -960 960 960" aria-hidden="true"><path d="M378-246 154-470l43-43 181 181 384-384 43 43-427 427Z" /></svg>'
+
+      // 노선 표시. 지하철은 원, 버스는 번호 네모, 번호 없는 노선은 평평한 표지 (R6. 노선 ID 가 올 때까지 막대는 회색)
+      const isNamed = (leg) => leg.mode === 'SUBWAY' && String(leg.label).length > 2
+      const mark = (leg) => {
+        if (leg.mode === 'BUS') return `<span class="bus-no" style="--c: var(${BUS_KINDS[leg.kind][1]})">${leg.number}</span>`
+        if (isNamed(leg)) return `<span class="line-tag">${leg.label}</span>`
+        return `<span class="line-no" style="--c: var(--line-${leg.lineId})">${leg.label}</span>`
+      }
+      const colorOf = (leg) => (leg.mode === 'BUS' ? `var(${BUS_KINDS[leg.kind][1]})` : isNamed(leg) ? 'var(--line-none)' : `var(--line-${leg.lineId})`)
+      // 카드 노선 줄 (R5): 화살표는 다음 탈것과 한 덩어리라 줄이 바뀌어도 줄 끝에 화살표만 남지 않는다. 걸어서만 가면 "걸어서" (R4)
+      const linesOf = (route) =>
+        rides(route).length ? rides(route).map((leg, i) => `<span class="line-step">${i ? ARROW : ''}${mark(leg)}</span>`).join('') : '<span class="walk-mark">걸어서</span>'
+      function legLines(leg) {
+        const unit = leg.mode === 'BUS' ? '정류장' : '역'
+        const n = leg.via.length
+        return `<span class="leg-count">${n === 1 ? '다음' : `${n}번째`} ${unit}에서 내려요</span>`
+      }
+      const placeName = (place) => {
+        const parts = place.name.split('.')
+        const suffix = place.kind === 'STOP' ? ' <small>정류장</small>' : ''
+        return parts.map((part, i) => `<span class="name-part">${part}${i < parts.length - 1 ? '.' : suffix}</span>`).join('<wbr>')
+      }
+
+      const cardsEl = document.querySelector('.cards')
+      const timelineEl = document.querySelector('.timeline')
+      document.querySelector('.right').classList.toggle('is-top', !single) // R3
+
+      cardsEl.innerHTML = ROUTES.map((route, i) =>
+        single
+          ? `<li><div class="card is-only" data-index="${i}" data-zone="card${i + 1}">
+              <span class="card-time">약<b>${route.durationMin}</b>분</span>
+              <span class="lines">${linesOf(route)}</span>
+              <span class="card-arrive">${clock(arriveAt(route))} 도착</span>
+            </div></li>`
+          : `<li><button type="button" class="card" data-index="${i}" data-zone="card${i + 1}" aria-pressed="false">
+              ${CHECK}
+              <span class="card-time">약<b>${route.durationMin}</b>분</span>
+              <span class="lines">${linesOf(route)}</span>
+              <span class="card-arrive">${clock(arriveAt(route))} 도착</span>
+            </button></li>`,
+      ).join('')
+
+      // 카드 검사용: 노선 줄이 몇 줄인지, 카드 밖으로 나가는지 남긴다
+      function checkCards() {
+        const hit = (p, q) => p.width && q.width && p.left < q.right && q.left < p.right && p.top < q.bottom && q.top < p.bottom
+        cardsEl.querySelectorAll('.card').forEach((card) => {
+          const box = card.getBoundingClientRect()
+          const time = card.querySelector('.card-time').getBoundingClientRect()
+          const arrive = card.querySelector('.card-arrive')
+          const range = document.createRange()
+          range.selectNodeContents(arrive)
+          const arriveText = range.getBoundingClientRect()
+          const steps = [...card.querySelectorAll('.line-step, .walk-mark')].map((el) => el.getBoundingClientRect())
+          const rows = new Set(steps.map((r) => Math.round(r.top))).size
+          const inside = steps.every((r) => r.left >= time.right && r.right <= box.right - 2 && r.top >= box.top && r.bottom <= box.bottom)
+          const clash = steps.some((r) => hit(r, arriveText)) || (arriveText.width > 0 && arriveText.right > box.right - 2)
+          card.dataset.fit = `${rows}줄${inside ? '' : ' 넘침'}${clash ? ' 도착시각겹침' : ''}`
+        })
+      }
+
+      // 타임라인. level 2 부터 걸어서 갈아타는 곳을 한 줄로, level 4 는 가운데를 접는다 (R2)
+      function timelineOf(route, level) {
+        const items = []
+        const stop = (place, role, cls, extra = '') =>
+          items.push(
+            `<li class="stop ${cls} ${role ? '' : 'no-role'}">${role ? `<span class="stop-role">${role}</span>` : ''}<span class="stop-dot"></span><span class="stop-main"><span class="stop-name">${placeName(place)}</span>${extra}</span></li>`,
+          )
+        const walkRow = (text, toStop) => items.push(`<li class="walk" data-to="${toStop ? 'stop' : 'ride'}"><span class="walk-text">${text}</span></li>`)
+        const ride = (leg) => items.push(`<li class="leg" data-c="${colorOf(leg)}"><span class="leg-text">${mark(leg)}${legLines(leg)}</span></li>`)
+        const exitHtml = route.exit ? `<span class="exit"><b>${route.exit}</b>번 출구</span>` : '' // R8: 없으면 쓰지 않는다
+        const legs = route.legs
+        const lastRide = legs.map((l) => l.mode !== 'WALK').lastIndexOf(true)
+        const firstRide = legs.findIndex((l) => l.mode !== 'WALK')
+        const end = () => items.join('') + '<li class="rails" aria-hidden="true"></li>'
+        // R7: 마지막 구간에서 내린 곳에 "내리는 곳"과 출구. 목적지가 장소면 걸어서 N분 → "가실 곳"
+        const tail = (i) => {
+          stop(legs[i].to, '내리는 곳', '', exitHtml)
+          legs.slice(i + 1).forEach((w) => {
+            walkRow(`걸어서 ${w.minutes}분`, !!w.to)
+            if (w.to) stop(w.to, '가실 곳', 'is-dest')
+          })
+        }
+        stop(route.start, legs[0].mode === 'WALK' ? '지금 계신 곳' : '타는 곳', 'is-from')
+
+        // R4: 걸어서만 가는 경로
+        if (lastRide < 0) {
+          legs.forEach((w) => {
+            walkRow(`걸어서 ${w.minutes}분`, !!w.to)
+            if (w.to) stop(w.to, '가실 곳', 'is-dest')
+          })
+          return end()
+        }
+        // R2-④: 첫 구간과 마지막 구간만 남기고 가운데를 접는다
+        if (level >= 4 && rides(route).length > 2) {
+          for (let i = 0; i < firstRide; i++) {
+            walkRow(`걸어서 ${legs[i].minutes}분`, !!legs[i].to)
+            if (legs[i].to) stop(legs[i].to, '타는 곳', '')
+          }
+          ride(legs[firstRide])
+          items.push(`<li class="walk is-fold" data-to="stop"><span class="walk-text"><b>갈아타기 ${transfersOf(route) - 1}번 더</b><br />자세한 길은 휴대폰으로 보내 드려요</span></li>`)
+          stop(legs[lastRide - 1].to ?? legs[lastRide - 2].to, '갈아타는 곳', 'is-mid')
+          ride(legs[lastRide])
+          tail(lastRide)
+          return end()
+        }
+        legs.forEach((leg, i) => {
+          if (i > lastRide) return // 마지막 구간 뒤 걷기는 tail 이 그린다
+          if (leg.mode === 'WALK') {
+            const prev = legs[i - 1]
+            // R2-②: 내려서 다른 곳까지 걸어가 갈아타면 내린 곳 줄을 없애고 걷는 줄에 이름을 넣는다
+            const merged = level >= 2 && prev && prev.mode !== 'WALK' && leg.to
+            walkRow(merged ? `${prev.to.name}에서 내려 걸어서 ${leg.minutes}분` : `걸어서 ${leg.minutes}분`, !!leg.to)
+            // 다른 곳까지 걸으면 그곳이 다음 점이다. 처음 걷기 뒤면 "타는 곳", 갈아타는 중이면 "갈아타는 곳"(다음 차를 타는 곳)
+            if (leg.to) stop(leg.to, i === 0 ? '타는 곳' : '갈아타는 곳', i === 0 ? '' : 'is-mid')
+            return
+          }
+          ride(leg)
+          if (i === lastRide) return tail(i)
+          // 내려서 다른 곳까지 걸어가 갈아타면 내리는 곳에는 라벨을 두지 않는다. 같은 역 안에서 갈아타면 여기가 갈아타는 곳
+          const walksAway = legs[i + 1]?.mode === 'WALK' && legs[i + 1].to
+          if (level >= 2 && walksAway) return // R2-②
+          stop(leg.to, walksAway ? '' : '갈아타는 곳', 'is-mid')
+        })
+        return end()
+      }
+
+      // 정류장 이름의 줄 수. maxLines 줄을 넘는 이름은 36px 로 줄인다
+      const nameLines = (name) => Math.round(name.getBoundingClientRect().height / parseFloat(getComputedStyle(name).lineHeight))
+      function fitNames(maxLines) {
+        timelineEl.querySelectorAll('.stop-name').forEach((name) => {
+          if (nameLines(name) > maxLines) name.classList.add('is-small')
+        })
+      }
+
+      // 선: 점과 점 사이. 걷는 구간은 점선, 타는 구간은 노선색. 앞이 걷기면 선 머리를 둥글게
+      function drawRails() {
+        const top0 = timelineEl.getBoundingClientRect().top
+        const items = [...timelineEl.children].filter((li) => !li.classList.contains('rails'))
+        const dotY = (li) => {
+          const r = li.querySelector('.stop-dot').getBoundingClientRect()
+          return r.top + r.height / 2 - top0
+        }
+        const rails = []
+        let y = 0
+        let prevStop = false
+        items.forEach((li, i) => {
+          if (li.classList.contains('stop')) {
+            y = dotY(li)
+            prevStop = true
+            return
+          }
+          const isWalk = li.classList.contains('walk')
+          const next = items[i + 1]
+          const start = y + (prevStop && isWalk ? 30 : 0)
+          const stopY = next?.classList.contains('stop') ? dotY(next) - (isWalk ? 30 : 0) : li.getBoundingClientRect().bottom - top0
+          rails.push(
+            isWalk
+              ? `<span class="rail is-walk" style="top:${start}px;height:${Math.max(0, stopY - start)}px"></span>`
+              : `<span class="rail ${prevStop ? '' : 'is-after-walk'}" style="--c:${li.dataset.c};top:${start}px;height:${stopY - start}px"></span>`,
+          )
+          y = stopY
+          prevStop = false
+        })
+        timelineEl.querySelector('.rails').innerHTML = rails.join('')
+      }
+
+      // R2: 넘치면 ① 촘촘하게 ② 걸어서 갈아타는 곳을 한 줄로 ③ 두 줄 이름을 36px ④ 가운데 접기 (환승 2회 이하 경로가 없을 때도 ④)
+      const overflows = () => timelineEl.scrollHeight > timelineEl.clientHeight + 1
+      let steps = []
+      function fitTimeline(route) {
+        steps = []
+        const render = (level) => (timelineEl.innerHTML = timelineOf(route, level))
+        timelineEl.classList.remove('is-compact')
+        render(1)
+        fitNames(2)
+        if (overflows()) {
+          timelineEl.classList.add('is-compact')
+          steps.push('촘촘')
+        }
+        if (overflows()) {
+          render(2)
+          fitNames(2)
+          steps.push('걷기 한 줄')
+        }
+        if (overflows()) {
+          fitNames(1)
+          steps.push('이름 36px')
+        }
+        if ((overflows() || fallback) && rides(route).length > 2) {
+          render(4)
+          fitNames(1)
+          steps.push('가운데 접기')
+        }
+        timelineEl.dataset.overflow = overflows() ? `yes (${timelineEl.scrollHeight - timelineEl.clientHeight}px 넘침)` : 'no'
+      }
+
+      function pick(index, animate) {
+        cardsEl.querySelectorAll('button.card').forEach((card, i) => card.setAttribute('aria-pressed', String(i === index)))
+        fitTimeline(ROUTES[index])
+        drawRails()
+        checkCards()
+        timelineEl.classList.remove('is-appearing')
+        if (animate) {
+          void timelineEl.offsetWidth
+          timelineEl.classList.add('is-appearing')
+        }
+      }
+      cardsEl.addEventListener('click', (e) => {
+        const card = e.target.closest('button.card')
+        if (card) pick(Number(card.dataset.index), true)
+      })
+      const first = Math.min(ROUTES.length, Math.max(1, Number(query.get('pick')) || 1)) - 1
+      pick(first, false)
+      document.fonts.ready.then(() => {
+        pick(first, false)
+        // 검사용: 넘침 여부를 화면 밖에서 읽을 수 있게 남긴다
+        document.body.dataset.fit = JSON.stringify({
+          case: CASE?.title ?? query.get('set') ?? 'bus',
+          given: given.length,
+          routes: ROUTES.length,
+          fallback,
+          steps,
+          timelineOverflow: timelineEl.dataset.overflow,
+          cards: [...cardsEl.querySelectorAll('.card')].map((c) => c.dataset.fit),
+        })
+      })
+
+      // 시연 페이지(demo.html) 안에서는 카드가 아닌 곳을 누르면 다음 화면으로 넘어간다
+      if (window.parent !== window) {
+        document.addEventListener('click', (e) => {
+          if (!e.target.closest('button.card')) window.parent.postMessage({ type: 'demo-next' }, '*')
+        })
+      }
+    </script>
+    <script src="../shared/mock.js"></script>
+  </body>
+</html>

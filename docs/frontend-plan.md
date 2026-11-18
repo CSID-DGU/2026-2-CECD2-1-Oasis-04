@@ -335,7 +335,7 @@ export const api = import.meta.env.VITE_USE_MOCK === 'true' ? mock : real;
 
 ### Phase 6 — 마무리
 
-1. `global.css` 최소 고령자 UI (글씨 28px 이상, 버튼 높이 80px 이상, 고대비)
+1. `global.css` 최소 고령자 UI (글씨·버튼 크기는 `docs/design-guidelines.md`를 따른다, 고대비)
 2. effect 핸들러 테스트 추가 (Vitest, fake timers): mock API를 주입해 `RESOLVING`·`ROUTING` 핸들러가 성공·실패·예외 각각에서 올바른 이벤트를 dispatch 하는지, cleanup 뒤에는 dispatch 하지 않는지(StrictMode 규칙). 타이머 핸들러(`inactivity`, `IDLE_REDUCED`, recorder 10초/2.5초)가 설정값대로 발화하고 cleanup에서 멈추는지
 3. `frontend/README.md`: 실행 방법(`npm install`, `npm run dev`, `npm test`), mock 키워드 목록, 시간 설정값 env 목록, 실제 API 교체 절차
 4. 문서 대조: `docs/kiosk-workflow.md` 41행과 `initialState` 1 + `transitions.js` 40항목을 한 번 더 비교

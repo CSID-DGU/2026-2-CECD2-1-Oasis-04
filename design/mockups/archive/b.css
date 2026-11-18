@@ -1,0 +1,118 @@
+/* B. 카드형 — 주 버튼이 내용 카드 안으로 올라간다. 나가는 버튼(취소·처음으로 등)은 맨 아래.
+ * 옅은 회색 바탕 + 흰 카드, 핵심 카드만 강조 배경. 글자 옆에 아이콘(Material Symbols) */
+
+:root {
+  /* 시안 전용 토큰 (디자인 문서에 아직 없음. 이 방향을 고르면 문서 3-4절에 먼저 추가한다) */
+  --card-padding: 40px;
+  --card-radius: 24px;
+  --card-border-width: 2px;
+  --icon-size: 48px;
+  --icon-size-lg: 96px;
+  --bar-height: 16px;
+  --focus-width: 4px;
+  --focus-offset: 3px;
+}
+
+.screen {
+  background: var(--color-bg-group);
+}
+
+/* 흰색과 회색의 대비가 1.12:1 뿐이라 카드에는 테두리를 반드시 둔다 */
+.b-card {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--block-gap);
+  padding: var(--card-padding);
+  background: var(--color-bg);
+  border: var(--card-border-width) solid var(--color-text-sub);
+  border-radius: var(--card-radius);
+}
+
+.b-card-core {
+  background: var(--color-bg-highlight);
+}
+
+.b-card-alert {
+  border: var(--border-width) solid var(--color-text);
+}
+
+.b-space {
+  flex: 1 1 auto;
+}
+
+/* 아래 버튼 영역: 선 대신 바탕색으로 구분한다 */
+.screen-actions {
+  padding-top: 0;
+  border-top: 0;
+}
+
+/* 아이콘은 옆 글자와 같은 색 */
+.b-ico {
+  display: inline-block;
+  width: var(--icon-size);
+  height: var(--icon-size);
+  margin-right: 0.3em;
+  vertical-align: -0.28em;
+  fill: currentColor;
+}
+
+.b-ico-lg {
+  display: block;
+  width: var(--icon-size-lg);
+  height: var(--icon-size-lg);
+  margin: 0;
+}
+
+.b-core {
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+.b-count {
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+/* 진행 막대: 파랑은 누르는 것에만 쓰므로 본문색 */
+.b-bar {
+  height: var(--bar-height);
+  overflow: hidden;
+  background: var(--color-bg);
+  border: var(--card-border-width) solid var(--color-text);
+  border-radius: var(--bar-height);
+}
+
+.b-bar::after {
+  content: '';
+  display: block;
+  width: 30%;
+  height: 100%;
+  background: var(--color-text);
+  border-radius: var(--bar-height);
+  animation: b-slide var(--motion-loop) ease-in-out infinite alternate;
+}
+
+@keyframes b-slide {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(233%);
+  }
+}
+
+.b-others {
+  display: flex;
+  flex-direction: column;
+  gap: var(--block-gap);
+  font-size: var(--font-sub);
+  color: var(--color-text-sub);
+}
+
+.b-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--block-gap);
+}

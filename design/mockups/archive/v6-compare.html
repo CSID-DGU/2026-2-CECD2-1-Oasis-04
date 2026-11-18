@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>v5 와 v6 비교</title>
+    <style>
+      /* 비교용 도구 페이지 (키오스크 화면이 아님) */
+      @import url('../../../frontend/src/styles/global.css');
+      html,
+      body {
+        width: auto;
+        height: auto;
+      }
+      body {
+        padding: 24px;
+        font-size: 18px;
+        background: #dddddd;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 26px;
+      }
+      table {
+        border-collapse: separate;
+        border-spacing: 16px;
+        margin-left: -16px;
+      }
+      th {
+        text-align: left;
+        vertical-align: top;
+        white-space: nowrap;
+      }
+      img {
+        display: block;
+        width: 576px;
+        height: 324px;
+        border: 1px solid var(--color-text-sub);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>v5 와 v6 비교 (1920×1080 을 30%로 줄여 봄. 그림을 누르면 실제 크기)</h1>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>v5</th>
+          <th>v6</th>
+          <th>v6 흐림 blur(12px)</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <script>
+      const PAGES = [
+        ['subway', '지하철역'],
+        ['bus', '버스정류장'],
+        ['default', '정보 없음'],
+      ]
+      const img = (file) => `<td><a href="shots/${file}.png"><img src="shots/${file}.png" alt="${file}" /></a></td>`
+      document.getElementById('rows').innerHTML = PAGES.map(([n, name]) => `<tr><th>${name}</th>${img(`v5-${n}`)}${img(`v6-${n}`)}${img(`v6-${n}-blur`)}</tr>`).join('')
+    </script>
+  </body>
+</html>

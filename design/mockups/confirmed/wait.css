@@ -1,0 +1,126 @@
+/* wait.css — 기다림 틀: 버튼 없는 화면 5개 공통 (STARTUP_CHECK, CHECKING, RESOLVING, ROUTING, FAIL_COUNT_CHECK).
+ * ../shared/flow.css 다음에 불러온다. 확정 (2026-11-17, 고리는 화면 가운데 = A안): LISTENING 의 고리를 그대로 이어 쓴다.
+ *   화면 가운데에 세로로: 고리 → 작은 머리말(있을 때만) → 큰 글씨(112px) → 안내 한 줄(48px)
+ *   고리는 LISTENING 과 같은 토큰(--halo-r, --ring-r, --ring-icon)으로 그린다 (flow.css 의 .ring-*)
+ *   바깥 고리 위를 주 색 호 하나가 --motion-wait(1.6초)에 한 바퀴 돈다. 움직임 줄이기 설정에서는 멈춘다
+ *   CHECKING 만 호가 돌지 않고 남은 시간만큼 줄어든다
+ * 1~3초만 보이는 화면이라 알리는 것은 두 가지뿐이다: "내 말을 알아들었다"(큰 글씨)와 "일하는 중이다"(도는 호)
+ * 고리의 세로 가운데는 LISTENING 의 듣는 중 표시와 같은 높이(화면 위에서 495px)다 */
+
+:root {
+  /* 문서 3-3절: 기다림 화면의 큰 글씨 112px, 넘치면 8px 씩 72px 까지 (7절의 이름 규칙과 같은 단계) */
+  --font-wait: 112px;
+  --font-wait-min: 72px;
+  --font-wait-step: 8px;
+  --wait-box: 340px; /* 고리 그림의 칸. 바깥 고리(지름 304) + 호의 굵기 + 여유 */
+  --ring-center-y: 399px; /* 본문 위에서 고리 가운데까지. 화면으로는 96 + 399 = 495px, LISTENING 과 같다 */
+  --arc-width: 10px; /* 도는 호의 굵기. 바깥 고리(6px)보다 굵어서 흐린 그림에서도 보인다 */
+  --wait-text-max: 1640px; /* 큰 글씨가 쓸 수 있는 너비: 화면 양쪽 140px 을 뺀 값 */
+}
+
+.wait {
+  position: absolute;
+  top: calc(var(--ring-center-y) - var(--wait-box) / 2);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.wait-ring {
+  position: relative;
+  flex-shrink: 0;
+  width: var(--wait-box);
+  height: var(--wait-box);
+}
+
+.wait-ring > svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+/* 도는 호: 바깥 고리 위, 둘레의 22%. 12시 방향에서 시작한다 */
+.ring-arc {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: var(--arc-width);
+  stroke-linecap: round;
+  stroke-dasharray: 22 78;
+  r: var(--halo-r);
+  transform: rotate(-90deg);
+}
+
+@keyframes ring-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ring-arc.is-spinning {
+    animation: ring-spin var(--motion-wait) linear infinite;
+  }
+}
+
+/* 선으로 그린 가운데 그림 (깃발, 말풍선, 로고). 선 굵기는 IDLE·LISTENING 의 아이콘(Material Symbols 400 굵기)을
+   --ring-icon 크기로 그렸을 때와 같다: 960 칸에서 60 → 152px 에서 9.5px */
+.ring-icon.is-line {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 9.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ring-icon.is-line .is-fill {
+  fill: var(--color-text);
+  stroke: none;
+}
+
+/* CHECKING: 고리 가운데의 남은 초. 숫자 폭을 고정해서 3 → 2 → 1 로 바뀔 때 흔들리지 않게 */
+.ring-count {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-figure);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.screen .wait-label {
+  margin: 24px 0 0;
+  font-size: var(--font-sub);
+  line-height: 1.2;
+  color: var(--color-text-sub);
+}
+
+.wait-core {
+  max-width: var(--wait-text-max);
+  margin: 0;
+  font-size: var(--font-wait);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+/* 머리말이 없는 화면은 고리와 큰 글씨 사이를 머리말이 있을 때와 비슷하게 띄운다 */
+.wait-ring + .wait-core {
+  margin-top: 40px;
+}
+
+.screen .wait-sub {
+  margin: 8px 0 0;
+  font-size: var(--font-title);
+  white-space: nowrap;
+}

@@ -1,0 +1,25 @@
+<!doctype html>
+<!-- 시연용: 화면을 누르면 IDLE → LISTENING → ROUTING → ROUTE_GUIDE 순서로 넘어간다 (다시 IDLE 로 돈다).
+     화면 내용은 v2.html 하나에만 있다. 여기서는 그 페이지를 시연 모드(?demo=1)로 창에 꽉 채워 보여 준다 -->
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>말길 시연 (시안 v2)</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+      }
+      iframe {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <iframe src="v2.html?demo=1" title="말길 시연"></iframe>
+  </body>
+</html>

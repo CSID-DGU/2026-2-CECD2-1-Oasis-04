@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>v8: 역·정류장 이름 크기 비교</title>
+    <style>
+      /* 비교용 도구 페이지 (키오스크 화면이 아님) */
+      @import url('../../../frontend/src/styles/global.css');
+      html,
+      body {
+        width: auto;
+        height: auto;
+      }
+      body {
+        padding: 24px;
+        font-size: 18px;
+        background: #dddddd;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 26px;
+      }
+      table {
+        border-collapse: separate;
+        border-spacing: 16px;
+        margin-left: -16px;
+      }
+      th {
+        text-align: left;
+        vertical-align: top;
+        white-space: nowrap;
+      }
+      img {
+        display: block;
+        width: 576px;
+        height: 324px;
+        border: 1px solid var(--color-text-sub);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>v8: 이름 글씨 크기(--place-name-size) 세 가지 (1920×1080 을 30%로 줄여 봄. 그림을 누르면 그 값으로 화면이 열린다)</h1>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>96px (띠 309px)</th>
+          <th>112px (띠 338px) — 지금 값</th>
+          <th>128px (띠 366px)</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <script>
+      const cell = (page, file, pn) => `<td><a href="${page}.html${pn ? `?pn=${pn}` : ''}"><img src="shots/${file}.png" alt="${file}" /></a></td>`
+      document.getElementById('rows').innerHTML =
+        `<tr><th>지하철역</th>${cell('v8-subway', 'v8-subway-pn96', 96)}${cell('v8-subway', 'v8-subway', '')}${cell('v8-subway', 'v8-subway-pn128', 128)}</tr>` +
+        `<tr><th>버스정류장</th>${cell('v8-bus', 'v8-bus-pn96', 96)}${cell('v8-bus', 'v8-bus', '')}${cell('v8-bus', 'v8-bus-pn128', 128)}</tr>`
+    </script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+<!doctype html>
+<!-- 가로 캔버스(1920×1080) 스크린샷을 세로 창에 맞춰 줄였을 때의 모습을 보여 준다 (v5-shoot.sh 가 1080×1920 창으로 찍는다).
+     주소: v5-fit.html?src=shots/v5-subway.png -->
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>세로 창에 맞춘 모습</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: #111111;
+      }
+      body {
+        display: flex;
+        align-items: center;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <img id="shot" alt="" />
+    <script>
+      document.getElementById('shot').src = new URLSearchParams(location.search).get('src')
+    </script>
+  </body>
+</html>

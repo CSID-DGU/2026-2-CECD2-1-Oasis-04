@@ -69,7 +69,7 @@ frontend/
       realRecorder.js       MediaRecorder 자리 (stub)
     screens/              상태 하나 = 화면 하나 (14개). titles.js 에 화면 제목 14개
     components/           공통 부품. ScreenFrame(제목+본문+버튼 틀), DevPanel(개발자 패널)
-    styles/global.css     고령자 UI 스타일 (글씨 32px 이상, 버튼 96px, 고대비)
+    styles/global.css     고령자 UI 스타일 (글씨 30px 이상, 버튼 112px, 고대비)
 ```
 
 역할을 한 줄로 요약하면 다음과 같습니다. Spring에 익숙하다면 괄호 안 비유를 참고하세요.
