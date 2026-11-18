@@ -1,0 +1,358 @@
+/* v6 — IDLE 가로(1920×1080). 화면을 세 구역으로 나눈다. 모든 요소는 이 셋 중 하나에 속한다.
+ *   A. 역명판 띠  위쪽, 화면 가로 전체, 높이 280px. 지하철 승강장의 역 이름판을 본떴다. "지금 계신 곳" 표시를 겸한다
+ *   B. 행동 판    오른쪽 600px, 띠 아래부터 화면 맨 아래까지. 주 버튼이 판의 대부분을 차지한다
+ *   C. 내용 칸    왼쪽 1320px, 띠 아래. 질문과 예시 문구. 주 버튼과 세로 가운데를 맞춘다
+ * 시선 순서: 주 버튼 → 질문 → 예시 문구 → 역명판 (문서 3-9절). 진하게 채운 덩어리는 주 버튼 하나뿐이다 */
+
+:root {
+  --canvas-width: 1920px;
+  --canvas-height: 1080px;
+
+  /* 문서 3-6절의 노선색·버스 종류 색 (모두 임시, 확인 필요). 띠 안에서는 가는 선으로, 색 그대로 쓴다 */
+  --line-seoul-1: #0052a4;
+  --line-seoul-3: #ef7c1c;
+  --line-seoul-5: #996cac;
+  --bus-trunk: #0068b7;
+  --bus-branch: #53b332;
+  --bus-express: #e60012;
+  --bus-circular: #f2b70a;
+  --line-none: #bdbdbd; /* 장소 정보가 없을 때의 선. 글씨 색으로는 쓰지 않는다 */
+
+  /* 구역 크기 */
+  --pad: 48px;
+  --band-height: 280px;
+  --rail-width: 600px;
+  --rail-pad: 40px;
+
+  /* 시안 전용 (채택하면 문서에 먼저 넣는다) */
+  --font-name: 72px; /* 역명판의 이름. 문서의 --font-display 와 같은 값 */
+  --font-question: 64px; /* 질문. 주 버튼 글씨보다 작게 */
+  --font-primary: 80px; /* 주 버튼 글씨. 화면에서 가장 큰 글씨 */
+  --line-width: 14px;
+  --plate-top: 96px;
+  --plate-height: 172px;
+  --tag-height: 44px;
+  --badge: 52px;
+  --no-circle: 72px; /* 역 번호 세 자리(30px)가 고리에 닿지 않는 크기 */
+  --btn-primary-height: 520px;
+  --btn-depth: 12px;
+  --mic-size: 128px;
+  --say-height: 148px;
+  --say-tail: 44px;
+  --motion-press: 100ms;
+  --motion-ring: 2s; /* 마이크 둘레 고리: 2초에 한 번 */
+}
+
+.screen {
+  padding: 0;
+}
+
+/* ================= A. 역명판 띠 ================= */
+
+.v6-band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--band-height);
+  overflow: hidden;
+  background: var(--color-bg-group);
+}
+
+/* 위쪽 줄: 로고와 현재 시각 */
+.v6-brand,
+.v6-now,
+.v6-note {
+  position: absolute;
+  top: 20px;
+  line-height: 52px;
+  white-space: nowrap;
+}
+
+.v6-brand {
+  left: var(--pad);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 700;
+}
+
+.v6-brand svg {
+  width: 44px;
+  height: 44px;
+}
+
+.v6-now {
+  right: var(--pad);
+  font-size: var(--font-sub);
+}
+
+.v6-note {
+  left: 50%;
+  font-size: var(--font-sub);
+  transform: translateX(-50%);
+}
+
+/* 노선색 선: 화면 왼쪽 끝에서 오른쪽 끝까지 끊기지 않는다 */
+.v6-lines svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 가운데 이름판: 흰 판. 선이 그 뒤로 지나간다 */
+.v6-plate {
+  position: absolute;
+  top: var(--plate-top);
+  left: 50%;
+  min-width: 400px;
+  height: var(--plate-height);
+  padding: 0 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  background: var(--color-bg);
+  border-radius: 20px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.v6-name {
+  font-size: var(--font-name);
+  font-weight: 700;
+  line-height: 80px;
+}
+
+.v6-name.is-waiting {
+  font-size: var(--font-title);
+  font-weight: 400;
+}
+
+.v6-sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--font-sub);
+  line-height: var(--no-circle);
+}
+
+.v6-name + .v6-sub {
+  margin-top: -2px;
+}
+
+/* 역 번호 원, 노선 번호 원: 흰 바탕 + 노선색 고리 + 검정 글씨 */
+.v6-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--no-circle);
+  height: var(--no-circle);
+  font-size: var(--font-sub);
+  line-height: 1;
+  background: var(--color-bg);
+  border: 6px solid var(--c);
+  border-radius: 50%;
+}
+
+.v6-circle.is-badge {
+  position: absolute;
+  left: var(--pad);
+  width: var(--badge);
+  height: var(--badge);
+  transform: translateY(-50%);
+}
+
+/* 선 위에 놓는 평평한 표지: 테두리가 없고 모서리가 거의 각지다. 버튼(둥근 모서리 + 테두리)과 다르게 보이게 한다.
+   글씨는 흰 표지 위 검정이다. 노선색 위에 직접 올리지 않는다 */
+.v6-tag {
+  position: absolute;
+  height: var(--tag-height);
+  padding: 0 14px;
+  font-size: var(--font-sub);
+  line-height: var(--tag-height);
+  background: var(--color-bg);
+  border-radius: 4px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.v6-tag.is-left {
+  left: 124px;
+}
+
+.v6-tag.is-edge {
+  left: var(--pad);
+}
+
+.v6-tag.is-right {
+  right: var(--pad);
+}
+
+/* 버스 번호 줄: 오른쪽에서부터 */
+.v6-nums {
+  position: absolute;
+  right: var(--pad);
+  display: flex;
+  gap: 14px;
+  transform: translateY(-50%);
+}
+
+.v6-nums .v6-tag {
+  position: static;
+  transform: none;
+}
+
+.v6-nums .v6-tag.is-num {
+  font-size: var(--font-body);
+}
+
+/* ================= B. 오른쪽 행동 판 ================= */
+
+.v6-rail {
+  position: absolute;
+  top: var(--band-height);
+  right: 0;
+  bottom: 0;
+  width: var(--rail-width);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: var(--rail-pad);
+  background: var(--color-bg-group);
+}
+
+.screen .v6-rail .btn {
+  transition: background-color var(--motion-press);
+}
+
+/* 주 버튼: 판의 대부분. 위에 큰 마이크, 아래에 글씨. 그림자는 이 버튼에만 */
+.screen .v6-rail .btn-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  min-height: var(--btn-primary-height);
+  font-size: var(--font-primary);
+  line-height: 1.15;
+  border-radius: 28px;
+  box-shadow:
+    0 var(--btn-depth) 0 var(--color-primary-pressed),
+    0 28px 40px rgba(8, 58, 125, 0.28);
+}
+
+.v6-mic {
+  position: relative;
+  width: var(--mic-size);
+  height: var(--mic-size);
+}
+
+.v6-mic svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+/* 마이크 둘레에서 천천히 퍼지는 고리. 2초에 한 번 (깜빡임 한도 1초 3번보다 훨씬 느리다) */
+.v6-mic::before,
+.v6-mic::after {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  border: 5px solid currentColor;
+  border-radius: 50%;
+  opacity: 0;
+  animation: v6-ring var(--motion-ring) ease-out infinite;
+}
+
+.v6-mic::after {
+  animation-delay: calc(var(--motion-ring) / 2);
+}
+
+@keyframes v6-ring {
+  from {
+    transform: scale(0.72);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+/* 보조 버튼: 하한선 크기. 테두리를 가늘고 옅게 해서 주 버튼과 다투지 않게 한다. 글씨는 그대로 검정(18.88:1) */
+.screen .v6-rail .btn-secondary {
+  border: 2px solid var(--color-text-sub);
+}
+
+/* ================= C. 왼쪽 내용 칸 ================= */
+
+/* 질문과 예시를 한 묶음으로, 주 버튼의 세로 가운데에 맞춘다 */
+.v6-content {
+  position: absolute;
+  top: calc(var(--band-height) + var(--rail-pad));
+  left: var(--pad);
+  width: calc(var(--canvas-width) - var(--rail-width) - var(--pad) - var(--say-tail) - 24px);
+  height: var(--btn-primary-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 32px;
+}
+
+.v6-question {
+  margin: 0;
+  font-size: var(--font-question);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+/* 예시 문구: 옅은 말풍선. 꼬리가 오른쪽 주 버튼을 향한다 ("이렇게 말하려면 저 버튼") */
+.v6-say {
+  position: relative;
+  height: var(--say-height);
+  display: flex;
+  align-items: center;
+  gap: 32px;
+  padding: 0 48px;
+  background: var(--color-bg-highlight);
+  border-radius: 28px;
+  white-space: nowrap;
+}
+
+.v6-say::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: calc(var(--say-tail) * -1 + 1px);
+  border-top: 30px solid transparent;
+  border-bottom: 30px solid transparent;
+  border-left: var(--say-tail) solid var(--color-bg-highlight);
+  transform: translateY(-50%);
+}
+
+.v6-say-label {
+  font-size: var(--font-sub);
+}
+
+.v6-say-words {
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+/* 움직임 줄이기 설정에서는 고리를 멈춘다 */
+@media (prefers-reduced-motion: reduce) {
+  .v6-mic::before,
+  .v6-mic::after {
+    animation: none;
+  }
+
+  .screen .v6-rail .btn {
+    transition: none;
+  }
+}

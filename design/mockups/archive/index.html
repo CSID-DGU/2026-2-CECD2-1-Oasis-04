@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 비교: A · B · C</title>
+    <style>
+      /* 비교용 도구 페이지 (키오스크 화면이 아님). 색·글꼴 토큰만 실제 앱에서 가져온다 */
+      @import url('../../../frontend/src/styles/global.css');
+      :root {
+        --gap: 24px;
+        --shot-width: 324px; /* 원본·흑백을 줄여 보여 주는 너비 (1080px 의 30%) */
+        --small-width: 270px; /* 축소본은 줄이지 않고 제 크기로 */
+      }
+      html,
+      body {
+        width: auto;
+        height: auto;
+      }
+      body {
+        padding: var(--gap);
+        font-size: 18px;
+        background: var(--color-bg-group);
+      }
+      h1 {
+        margin: 0 0 var(--gap);
+        font-size: 28px;
+      }
+      table {
+        border-collapse: separate;
+        border-spacing: var(--gap);
+        margin-left: calc(var(--gap) * -1);
+      }
+      th {
+        text-align: left;
+        vertical-align: top;
+      }
+      thead th {
+        max-width: var(--shot-width);
+        font-weight: 400;
+      }
+      thead strong {
+        display: block;
+        font-size: 22px;
+      }
+      td {
+        vertical-align: top;
+      }
+      td a {
+        display: inline-block;
+        border: 1px solid var(--color-text-sub);
+        background: var(--color-bg);
+      }
+      td img {
+        display: block;
+        width: var(--shot-width);
+        height: auto;
+      }
+      body[data-mode='small'] td img {
+        width: var(--small-width);
+      }
+      .modes {
+        position: sticky;
+        top: 0;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+        background: var(--color-bg-group);
+      }
+      .modes button {
+        padding: 10px 24px;
+        font: inherit;
+        font-weight: 700;
+        color: var(--color-text);
+        background: var(--color-bg);
+        border: 2px solid var(--color-text);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+      .modes button[aria-pressed='true'] {
+        color: var(--color-on-primary);
+        background: var(--color-primary);
+        border-color: var(--color-primary);
+      }
+      .modes span {
+        color: var(--color-text-sub);
+      }
+    </style>
+  </head>
+  <body data-mode="original">
+    <h1>시안 비교: 방향 3개 × 화면 4개</h1>
+
+    <div class="modes">
+      <button type="button" data-mode="original">원본</button>
+      <button type="button" data-mode="gray">흑백</button>
+      <button type="button" data-mode="small">축소</button>
+      <span id="mode-note"></span>
+    </div>
+
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th><strong>A. 공공 안내형</strong>지하철 안내판처럼 띠와 선으로 구역을 나누고, 안내 내용을 버튼 바로 위까지 내려 붙인다.</th>
+          <th><strong>B. 카드형</strong>옅은 회색 바탕 위 흰 카드에 읽을 것과 그 주 버튼을 함께 담고, 글자 옆에 아이콘을 붙인다.</th>
+          <th><strong>C. 큰 단계형</strong>할 일 하나만 큰 상징과 아주 큰 한 줄로 가운데에 놓고, 버튼을 그 바로 아래에 붙인다.</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+
+    <script>
+      const SCREENS = ['IDLE', 'LISTENING', 'ROUTING', 'ROUTE_GUIDE']
+      const DIRECTIONS = ['a', 'b', 'c']
+      const MODES = {
+        original: { suffix: '', note: '1080×1920 스크린샷을 30%로 줄여 보여 준다. 누르면 실제 크기 그림이 열린다' },
+        gray: { suffix: '-gray', note: '색을 뺀 것. 색 없이도 주 버튼과 내용이 구분되는지 본다' },
+        small: { suffix: '-small', note: '270×480 그림을 제 크기로. 멀리서 볼 때를 흉내 낸다' },
+      }
+
+      document.getElementById('rows').innerHTML = SCREENS.map(
+        (s) => `<tr><th>${s}</th>${DIRECTIONS.map((d) => `<td><a data-shot="${d}-${s}"><img alt="${d.toUpperCase()} ${s}" /></a></td>`).join('')}</tr>`,
+      ).join('')
+
+      function setMode(mode) {
+        document.body.dataset.mode = mode
+        document.querySelectorAll('.modes button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mode === mode)))
+        document.getElementById('mode-note').textContent = MODES[mode].note
+        document.querySelectorAll('[data-shot]').forEach((a) => {
+          const file = `shots/${a.dataset.shot}${MODES[mode].suffix}.png`
+          a.href = file
+          a.querySelector('img').src = file
+        })
+      }
+
+      document.querySelectorAll('.modes button').forEach((b) => b.addEventListener('click', () => setMode(b.dataset.mode)))
+      // index.html?mode=gray 처럼 열 수도 있다
+      const asked = new URLSearchParams(location.search).get('mode')
+      setMode(MODES[asked] ? asked : 'original')
+    </script>
+  </body>
+</html>

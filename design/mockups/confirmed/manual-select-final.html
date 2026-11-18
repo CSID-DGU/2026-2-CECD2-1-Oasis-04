@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>MANUAL_SELECT 확정 시안 (지하철역: 종로3가)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/flow.css" />
+    <link rel="stylesheet" href="pick.css" />
+    <script src="../shared/brand.js"></script>
+    <style>
+      /* MANUAL_SELECT 확정본 (2026-11-18). 규칙은 docs/design-guidelines.md 11절. band-thin.html 의 예시를 다듬었다 (목록 배치는 이 파일이 기준).
+       * 눈이 가는 순서: 1 목적지 목록 → 2 제목 → 3 오른쪽 버튼.
+       * 문구·버튼은 frontend/src/screens/ManualSelectScreen.jsx 그대로다:
+       *   제목 "가실 곳을 골라 주세요" / 목적지마다 고르는 카드 (POI_SELECTED) / 말로 하기 (SWITCH_TO_VOICE) / 처음으로
+       *   마이크·STT 를 쓸 수 없으면 '말로 하기'를 그리지 않는다
+       * 목록: 왼쪽 칸 3열 4줄 (문서 6절). 왼쪽 칸은 다른 화면처럼 x 140px 에서 시작한다 (flow.css. 2026-11-18 팀장).
+       *   칸 너비 1068px, 한 칸 (1068 − 20×2) ÷ 3 ≈ 343px. 이름 36px 굵게, 분류 둘째 줄 30px (괄호 없이).
+       *   한 줄의 높이는 그 줄에서 가장 긴 이름을 따른다.
+       * 목적지는 band-thin.html 과 같은 12개다 (지어 넣은 것이 섞여 있다).
+       *
+       * 주소: ?voice=0 '말로 하기' 숨김, ?left=15 남은 시간 알림 (timeout-notice.js), ?names=long 긴 이름 시험(지어낸 목록),
+       *   ?lines=1 카드마다 이름 줄 수와 크기, 목록 아래 끝을 <title> 에 적는다 (pick-shoot.sh 가 읽는다) */
+      :root {
+        --pick-name: var(--font-body);
+      }
+      .select {
+        position: absolute;
+        top: 32px;
+        left: 0;
+        right: 0;
+      }
+      .screen .select-title {
+        margin: 0 0 var(--block-gap);
+        font-size: var(--font-title);
+        font-weight: 700;
+        line-height: 1.4;
+      }
+      .picks {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
+      .screen .picks .pick {
+        padding: 18px 16px 18px 24px;
+        column-gap: 8px;
+      }
+      /* 이름 줄 바꿈 (모두 text-wrap: balance 로 줄 길이를 고르게):
+       *   띄어쓰기가 있는 이름은 띄어쓰기에서만 바꾼다 ("국립현대미술관 / 서울관")
+       *   한 단어인 이름은 글자 사이에서 바꾼다 ("동대문역사 / 문화공원역").
+       *   한 규칙으로 하면 둘 중 하나가 깨진다 (keep-all 이면 "동대문역사문화공 / 원역", 아니면 "국립현대미 / 술관 서울관") */
+      .picks .pick-name {
+        line-height: 1.3;
+        overflow-wrap: anywhere;
+      }
+      .picks .pick-name.has-space {
+        word-break: keep-all;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="screen" data-screen="MANUAL_SELECT">
+      <header class="thin" data-zone="band">
+        <div class="thin-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <service-name></service-name>
+        </div>
+        <div class="thin-place">종로3가</div>
+        <div class="thin-now"><span data-date>11월 18일 수요일</span> <span data-clock>오후 2:30</span></div>
+        <div class="thin-alert" data-zone="alert" role="status">
+          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m627-287 45-45-159-160v-201h-60v225l174 181ZM480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-82 31.5-155t86-127.5Q252-817 325-848.5T480-880q82 0 155 31.5t127.5 86Q817-708 848.5-635T880-480q0 82-31.5 155t-86 127.5Q708-143 635-111.5T480-80Zm0-400Zm0 340q140 0 240-100t100-240q0-140-100-240T480-820q-140 0-240 100T140-480q0 140 100 240t240 100Z" /></svg>
+          <p><b><span data-left>15</span>초 뒤에 처음으로 돌아가요</b><span>계속하시려면 화면을 눌러 주세요</span></p>
+        </div>
+      </header>
+
+      <div class="body">
+        <main class="left">
+          <div class="select">
+            <h1 class="select-title v3-core">가실 곳을 골라 주세요</h1>
+            <ul class="picks" data-zone="primary"></ul>
+          </div>
+        </main>
+
+        <div class="right" data-zone="actions">
+          <button type="button" class="btn btn-secondary" data-voice>
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-423q-43 0-72-30.92-29-30.91-29-75.08v-251q0-41.67 29.44-70.83Q437.88-880 479.94-880t71.56 29.17Q581-821.67 581-780v251q0 44.17-29 75.08Q523-423 480-423Zm0-228Zm-30 531v-136q-106-11-178-89t-72-184h60q0 91 64.29 153t155.5 62q91.21 0 155.71-62Q700-438 700-529h60q0 106-72 184t-178 89v136h-60Zm30-363q18 0 29.5-13.5T521-529v-251q0-17-11.79-28.5T480-820q-17.42 0-29.21 11.5T439-780v251q0 19 11.5 32.5T480-483Z" /></svg>
+            <span>말로 하기</span>
+          </button>
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M220-180h150v-250h220v250h150v-390L480-765 220-570v390Zm-60 60v-480l320-240 320 240v480H530v-250H430v250H160Zm320-353Z" /></svg>
+            <span>처음으로</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <template id="pick">
+      <li>
+        <button type="button" class="btn pick">
+          <span class="pick-text"><span class="pick-name"></span><small class="pick-kind"></small></span>
+          <svg class="pick-arrow" viewBox="0 -960 960 960" aria-hidden="true"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" /></svg>
+        </button>
+      </li>
+    </template>
+
+    <script>
+      const query = new URLSearchParams(location.search)
+      // band-thin.html 과 같은 12개
+      // ?names=long: 긴 이름 시험용. 지어낸 목록이다 (가장 긴 것 16자)
+      const LONG = [
+        ['서울대학교병원', '종합병원'],
+        ['국립현대미술관 서울관', '미술관'],
+        ['동대문디자인플라자', '문화시설'],
+        ['서울특별시청 서소문청사', '관공서'],
+        ['국립중앙의료원 장례식장', '장례식장'],
+        ['종로구 노인복지관', '복지시설'],
+        ['을지로입구역', '지하철 2호선'],
+        ['서울특별시 동부병원 응급의료센터', '종합병원'],
+        ['청계천', '관광지'],
+        ['동대문역사문화공원역', '지하철 2호선'],
+        ['명동역', '지하철 4호선'],
+        ['남대문시장', '시장'],
+      ]
+      const POIS = query.get('names') === 'long' ? LONG : [
+        ['종각역', '지하철 1호선'],
+        ['을지로3가역', '지하철 2호선'],
+        ['안국역', '지하철 3호선'],
+        ['을지로4가역', '지하철 2호선'],
+        ['종로5가역', '지하철 1호선'],
+        ['광화문역', '지하철 5호선'],
+        ['을지로입구역', '지하철 2호선'],
+        ['시청역', '지하철 1호선'],
+        ['충무로역', '지하철 3호선'],
+        ['동대문역사문화공원역', '지하철 2호선'],
+        ['명동역', '지하철 4호선'],
+        ['동대문역', '지하철 1호선'],
+      ]
+      const list = document.querySelector('.picks')
+      const tpl = document.getElementById('pick')
+      for (const [name, category] of POIS) {
+        const li = tpl.content.cloneNode(true)
+        li.querySelector('.pick-name').textContent = name
+        li.querySelector('.pick-name').classList.toggle('has-space', name.includes(' '))
+        li.querySelector('.pick-kind').textContent = category // 괄호 없이 (2026-11-18 팀장)
+        list.append(li)
+      }
+      // 시작 점검에서 마이크·STT 를 쓸 수 없으면 '말로 하기'를 숨긴다 (회색으로 두지 않는다. 문서 2절)
+      if (query.get('voice') === '0') document.querySelector('[data-voice]').remove()
+
+      // ?lines=1: 글꼴을 읽은 뒤 카드마다 이름 줄 수와 크기, 목록 아래 끝(화면 위에서)을 잰다. 본문 아래 끝은 1080 − 48 = 1032
+      if (query.get('lines') === '1') {
+        document.fonts.ready.then(() => {
+          const cards = [...document.querySelectorAll('.pick')].map((card) => {
+            const name = card.querySelector('.pick-name')
+            const lines = Math.round(name.getBoundingClientRect().height / parseFloat(getComputedStyle(name).lineHeight))
+            const r = card.getBoundingClientRect()
+            return `${name.textContent}=${lines}줄 ${Math.round(r.width)}x${Math.round(r.height)}`
+          })
+          const top = document.querySelector('.screen').getBoundingClientRect().top
+          const list = document.querySelector('.picks').getBoundingClientRect()
+          document.title = JSON.stringify({ cards, listBottom: Math.round(list.bottom - top), limit: 1032 })
+        })
+      }
+    </script>
+    <script src="timeout-notice.js"></script>
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>

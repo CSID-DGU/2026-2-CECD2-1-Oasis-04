@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 v4: 시선 순서 검사</title>
+    <style>
+      /* 검사용 도구 페이지 (키오스크 화면이 아님) */
+      @import url('../../../frontend/src/styles/global.css');
+      html,
+      body {
+        width: auto;
+        height: auto;
+      }
+      body {
+        padding: 24px;
+        font-size: 18px;
+        background: var(--color-bg-group);
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 26px;
+      }
+      table {
+        border-collapse: separate;
+        border-spacing: 20px;
+        margin-left: -20px;
+      }
+      th {
+        text-align: left;
+        vertical-align: top;
+      }
+      td {
+        vertical-align: top;
+      }
+      img {
+        display: block;
+        width: 270px;
+        height: 480px;
+        border: 1px solid var(--color-text-sub);
+      }
+    </style>
+  </head>
+  <body>
+    <h1>시안 v4: 시선 순서 검사. 네 칸 모두에서 주 버튼이 가장 먼저 보여야 한다 (문서 3-9절)</h1>
+    <table>
+      <thead>
+        <tr>
+          <th></th>
+          <th>원본 (줄여 봄)</th>
+          <th>흐림 blur(12px)</th>
+          <th>흑백</th>
+          <th>축소 270×480</th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+    <script>
+      const PAGES = [
+        ['subway', '지하철역'],
+        ['bus', '버스정류장'],
+        ['default', '정보 없음'],
+      ]
+      document.getElementById('rows').innerHTML = PAGES.map(
+        ([file, name]) =>
+          `<tr><th>${name}</th>${['', '-blur', '-gray', '-small'].map((s) => `<td><a href="shots/v4-${file}${s}.png"><img src="shots/v4-${file}${s}.png" alt="${name} ${s}" /></a></td>`).join('')}</tr>`,
+      ).join('')
+    </script>
+  </body>
+</html>

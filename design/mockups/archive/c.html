@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 C. 큰 단계형</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="c.css" />
+  </head>
+  <body>
+    <!-- IDLE -->
+    <section class="screen" data-screen="IDLE">
+      <p class="c-top location">지금 계신 곳: 종로3가.탑골공원 정류장</p>
+      <div class="c-symbol" aria-hidden="true">
+        <svg viewBox="0 0 200 200">
+          <rect x="75" y="30" width="50" height="90" rx="25" />
+          <path d="M50 95a50 50 0 0 0 100 0M100 145v25M70 170h60" />
+        </svg>
+      </div>
+      <h1 class="c-core">어디로 가시나요?</h1>
+      <p>버튼을 누르고 말씀하시거나, 손으로 골라 주세요</p>
+      <div class="c-actions">
+        <button type="button" class="btn btn-primary">말하기</button>
+        <button type="button" class="btn btn-secondary">손으로 고르기</button>
+      </div>
+    </section>
+
+    <!-- LISTENING (실제 마이크 모드: 글 입력창 없음) -->
+    <section class="screen" data-screen="LISTENING">
+      <div class="c-symbol" aria-hidden="true">
+        <span class="c-ring"></span>
+        <span class="c-ring"></span>
+        <svg viewBox="0 0 200 200">
+          <rect x="75" y="30" width="50" height="90" rx="25" class="is-solid" />
+          <path d="M50 95a50 50 0 0 0 100 0M100 145v25M70 170h60" />
+        </svg>
+      </div>
+      <h1 class="c-kicker">말씀해 주세요</h1>
+      <p class="c-core">듣고 있어요</p>
+      <p class="hint">가실 곳을 말씀해 주세요. 말씀이 끝나면 자동으로 넘어가요</p>
+      <div class="c-actions">
+        <button type="button" class="btn btn-primary">다 말했어요</button>
+        <button type="button" class="btn btn-secondary">취소</button>
+        <button type="button" class="btn btn-secondary">처음으로</button>
+      </div>
+    </section>
+
+    <!-- ROUTING -->
+    <section class="screen" data-screen="ROUTING">
+      <div class="c-symbol" aria-hidden="true">
+        <svg viewBox="0 0 200 200">
+          <circle cx="40" cy="155" r="12" class="is-solid" />
+          <path d="M58 153C100 148 125 135 150 108" class="c-flow" />
+          <path d="M160 100C132 68 135 28 160 28C185 28 188 68 160 100Z" />
+          <circle cx="160" cy="55" r="8" class="is-solid" />
+        </svg>
+      </div>
+      <h1 class="c-core">가는 길을 찾고 있어요</h1>
+      <p class="c-echo">목적지: 서울병원</p>
+    </section>
+
+    <!-- CHECKING -->
+    <section class="screen" data-screen="CHECKING">
+      <div class="c-symbol c-count" aria-hidden="true">3</div>
+      <h1 class="c-kicker">잠시만 기다려 주세요</h1>
+      <p class="c-core">잠시 문제가 생겼어요</p>
+      <p>3초 뒤에 다시 해 볼게요</p>
+    </section>
+
+    <!-- ROUTE_GUIDE -->
+    <section class="screen" data-screen="ROUTE_GUIDE">
+      <h1 class="c-kicker">이렇게 가세요</h1>
+      <p class="c-echo">목적지: 서울병원</p>
+      <p class="c-core c-gap">지하철 3호선 → 4호선</p>
+      <p class="c-title">약 25분 · 환승 1회</p>
+      <p class="hint c-gap">다른 방법</p>
+      <div class="c-others">
+        <div>2. 버스 100번 (약 32분 · 환승 없음)</div>
+        <div>3. 지하철 3호선 → 버스 200번 (약 35분 · 환승 1회)</div>
+      </div>
+      <div class="c-actions">
+        <button type="button" class="btn btn-primary">휴대폰으로 보내기</button>
+        <button type="button" class="btn btn-secondary">처음으로</button>
+      </div>
+    </section>
+
+    <!-- MANUAL_SELECT (목적지 12개) -->
+    <section class="screen" data-screen="MANUAL_SELECT">
+      <h1 class="c-title">가실 곳을 골라 주세요</h1>
+      <ul class="btn-list">
+        <li><button type="button" class="btn btn-primary">서울역 <small>(지하철역)</small></button></li>
+        <li><button type="button" class="btn btn-primary">시청 <small>(지하철역)</small></button></li>
+        <li><button type="button" class="btn btn-primary">동국대학교 <small>(학교)</small></button></li>
+        <li><button type="button" class="btn btn-primary">남산타워 <small>(관광지)</small></button></li>
+        <li><button type="button" class="btn btn-primary">고속터미널 <small>(터미널)</small></button></li>
+        <li><button type="button" class="btn btn-primary">동국대병원 <small>(병원)</small></button></li>
+        <li><button type="button" class="btn btn-primary">서울병원 <small>(병원)</small></button></li>
+        <li><button type="button" class="btn btn-primary">중앙병원 <small>(병원)</small></button></li>
+        <li><button type="button" class="btn btn-primary">국립중앙의료원 <small>(병원)</small></button></li>
+        <li><button type="button" class="btn btn-primary">남대문시장 <small>(시장)</small></button></li>
+        <li><button type="button" class="btn btn-primary">광장시장 <small>(시장)</small></button></li>
+        <li><button type="button" class="btn btn-primary">종로구청 <small>(관공서)</small></button></li>
+      </ul>
+      <div class="c-actions">
+        <button type="button" class="btn btn-secondary">말로 하기</button>
+        <button type="button" class="btn btn-secondary">처음으로</button>
+      </div>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+  </body>
+</html>

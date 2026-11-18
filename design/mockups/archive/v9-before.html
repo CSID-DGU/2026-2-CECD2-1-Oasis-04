@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>띠 시험: 전과 후</title>
+    <style>
+      /* 비교용 도구 페이지 (키오스크 화면이 아님). 띠 부분만 잘라서 보여 준다 */
+      @import url('../../../frontend/src/styles/global.css');
+      html,
+      body {
+        width: auto;
+        height: auto;
+      }
+      body {
+        padding: 20px;
+        font-size: 18px;
+        background: #dddddd;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 24px;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 150px 880px 880px;
+        gap: 12px;
+        margin-bottom: 12px;
+        font-weight: 700;
+      }
+      .crop {
+        width: 880px;
+        height: 160px;
+        overflow: hidden;
+        border: 1px solid var(--color-text-sub);
+      }
+      .crop img {
+        display: block;
+        width: 880px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>띠 시험 (위쪽 띠만 잘라 46%로 줄여 봄). 왼쪽: 지금 시안 v8 그대로 / 오른쪽: 띠 규칙 적용 v9</h1>
+    <div id="rows"></div>
+    <script>
+      const CASES = [
+        ['jongno3ga', '기준: 종로3가'],
+        ['anguk', '노선 1개'],
+        ['chungmuro', '노선 2개'],
+        ['seoul', '노선 5개, 번호 없는 노선, 종점'],
+        ['ogeum', '종점'],
+        ['bus', '기준: 종로3가.탑골공원'],
+        ['busmany', '버스 6종류, 8개 이상'],
+        ['buslong', '긴 이름 + 버스 많음'],
+        ['buscircular', '순환버스 (노랑)'],
+      ]
+      const crop = (file, page, c) => `<a class="crop" href="${page}.html?case=${c}"><img src="shots/${file}.png" alt="${file}" onerror="this.parentNode.textContent='(찍지 않음)'" /></a>`
+      document.getElementById('rows').innerHTML = CASES.map(([c, name]) => `<div class="row"><div>${name}<br />${c}</div>${crop(`v8-test-${c}`, 'v8-test', c)}${crop(`v9-test-${c}`, 'v9-test', c)}</div>`).join('')
+    </script>
+  </body>
+</html>

@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 v3-3. 승차권 스타일 (IDLE)</title>
+    <!-- 문서 3-2절 표에 아직 없는 글씨·배경 조합 (제안). 검사에서 "제안"으로 따로 센다 -->
+    <meta name="proposed-pairs" content="#ffffff on #0f5132, #111111 on #ffd23f" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <style>
+      /* v3-3 승차권 스타일. 검은 바탕 위에 큰 승차권 한 장이 놓여 있다.
+       * 위는 짙은 초록 면(질문), 가운데 절취선과 반달 홈, 아래는 표에 찍힌 칸(타는 곳·가실 곳)과 버튼.
+       * 가실 곳 칸은 비어 있다. 말하면 채워진다는 뜻이다.
+       * 노란 말풍선이 초록 면 오른쪽에서 튀어나와 예시 문구를 보여 준다. 색은 서울 버스 색(초록·노랑·파랑)에서 가져왔다 */
+      :root {
+        /* 새 색 (제안). 대비: 흰 글씨 on 초록 9.36:1, 검정 글씨 on 노랑 13.08:1.
+         * 노랑 위에는 검정만 올린다 (보조 글씨 #444444 는 6.74:1 로 미달) */
+        --ticket-green: #0f5132;
+        --ticket-yellow: #ffd23f;
+        /* 시안 전용 */
+        --font-question: 160px; /* 문서의 120px(숫자 전용)보다 크다. 채택하면 문서 3-3절부터 고친다 */
+        --font-display: 72px;
+        --inset: 28px;
+        --pad: 52px;
+        --top-height: 1070px;
+        --notch: 40px;
+        --rule: 4px;
+        --ticket-radius: 44px;
+      }
+
+      /* 승차권 바깥: 머리말 띠와 같은 검정 */
+      .screen {
+        padding: var(--inset);
+        background: var(--color-text);
+      }
+
+      .ticket {
+        position: relative;
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        background: var(--color-bg);
+        border-radius: var(--ticket-radius);
+      }
+
+      /* 절취선 양 끝의 반달 홈: 바깥 검정이 파고든다 */
+      .ticket::before,
+      .ticket::after {
+        content: '';
+        position: absolute;
+        z-index: 1;
+        top: calc(var(--top-height) - var(--notch));
+        width: calc(var(--notch) * 2);
+        height: calc(var(--notch) * 2);
+        background: var(--color-text);
+        border-radius: 50%;
+      }
+      .ticket::before {
+        left: calc(var(--notch) * -1);
+      }
+      .ticket::after {
+        right: calc(var(--notch) * -1);
+      }
+
+      /* ---------- 위: 초록 면 ---------- */
+      .top {
+        position: relative;
+        flex-shrink: 0;
+        height: var(--top-height);
+        color: var(--color-on-primary);
+        background: var(--ticket-green);
+        border-bottom: 6px dashed var(--color-bg);
+      }
+      .brand {
+        position: absolute;
+        top: var(--pad);
+        left: var(--pad);
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-weight: 700;
+      }
+      .brand svg {
+        width: 56px;
+        height: 56px;
+      }
+      .brand-sub {
+        position: absolute;
+        top: 124px;
+        left: var(--pad);
+        font-size: var(--font-sub);
+      }
+      .now {
+        position: absolute;
+        top: 40px;
+        right: var(--pad);
+        text-align: right;
+      }
+      .now-time {
+        font-size: var(--font-display);
+        font-weight: 700;
+        line-height: 1.15;
+      }
+      .now-date {
+        font-size: var(--font-sub);
+      }
+
+      /* 노란 말풍선: 승차권 오른쪽 끝까지 이어진다 */
+      .say {
+        position: absolute;
+        top: 290px;
+        right: 0;
+        width: 740px;
+        padding: 40px 52px 48px;
+        color: var(--color-text);
+        background: var(--ticket-yellow);
+        border-radius: 72px 0 0 72px;
+      }
+      .say::after {
+        content: '';
+        position: absolute;
+        left: 96px;
+        bottom: -56px;
+        border-top: 60px solid var(--ticket-yellow);
+        border-right: 72px solid transparent;
+      }
+      .say-label {
+        font-size: var(--font-sub);
+      }
+      .say-words {
+        font-size: var(--font-display);
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: nowrap;
+      }
+
+      .question {
+        position: absolute;
+        left: var(--pad);
+        bottom: 64px;
+        margin: 0;
+        font-size: var(--font-question);
+        font-weight: 700;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+      }
+
+      /* ---------- 아래: 표에 찍힌 칸과 버튼 ---------- */
+      .stub {
+        flex: 1 1 auto;
+        display: flex;
+        flex-direction: column;
+        padding: 36px var(--pad) 44px;
+      }
+      .fields {
+        margin: 0;
+        border-top: var(--rule) solid var(--color-text);
+      }
+      .field {
+        display: grid;
+        grid-template-columns: 200px 1fr;
+        align-items: center;
+        min-height: 124px;
+        border-bottom: var(--rule) solid var(--color-text);
+      }
+      .field dt {
+        font-size: var(--font-sub);
+        color: var(--color-text-sub);
+      }
+      .field dd {
+        margin: 0;
+        font-size: var(--font-title);
+        font-weight: 700;
+        line-height: 1.25;
+        white-space: nowrap;
+      }
+      /* 비어 있는 칸: 손으로 적어 넣을 자리처럼 점선 밑줄 */
+      .field dd.is-empty {
+        padding-bottom: 6px;
+        font-size: var(--font-body);
+        font-weight: 400;
+        color: var(--color-text-sub);
+        border-bottom: var(--rule) dashed var(--color-text-sub);
+      }
+
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--btn-gap);
+        margin-top: auto;
+      }
+      .screen .actions .btn {
+        min-height: 140px;
+      }
+      .screen .actions .btn-primary {
+        box-shadow: 0 8px 0 var(--color-primary-pressed);
+        margin-bottom: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="screen" data-screen="IDLE">
+      <div class="ticket">
+        <div class="top">
+          <div class="brand">
+            <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+              <circle cx="28" cy="28" r="20" stroke-width="9" />
+              <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+            </svg>
+            <span>말길</span>
+          </div>
+          <div class="brand-sub">버스와 지하철 길 안내</div>
+          <div class="now">
+            <div class="now-time" data-clock>오후 2:30</div>
+            <div class="now-date" data-date>11월 16일 월요일</div>
+          </div>
+
+          <div class="say">
+            <div class="say-label">이렇게 말해 보세요</div>
+            <div class="say-words" data-rotate="명동 어떻게 가요?|서울역 가는 버스|가까운 병원|동대문시장 가는 길"></div>
+          </div>
+
+          <h1 class="question v3-core">어디로<br />가시나요?</h1>
+        </div>
+
+        <div class="stub">
+          <dl class="fields">
+            <div class="field">
+              <dt>타는 곳</dt>
+              <dd>종로3가.탑골공원 정류장</dd>
+            </div>
+            <div class="field">
+              <dt>가실 곳</dt>
+              <dd class="is-empty">말씀해 주세요</dd>
+            </div>
+          </dl>
+          <div class="actions">
+            <button type="button" class="btn btn-primary">말하기</button>
+            <button type="button" class="btn btn-secondary">손으로 고르기</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>

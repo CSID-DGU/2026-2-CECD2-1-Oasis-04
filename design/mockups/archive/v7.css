@@ -1,0 +1,357 @@
+/* v7 — IDLE 가로(1920×1080). 배경은 두 구역뿐이다.
+ *   역명판 띠  위쪽, 화면 가로 전체, 높이 280px, 옅은 바탕(--color-bg-group). "지금 계신 곳" 표시를 겸한다
+ *   본문       그 아래 전부, 흰색 하나. 왼쪽에 질문과 예시, 오른쪽에 버튼 묶음
+ * 띠와 본문은 바탕색 차이만으로 나눈다. 테두리 선이나 그림자를 더하지 않는다.
+ * 오른쪽 칸에는 판을 깔지 않는다. 큰 주 버튼이 칸의 자리를 잡아 준다.
+ * 시선 순서: 주 버튼 → 질문 → 예시 문구 → 역명판 (문서 3-9절). 진하게 채운 덩어리는 주 버튼 하나뿐이다 */
+
+:root {
+  --canvas-width: 1920px;
+  --canvas-height: 1080px;
+
+  /* 문서 3-6절의 노선색·버스 종류 색 (모두 임시, 확인 필요). 띠 안에서는 흰색을 섞어 옅게 쓴다 (v7-band.js) */
+  --line-seoul-1: #0052a4;
+  --line-seoul-3: #ef7c1c;
+  --line-seoul-5: #996cac;
+  --bus-trunk: #0068b7;
+  --bus-branch: #53b332;
+  --bus-express: #e60012;
+  --bus-circular: #f2b70a;
+  --line-none: #dcdcdc; /* 장소 정보가 없을 때의 선. 글씨 색으로는 쓰지 않는다 */
+
+  /* 구역 크기 */
+  --pad: 48px;
+  --band-height: 280px;
+  --actions-width: 520px;
+  --btn-primary-height: 520px;
+  --btn-depth: 12px;
+  /* 버튼 묶음(주 버튼 520 + 턱 12 + 간격 24 + 보조 버튼 112 = 668)을 본문(높이 800) 세로 가운데에 둔다 */
+  --actions-top: calc(var(--band-height) + (var(--canvas-height) - var(--band-height) - 668px) / 2);
+
+  /* 시안 전용 (채택하면 문서에 먼저 넣는다) */
+  --font-name: 72px; /* 역명판의 이름. 문서의 --font-display 와 같은 값 */
+  --font-question: 96px; /* 질문 */
+  --font-primary: 80px; /* 주 버튼 글씨 */
+  --line-width: 14px;
+  --plate-top: 96px;
+  --plate-height: 172px;
+  --tag-height: 44px;
+  --badge: 52px;
+  --no-circle: 72px; /* 역 번호 세 자리(30px)가 고리에 닿지 않는 크기 */
+  --near-circle: 56px;
+  --mic-size: 128px;
+  --motion-press: 100ms;
+  --motion-ring: 2s; /* 마이크 둘레 고리: 2초에 한 번 */
+}
+
+.screen {
+  padding: 0;
+}
+
+/* ================= 역명판 띠 ================= */
+
+.v7-band {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--band-height);
+  overflow: hidden;
+  background: var(--color-bg-group);
+}
+
+/* 위쪽 줄: 로고와 현재 시각 */
+.v7-brand,
+.v7-now,
+.v7-note {
+  position: absolute;
+  top: 20px;
+  line-height: 52px;
+  white-space: nowrap;
+}
+
+.v7-brand {
+  left: var(--pad);
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-weight: 700;
+}
+
+.v7-brand svg {
+  width: 44px;
+  height: 44px;
+}
+
+.v7-now {
+  right: var(--pad);
+  font-size: var(--font-sub);
+}
+
+.v7-note {
+  left: 50%;
+  font-size: var(--font-sub);
+  transform: translateX(-50%);
+}
+
+/* 노선색 선: 화면 왼쪽 끝에서 오른쪽 끝까지 끊기지 않는다 */
+.v7-lines svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* 가운데 이름판: 흰 판. 선이 그 뒤로 지나간다 */
+.v7-plate {
+  position: absolute;
+  top: var(--plate-top);
+  left: 50%;
+  min-width: 400px;
+  height: var(--plate-height);
+  padding: 0 56px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  border-radius: 20px;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+.v7-name {
+  font-size: var(--font-name);
+  font-weight: 700;
+  line-height: 80px;
+}
+
+.v7-name.is-waiting {
+  font-size: var(--font-title);
+  font-weight: 400;
+}
+
+.v7-sub {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: var(--font-sub);
+  line-height: 1;
+}
+
+/* 가까운 지하철: 정류장 이름과 붙어 보이지 않게 위를 띄우고 원을 작게 한다 */
+.v7-sub.is-near {
+  margin-top: 12px;
+  gap: 10px;
+}
+
+.v7-sub.is-near span:first-child {
+  margin-right: 8px;
+}
+
+.v7-sub.is-near span:last-child {
+  margin-left: 8px;
+}
+
+/* 역 번호 원, 노선 번호 원: 흰 바탕 + 옅은 노선색 고리 + 검정 글씨 */
+.v7-circle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--no-circle);
+  height: var(--no-circle);
+  font-size: var(--font-sub);
+  line-height: 1;
+  background: var(--color-bg);
+  border: 6px solid var(--c);
+  border-radius: 50%;
+}
+
+.v7-sub.is-near .v7-circle {
+  width: var(--near-circle);
+  height: var(--near-circle);
+}
+
+.v7-circle.is-badge {
+  position: absolute;
+  left: var(--pad);
+  width: var(--badge);
+  height: var(--badge);
+  transform: translateY(-50%);
+}
+
+/* 선 위에 놓는 평평한 표지: 테두리가 없고 모서리가 거의 각지다. 버튼(둥근 모서리 + 테두리)과 다르게 보이게 한다.
+   글씨는 흰 표지 위 검정이다. 노선색 위에 직접 올리지 않는다 */
+.v7-tag {
+  position: absolute;
+  height: var(--tag-height);
+  padding: 0 14px;
+  font-size: var(--font-sub);
+  line-height: var(--tag-height);
+  background: var(--color-bg);
+  border-radius: 4px;
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.v7-tag.is-left {
+  left: 124px;
+}
+
+.v7-tag.is-edge {
+  left: var(--pad);
+}
+
+.v7-tag.is-right {
+  right: var(--pad);
+}
+
+/* 버스 번호 줄: 오른쪽에서부터 */
+.v7-nums {
+  position: absolute;
+  right: var(--pad);
+  display: flex;
+  gap: 14px;
+  transform: translateY(-50%);
+}
+
+.v7-nums .v7-tag {
+  position: static;
+  transform: none;
+}
+
+.v7-nums .v7-tag.is-num {
+  font-size: var(--font-body);
+}
+
+/* ================= 본문 오른쪽: 버튼 묶음. 본문 세로 가운데 ================= */
+
+.v7-actions {
+  position: absolute;
+  top: var(--actions-top);
+  right: var(--pad);
+  width: var(--actions-width);
+  display: flex;
+  flex-direction: column;
+}
+
+.screen .v7-actions .btn {
+  min-width: 0;
+  transition: background-color var(--motion-press);
+}
+
+/* 주 버튼: 위에 큰 마이크, 아래에 글씨. 그림자는 이 버튼에만. 보조 버튼은 바로 아래 24px */
+.screen .v7-actions .btn-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 36px;
+  min-height: var(--btn-primary-height);
+  margin-bottom: calc(var(--btn-depth) + var(--btn-gap));
+  font-size: var(--font-primary);
+  line-height: 1.15;
+  border-radius: 28px;
+  box-shadow:
+    0 var(--btn-depth) 0 var(--color-primary-pressed),
+    0 28px 40px rgba(8, 58, 125, 0.28);
+}
+
+.v7-mic {
+  position: relative;
+  width: var(--mic-size);
+  height: var(--mic-size);
+}
+
+.v7-mic svg {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+/* 마이크 둘레에서 천천히 퍼지는 고리. 2초에 한 번 (깜빡임 한도 1초 3번보다 훨씬 느리다) */
+.v7-mic::before,
+.v7-mic::after {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  border: 5px solid currentColor;
+  border-radius: 50%;
+  opacity: 0;
+  animation: v7-ring var(--motion-ring) ease-out infinite;
+}
+
+.v7-mic::after {
+  animation-delay: calc(var(--motion-ring) / 2);
+}
+
+@keyframes v7-ring {
+  from {
+    transform: scale(0.72);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.3);
+    opacity: 0;
+  }
+}
+
+/* 보조 버튼: 하한선 크기. 테두리를 가늘고 옅게 해서 주 버튼과 다투지 않게 한다. 글씨는 그대로 검정(18.88:1) */
+.screen .v7-actions .btn-secondary {
+  border: 2px solid var(--color-text-sub);
+}
+
+/* ================= 본문 왼쪽: 질문과 예시. 주 버튼과 한 쌍 ================= */
+
+/* 주 버튼과 같은 높이의 자리. 그 안에서 묶음을 세로 가운데, 가로 가운데에 둔다 */
+.v7-left {
+  position: absolute;
+  top: var(--actions-top);
+  left: var(--pad);
+  right: calc(var(--pad) + var(--actions-width) + var(--pad));
+  height: var(--btn-primary-height);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.v7-question {
+  margin: 0 0 36px;
+  font-size: var(--font-question);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  white-space: nowrap;
+}
+
+.screen .v7-say-label {
+  margin: 0 0 12px;
+  font-size: var(--font-sub);
+}
+
+/* 예시 세 개: 따옴표와 글자만. 테두리·그림자·바탕이 없어서 버튼처럼 보이지 않는다 */
+.v7-says {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-title);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* 움직임 줄이기 설정에서는 고리를 멈춘다 */
+@media (prefers-reduced-motion: reduce) {
+  .v7-mic::before,
+  .v7-mic::after {
+    animation: none;
+  }
+
+  .screen .v7-actions .btn {
+    transition: none;
+  }
+}

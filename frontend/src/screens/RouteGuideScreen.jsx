@@ -43,7 +43,7 @@ export default function RouteGuideScreen() {
       {!best && <p>보여 드릴 경로가 없어요</p>}
 
       {best && (
-        // 1순위: 제목 크기(40px)로 강조. 스타일은 global.css 의 .route-best. "이렇게 가세요" 는 화면 제목이 맡는다
+        // 1순위: 제목 크기로 강조. 스타일은 global.css 의 .route-best. "이렇게 가세요" 는 화면 제목이 맡는다
         <div className="route-best">
           <div>{best.summary}</div>
           {detailsOf(best) && <div className="route-best-detail">{detailsOf(best)}</div>}

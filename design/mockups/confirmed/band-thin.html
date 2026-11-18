@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>얇은 띠 확정 시안 (IDLE 이 아닌 화면용) — MANUAL_SELECT 예시</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <style>
+      /* 얇은 띠: IDLE 을 뺀 화면에서 쓰는 한 줄짜리 띠 (제안). 로고, 지금 계신 곳 이름, 현재 시각만 있다.
+       * 큰 띠(337px)를 그대로 쓰면 MANUAL_SELECT 가 들어가지 않아서 만든 안이다.
+       * 본문은 디자인 문서 6절의 좌우 두 칸(1160 / 64 / 600)과 버튼 크기(112px)를 그대로 썼다.
+       * 화면 내용(목적지 12개)은 얇은 띠 아래에 무엇이 얼마나 들어가는지 보려는 예시다. 목적지 이름은 지어 넣은 것이 섞여 있다 */
+      :root {
+        --canvas-width: 1920px;
+        --canvas-height: 1080px;
+        --pad: 48px;
+        --thin-height: 96px;
+        --col-left: 1160px;
+        --col-right: 600px;
+        --line-seoul-1: #0052a4;
+        --line-seoul-3: #ef7c1c;
+        --line-seoul-5: #996cac;
+      }
+      .screen {
+        padding: 0;
+      }
+      .thin {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: var(--thin-height);
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        align-items: center;
+        padding: 0 var(--pad);
+        background: var(--color-bg-group);
+      }
+      .thin-brand {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        font-weight: 700;
+      }
+      .thin-brand svg {
+        width: 44px;
+        height: 44px;
+      }
+      /* 지금 계신 곳: 흰 판 없이 띠 바탕 위에 이름 글자만 둔다 (버튼처럼 보이지 않게) */
+      .thin-place {
+        font-size: var(--font-title);
+        font-weight: 700;
+        white-space: nowrap;
+      }
+      .thin-now {
+        font-size: var(--font-sub);
+        text-align: right;
+      }
+      .left {
+        position: absolute;
+        top: calc(var(--thin-height) + 32px);
+        left: var(--pad);
+        width: var(--col-left);
+      }
+      .title {
+        margin: 0 0 var(--block-gap);
+        font-size: var(--font-title);
+        font-weight: 700;
+      }
+      .screen .btn-list {
+        grid-template-columns: repeat(3, 1fr);
+      }
+      /* 분류(지하철 2호선 등)는 이름 아래 둘째 줄에 통째로 둔다. 가운데에서 끊기지 않는다 */
+      .screen .btn-list .btn small {
+        display: block;
+        white-space: nowrap;
+      }
+      .right {
+        position: absolute;
+        right: var(--pad);
+        bottom: var(--pad);
+        width: var(--col-right);
+        display: flex;
+        flex-direction: column;
+        gap: var(--btn-gap);
+      }
+    </style>
+    <script src="../shared/brand.js"></script>
+  </head>
+  <body>
+    <section class="screen" data-screen="MANUAL_SELECT">
+      <header class="thin" data-zone="band">
+        <div class="thin-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <service-name></service-name>
+        </div>
+        <div class="thin-place">종로3가</div>
+        <div class="thin-now"><span data-date>11월 16일 월요일</span> <span data-clock>오후 2:30</span></div>
+      </header>
+
+      <main class="left" data-zone="content">
+        <h1 class="title v3-core">가실 곳을 골라 주세요</h1>
+        <ul class="btn-list">
+          <li><button type="button" class="btn btn-primary">종각역 <small>(지하철 1호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">을지로3가역 <small>(지하철 2호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">안국역 <small>(지하철 3호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">을지로4가역 <small>(지하철 2호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">종로5가역 <small>(지하철 1호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">광화문역 <small>(지하철 5호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">을지로입구역 <small>(지하철 2호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">시청역 <small>(지하철 1호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">충무로역 <small>(지하철 3호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">동대문역사문화공원역 <small>(지하철 2호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">명동역 <small>(지하철 4호선)</small></button></li>
+          <li><button type="button" class="btn btn-primary">동대문역 <small>(지하철 1호선)</small></button></li>
+        </ul>
+      </main>
+
+      <div class="right" data-zone="actions">
+        <button type="button" class="btn btn-secondary">말로 하기</button>
+        <button type="button" class="btn btn-secondary">처음으로</button>
+      </div>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>

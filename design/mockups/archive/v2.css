@@ -1,0 +1,373 @@
+/* v2 — 시안 C(큰 단계형) 배치를 뼈대로 한 발표 시연용 시안.
+ * 정체성은 모양 하나에 건다: 노선도의 "역 고리와 선". 네 화면 모두 같은 고리가 나온다
+ *   IDLE 고리 안 마이크 → LISTENING 고리 둘레 음량 막대 → ROUTING 고리로 흘러가는 선 → ROUTE_GUIDE 고리와 선의 타임라인
+ * 기준: docs/design-guidelines.md (개정 2). 하한선(2절)과 글씨·배경 허용 조합(3-2절)은 그대로 지킨다 */
+
+:root {
+  /* 디자인 문서에는 있고 global.css 에는 아직 없는 토큰 (구현할 때 global.css 로 옮긴다) */
+  --font-display: 72px; /* 3-3절. 화면의 핵심 한 줄, 소요 시간의 단위, 환승 횟수 */
+  --font-figure: 120px; /* 3-3절. 소요 시간의 숫자에만 */
+  --color-band: #111111; /* 3-1절. 머리말 띠. 위에는 흰 글씨만 */
+  --line-seoul-3: #ef7c1c; /* 3-6절. 임시, 확인 필요 */
+  --line-seoul-4: #00a5de; /* 3-6절. 임시, 확인 필요 */
+  --motion-press: 100ms; /* 3-5절 */
+  --motion-screen: 250ms; /* 3-5절 */
+
+  /* 시안 전용 (문서에 아직 없음. 간격·크기는 4절 5번에서 정한다) */
+  --gap-lg: 48px;
+  --gap-xl: 72px;
+  --symbol-size: 520px;
+  --logo-size: 56px;
+  --band-padding: 28px;
+  --plate-padding: 12px 28px;
+  --say-padding: 32px 56px;
+  --say-tail: 36px;
+  --btn-depth: 8px;
+  --rail-width: 96px;
+  --node-size: 68px;
+  --node-stroke: 16px;
+  --seg-width: 22px;
+  --seg-height: 190px;
+  --path-width: 280px;
+  --path-height: 640px;
+  --tight: 1.25;
+}
+
+.screen {
+  padding: 0;
+  gap: 0;
+}
+
+/* ---------- 머리말 띠: 서비스 이름, 현재 시각, 지금 계신 곳 ---------- */
+
+.v2-band {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  row-gap: var(--band-padding);
+  padding: var(--band-padding) var(--screen-padding);
+  color: var(--color-on-primary);
+  background: var(--color-band);
+}
+
+.v2-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--block-gap);
+  font-weight: 700;
+}
+
+/* 로고 자리. 로고가 정해지면 이 그림만 바꾼다 (문서 5절, 결정 필요) */
+.v2-logo {
+  width: var(--logo-size);
+  height: var(--logo-size);
+}
+
+.v2-clock {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-place {
+  grid-column: 1 / -1;
+  font-size: var(--font-sub);
+}
+
+.v2-place strong {
+  margin-left: 0.4em;
+}
+
+/* ---------- 본문: 가운데 한 덩어리 ---------- */
+
+.v2-main {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: var(--block-gap);
+  padding: 0 var(--screen-padding);
+  text-align: center;
+}
+
+.v2-main.is-left {
+  text-align: left;
+}
+
+.v2-core {
+  margin: 0;
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: var(--tight);
+}
+
+.v2-title {
+  margin: 0;
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+/* 버튼은 핵심 바로 아래 */
+.v2-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--btn-gap);
+  margin-top: var(--gap-lg);
+}
+
+/* 눌림: 색만 어두워진다. 크기·위치는 그대로 (문서 3-5절) */
+.screen .v2-actions .btn {
+  transition: background-color var(--motion-press), border-color var(--motion-press);
+}
+
+/* 주 버튼 아래 단단한 턱. 글씨 뒤에는 깔리지 않는다 (문서 3-8절) */
+.screen .v2-actions .btn-primary {
+  margin-bottom: var(--btn-depth);
+  box-shadow: 0 var(--btn-depth) 0 var(--color-primary-pressed);
+}
+
+/* ---------- 고리 (IDLE 쉬는 모습, LISTENING 음량 표시). 그림은 v2.js 가 그린다 ---------- */
+
+.v2-meter {
+  align-self: center;
+  width: var(--symbol-size);
+  height: var(--symbol-size);
+  color: var(--color-text); /* 버튼이 아니므로 파랑을 쓰지 않는다 (문서 3-7절) */
+}
+
+.v2-meter svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* ---------- IDLE: 이렇게 말해 보세요 ---------- */
+
+.v2-say {
+  position: relative;
+  align-self: center;
+  margin-top: var(--gap-lg);
+  padding: var(--say-padding);
+  background: var(--color-bg-highlight);
+  border-radius: var(--gap-lg);
+}
+
+/* 말풍선 꼬리 */
+.v2-say::before {
+  content: '';
+  position: absolute;
+  top: calc(var(--say-tail) / -2);
+  left: 50%;
+  width: var(--say-tail);
+  height: var(--say-tail);
+  background: inherit;
+  transform: translateX(-50%) rotate(45deg);
+}
+
+.v2-say-label {
+  position: relative;
+  font-size: var(--font-sub);
+  color: var(--color-text-sub);
+}
+
+.v2-say-words {
+  position: relative;
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+/* ---------- ROUTING: 지금 계신 곳에서 목적지 고리로 선이 흘러간다 ---------- */
+
+.v2-path {
+  align-self: center;
+  width: var(--path-width);
+  height: var(--path-height);
+  color: var(--color-text);
+}
+
+.v2-flow {
+  animation: v2-flow var(--motion-loop) linear infinite;
+}
+
+@keyframes v2-flow {
+  to {
+    stroke-dashoffset: -76;
+  }
+}
+
+/* 목적지 고리 둘레를 도는 호: 찾는 중 */
+.v2-seek {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: v2-seek var(--motion-loop) linear infinite;
+}
+
+@keyframes v2-seek {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------- ROUTE_GUIDE ---------- */
+
+.v2-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--block-gap);
+}
+
+/* 옅은 판: 되짚는 말, 역의 역할 */
+.v2-plate {
+  padding: var(--plate-padding);
+  font-size: var(--font-sub);
+  font-weight: 400;
+  color: var(--color-text-sub);
+  background: var(--color-bg-group);
+  border-radius: var(--radius);
+  white-space: nowrap;
+}
+
+.v2-plate.is-echo {
+  font-size: var(--font-body);
+  color: var(--color-text);
+  background: var(--color-bg-highlight);
+}
+
+/* 소요 시간: 숫자만 가장 크게, 단위와 환승 횟수는 한 단계 작게 */
+.v2-sum {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--block-gap);
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: 1;
+}
+
+.v2-figure {
+  margin: 0 0.08em;
+  font-size: var(--font-figure);
+}
+
+/* 세로 타임라인: 역(고리)과 구간(노선색 선) */
+.v2-line {
+  display: flex;
+  flex-direction: column;
+  margin: var(--gap-lg) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.v2-stop,
+.v2-seg {
+  display: grid;
+  grid-template-columns: var(--rail-width) 1fr;
+  align-items: center;
+  column-gap: var(--block-gap);
+}
+
+.v2-stop::before {
+  content: '';
+  position: relative;
+  z-index: 1;
+  justify-self: center;
+  width: var(--node-size);
+  height: var(--node-size);
+  background: var(--color-bg);
+  border: var(--node-stroke) solid var(--color-text);
+  border-radius: 50%;
+}
+
+.v2-stop-text {
+  display: flex;
+  align-items: center;
+  gap: var(--block-gap);
+}
+
+.v2-stop-text strong {
+  font-size: var(--font-title);
+  line-height: var(--tight);
+}
+
+.v2-seg {
+  min-height: var(--seg-height);
+}
+
+/* 노선색은 장식. 글자는 검정이고 노선색 위에 올리지 않는다 (문서 3-6절) */
+.v2-seg::before {
+  content: '';
+  justify-self: center;
+  align-self: stretch;
+  width: var(--seg-width);
+  margin: calc(var(--node-size) / -2) 0;
+  background: var(--line);
+}
+
+.v2-seg strong {
+  margin-right: 0.5em;
+}
+
+.screen .v2-other {
+  margin-top: var(--gap-lg);
+}
+
+/* ---------- 화면 전환 (시연 페이지) ---------- */
+
+.v2-enter {
+  animation: v2-enter var(--motion-screen) ease-out both;
+}
+
+@keyframes v2-enter {
+  from {
+    opacity: 0;
+    transform: translateY(var(--gap-lg));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* 시연 페이지: 창 크기에 맞춰 1080×1920 무대를 줄여 가운데 둔다 (v2.js 가 --fit 를 정한다) */
+body.is-demo {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  overflow: hidden;
+  background: var(--color-band);
+  cursor: pointer;
+}
+
+.v2-stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--canvas-width);
+  height: var(--canvas-height);
+  overflow: hidden;
+  background: var(--color-bg);
+  transform: translate(-50%, -50%) scale(var(--fit, 1));
+}
+
+/* 무대 밖 안내 (키오스크 화면이 아니다) */
+.v2-demo-note {
+  position: fixed;
+  left: 16px;
+  bottom: 12px;
+  font-size: 16px;
+  color: var(--color-on-primary);
+}
+
+/* 움직임 줄이기 설정에서는 모두 멈춘다. 상태는 글자로 알 수 있다 (문서 3-5절) */
+@media (prefers-reduced-motion: reduce) {
+  .v2-flow,
+  .v2-seek,
+  .v2-enter {
+    animation: none;
+  }
+
+  .screen .v2-actions .btn {
+    transition: none;
+  }
+}

@@ -1,0 +1,177 @@
+/* A. 공공 안내형 — 내용이 버튼 쪽으로 내려온다. 버튼은 늘 맨 아래.
+ * 새 글씨 단계·아이콘 없음. 구역은 3px 선으로 나누고 옅은 배경은 거든다 */
+
+:root {
+  /* 시안 전용: 지금 코드에 숫자로 적힌 포커스 외곽선 값을 토큰으로 옮긴 것 (문서 4절 5번) */
+  --focus-width: 4px;
+  --focus-offset: 3px;
+  --dot-size: 20px;
+}
+
+.screen {
+  padding: 0;
+  gap: 0;
+}
+
+/* 위쪽 띠: 지금 계신 곳 */
+.a-band {
+  flex-shrink: 0;
+  padding: var(--block-gap) var(--screen-padding);
+  background: var(--color-bg-group);
+  border-bottom: var(--border-width) solid var(--color-text);
+}
+
+.a-band-label {
+  font-size: var(--font-sub);
+  color: var(--color-text-sub);
+}
+
+.a-band-place {
+  font-weight: 700;
+}
+
+/* 가운데는 비워 둔다. 남는 높이를 모두 차지해 안내판을 아래로 민다 */
+.a-space {
+  flex: 1 1 auto;
+}
+
+/* 안내판: 버튼 영역 바로 위 */
+.a-board {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--block-gap);
+  padding: var(--block-gap) var(--screen-padding);
+  border-top: var(--border-width) solid var(--color-text);
+}
+
+/* 화면 제목은 본문 크기로 내리고(굵게), 핵심이 제목 크기를 쓴다 */
+.a-label {
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 700;
+  color: var(--color-text-sub);
+}
+
+.a-core {
+  margin: 0;
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+.a-now {
+  padding: var(--block-gap);
+  background: var(--color-bg-highlight);
+}
+
+.screen-actions {
+  margin: 0 var(--screen-padding) var(--screen-padding);
+}
+
+/* 버튼이 없는 화면: 안내판이 화면 맨 아래에 온다 */
+.a-board-last {
+  padding-bottom: var(--screen-padding);
+}
+
+/* 점 세 개가 차례로 켜진다 */
+.a-dots {
+  display: inline-flex;
+  gap: var(--dot-size);
+  margin-left: var(--block-gap);
+  vertical-align: middle;
+}
+
+.a-dots i {
+  width: var(--dot-size);
+  height: var(--dot-size);
+  border-radius: 50%;
+  background: var(--color-text);
+  animation: a-dot var(--motion-loop) infinite;
+}
+
+.a-dots i:nth-child(2) {
+  animation-delay: calc(var(--motion-loop) / 4);
+}
+
+.a-dots i:nth-child(3) {
+  animation-delay: calc(var(--motion-loop) / 2);
+}
+
+@keyframes a-dot {
+  0%,
+  100% {
+    opacity: 0.15;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+/* 단계 띠 */
+.a-steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: var(--border-width) solid var(--color-text);
+}
+
+.a-steps li {
+  padding: var(--block-gap);
+  font-size: var(--font-sub);
+  color: var(--color-text-sub);
+  text-align: center;
+}
+
+.a-steps li + li {
+  border-left: var(--border-width) solid var(--color-text);
+}
+
+.a-steps li.is-now {
+  font-size: var(--font-body);
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-bg-highlight);
+}
+
+/* CHECKING: 테두리 상자 + 남은 초 */
+.a-notice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--block-gap);
+  padding: var(--screen-padding) var(--block-gap);
+  border: var(--border-width) solid var(--color-text);
+}
+
+.a-count {
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+/* 경로: 시간표처럼 줄 단위 */
+.a-route-best {
+  display: flex;
+  flex-direction: column;
+  gap: var(--block-gap);
+  padding: var(--block-gap);
+  background: var(--color-bg-highlight);
+  border-top: var(--border-width) solid var(--color-text);
+  border-bottom: var(--border-width) solid var(--color-text);
+}
+
+.a-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--block-gap);
+}
+
+.a-others {
+  display: flex;
+  flex-direction: column;
+  gap: var(--block-gap);
+  padding: 0 var(--block-gap);
+  font-size: var(--font-sub);
+  color: var(--color-text-sub);
+}

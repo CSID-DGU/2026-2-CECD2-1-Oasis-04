@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 v3-2. 지도 스타일 (IDLE)</title>
+    <!-- 문서 3-2절 표에 아직 없는 글씨·배경 조합 (제안). 검사에서 "제안"으로 따로 센다 -->
+    <meta name="proposed-pairs" content="#111111 on #cfe5c8" />
+    <link rel="stylesheet" href="../shared/base.css" />
+    <style>
+      /* v3-2 지도 스타일. 종로 일대를 단순화한 지도가 배경이고, 아래에서 올라온 둥근 판 위에 질문과 버튼이 있다.
+       * 지도는 길 찾기용이 아니라 "여기가 어디인지" 보여 주는 그림이다. 실제 지형과 정확히 맞지 않는다 */
+      :root {
+        /* 지도 색 (제안). 글씨를 직접 올리는 곳은 공원뿐이다: #111111 on #CFE5C8 = 14.11:1 */
+        --map-land: #eef0ea;
+        --map-road: #ffffff;
+        --map-water: #bfd9f2;
+        --map-park: #cfe5c8;
+        --map-block: #dfe3d8; /* 건물 자리. 글씨를 올리지 않는다 */
+        /* 노선색: 공식 자료로 확인하지 않은 임시값 */
+        --line-seoul-1: #0052a4;
+        --line-seoul-3: #ef7c1c;
+        --line-seoul-5: #996cac;
+        --map-here: #d9480f; /* 지금 여기 표시. 글씨 색으로는 쓰지 않는다 (흰 글씨와 4.30:1) */
+        /* 시안 전용 */
+        --font-question: 104px;
+        --font-display: 72px;
+        --pad: 56px;
+        --sheet-top: 1120px;
+        --sheet-radius: 72px;
+        --plate-radius: 24px;
+        --shadow: 0 12px 32px rgba(17, 17, 17, 0.18);
+        --motion-loop: 1.6s;
+      }
+
+      .screen {
+        padding: 0;
+        background: var(--map-land);
+      }
+
+      .map {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 1080px;
+        height: 1260px;
+      }
+
+      .abs {
+        position: absolute;
+        margin: 0;
+        white-space: nowrap;
+      }
+
+      /* 지도 위 이름표. 길 이름은 흰 판, 공원 이름은 공원 색 위에 바로 */
+      .label {
+        padding: 2px 16px;
+        font-size: var(--font-sub);
+        background: var(--color-bg);
+        border-radius: 8px;
+      }
+      .label.is-park {
+        font-weight: 700;
+        background: var(--map-park);
+      }
+
+      /* 떠 있는 판: 시각, 서비스 이름 */
+      .plate {
+        padding: 20px 32px;
+        background: var(--color-bg);
+        border-radius: var(--plate-radius);
+        box-shadow: var(--shadow);
+      }
+      .plate-time {
+        font-size: var(--font-display);
+        font-weight: 700;
+        line-height: 1.1;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        font-weight: 700;
+      }
+      .brand svg {
+        width: 56px;
+        height: 56px;
+      }
+
+      /* 지금 여기: 퍼지는 고리 + 검은 말풍선 */
+      .halo {
+        transform-box: fill-box;
+        transform-origin: center;
+        animation: halo var(--motion-loop) ease-out infinite;
+      }
+      @keyframes halo {
+        from {
+          transform: scale(0.4);
+          opacity: 0.5;
+        }
+        to {
+          transform: scale(1);
+          opacity: 0;
+        }
+      }
+      .here {
+        padding: 18px 32px 22px;
+        color: var(--color-on-primary);
+        background: var(--color-text);
+        border-radius: var(--plate-radius);
+        box-shadow: var(--shadow);
+      }
+      .here::before {
+        content: '';
+        position: absolute;
+        top: -14px;
+        left: 238px;
+        width: 32px;
+        height: 32px;
+        background: inherit;
+        transform: rotate(45deg);
+      }
+      .here-label {
+        position: relative;
+        font-size: var(--font-sub);
+      }
+      .here-name {
+        position: relative;
+        font-weight: 700;
+      }
+
+      /* 아래에서 올라온 둥근 판 */
+      .sheet {
+        position: absolute;
+        top: var(--sheet-top);
+        right: 0;
+        bottom: 0;
+        left: 0;
+        display: flex;
+        flex-direction: column;
+        padding: var(--pad) var(--pad) 48px;
+        background: var(--color-bg);
+        border-radius: var(--sheet-radius) var(--sheet-radius) 0 0;
+        box-shadow: 0 -16px 40px rgba(17, 17, 17, 0.16);
+      }
+      .question {
+        margin: 0;
+        font-size: var(--font-question);
+        font-weight: 700;
+        line-height: 1.15;
+        letter-spacing: -0.02em;
+      }
+      .say {
+        display: flex;
+        align-items: baseline;
+        gap: 24px;
+        margin-top: 28px;
+      }
+      .say-label {
+        font-size: var(--font-sub);
+        color: var(--color-text-sub);
+      }
+      .say-words {
+        font-size: var(--font-title);
+        font-weight: 700;
+      }
+      .near {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        margin-top: 24px;
+      }
+      .near strong {
+        margin-left: 10px;
+      }
+      .ring {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 60px;
+        height: 60px;
+        font-size: var(--font-sub);
+        font-weight: 700;
+        border: 8px solid var(--c);
+        border-radius: 50%;
+      }
+      .actions {
+        display: flex;
+        flex-direction: column;
+        gap: var(--btn-gap);
+        margin-top: auto;
+      }
+      .screen .actions .btn {
+        min-height: 132px;
+      }
+      .screen .actions .btn-primary {
+        box-shadow: 0 8px 0 var(--color-primary-pressed);
+        margin-bottom: 8px;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .halo {
+          animation: none;
+          opacity: 0.25;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <section class="screen" data-screen="IDLE">
+      <!-- 종로 일대를 단순화한 지도. 위가 북쪽. 길과 건물 자리는 대략적이다 -->
+      <svg class="map" viewBox="0 0 1080 1260" fill="none" aria-hidden="true">
+        <rect width="1080" height="1260" fill="var(--map-land)" />
+        <!-- 공원: 탑골공원, 종묘 -->
+        <rect x="286" y="372" width="196" height="150" rx="16" fill="var(--map-park)" />
+        <path d="M716 232h214a20 20 0 0 1 20 20v248a20 20 0 0 1-20 20H716a20 20 0 0 1-20-20V252a20 20 0 0 1 20-20Z" fill="var(--map-park)" />
+        <!-- 건물 자리 (대략) -->
+        <g fill="var(--map-block)">
+          <rect x="296" y="212" width="170" height="64" rx="8" />
+          <rect x="296" y="322" width="186" height="36" rx="8" />
+          <rect x="20" y="430" width="74" height="96" rx="8" />
+          <rect x="146" y="430" width="52" height="96" rx="8" />
+          <rect x="530" y="330" width="78" height="190" rx="8" />
+          <rect x="290" y="640" width="70" height="44" rx="8" />
+          <rect x="406" y="640" width="76" height="44" rx="8" />
+          <rect x="524" y="722" width="84" height="74" rx="8" />
+          <rect x="698" y="624" width="64" height="170" rx="8" />
+          <rect x="884" y="690" width="76" height="100" rx="8" />
+          <rect x="146" y="884" width="60" height="50" rx="8" />
+          <rect x="406" y="884" width="76" height="50" rx="8" />
+          <rect x="698" y="884" width="64" height="150" rx="8" />
+          <rect x="820" y="972" width="130" height="50" rx="8" />
+        </g>
+        <!-- 청계천 -->
+        <path d="M-20 842C200 820 420 860 640 838S900 812 1100 836" stroke="var(--map-water)" stroke-width="52" />
+        <!-- 골목 -->
+        <g stroke="var(--map-road)" stroke-width="14">
+          <path d="M120 200V1260M380 620V1260M500 200V372M500 620V1260M790 620V1260M860 620V820M-20 400H250M-20 700H1100M-20 950H1100M290 300H640M680 660H1100M-20 1160H1100" />
+          <path d="M330 372L210 200" stroke-width="26" />
+        </g>
+        <!-- 큰길: 율곡로, 종로, 을지로 / 삼일대로, 돈화문로, 창경궁로 -->
+        <g stroke="var(--map-road)" stroke-linecap="round">
+          <path d="M-20 170H1100" stroke-width="52" />
+          <path d="M-20 574H1100" stroke-width="76" />
+          <path d="M-20 1060H1100" stroke-width="56" />
+          <path d="M240 -20V1280" stroke-width="52" />
+          <path d="M640 170V1280" stroke-width="44" />
+          <path d="M990 -20V1280" stroke-width="52" />
+        </g>
+        <!-- 지금 여기에서 역까지 걷는 길 -->
+        <path d="M452 566H604" stroke="#111" stroke-width="9" stroke-linecap="round" stroke-dasharray="0 22" />
+        <!-- 종로3가역 -->
+        <circle cx="640" cy="574" r="22" fill="#fff" stroke="#111" stroke-width="8" />
+        <!-- 지금 여기 -->
+        <circle class="halo" cx="404" cy="548" r="120" fill="var(--map-here)" />
+        <circle cx="404" cy="548" r="34" fill="var(--map-here)" stroke="#fff" stroke-width="10" />
+      </svg>
+
+      <div class="abs label is-park" style="left: 300px; top: 392px">탑골공원</div>
+      <div class="abs label is-park" style="left: 772px; top: 340px">종묘</div>
+      <div class="abs label" style="left: 40px; top: 553px">종로</div>
+      <div class="abs label" style="left: 836px; top: 553px">종로4가</div>
+      <div class="abs label" style="left: 664px; top: 606px">종로3가역</div>
+      <div class="abs label" style="left: 60px; top: 818px">청계천</div>
+      <div class="abs label" style="left: 800px; top: 1039px">을지로</div>
+      <div class="abs label" style="left: 300px; top: 222px">낙원상가</div>
+      <div class="abs label" style="left: 778px; top: 690px">세운상가</div>
+
+      <div class="abs plate" style="left: 40px; top: 40px">
+        <div class="plate-time" data-clock>오후 2:30</div>
+        <div data-date>11월 16일 월요일</div>
+      </div>
+      <div class="abs plate brand" style="right: 40px; top: 40px">
+        <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+          <circle cx="28" cy="28" r="20" stroke-width="9" />
+          <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+        </svg>
+        <span>말길</span>
+      </div>
+
+      <div class="abs here" style="left: 150px; top: 618px">
+        <div class="here-label">지금 여기</div>
+        <div class="here-name">종로3가.탑골공원 정류장</div>
+      </div>
+
+      <div class="sheet">
+        <h1 class="question v3-core">어디로 가시나요?</h1>
+        <div class="say">
+          <span class="say-label">이렇게 말해 보세요</span>
+          <span class="say-words" data-rotate="명동 어떻게 가요?|서울역 가는 버스|가까운 병원|동대문시장 가는 길"></span>
+        </div>
+        <div class="near">
+          <span class="say-label">가까운 지하철</span>
+          <span class="ring" style="--c: var(--line-seoul-1)">1</span>
+          <span class="ring" style="--c: var(--line-seoul-3)">3</span>
+          <span class="ring" style="--c: var(--line-seoul-5)">5</span>
+          <strong>종로3가역</strong>
+        </div>
+        <div class="actions">
+          <button type="button" class="btn btn-primary">말하기</button>
+          <button type="button" class="btn btn-secondary">손으로 고르기</button>
+        </div>
+      </div>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>

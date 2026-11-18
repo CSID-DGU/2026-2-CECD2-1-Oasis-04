@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>CONFIRMING 확정 시안 (지하철역: 종로3가)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/flow.css" />
+    <link rel="stylesheet" href="pick.css" />
+    <script src="../shared/brand.js"></script>
+    <style>
+      /* CONFIRMING 확정본 (2026-11-18). 규칙은 docs/design-guidelines.md 11절. 눈이 가는 순서: 1 후보 → 2 들은 말 → 3 오른쪽 버튼.
+       * 문구·버튼은 frontend/src/screens/ConfirmingScreen.jsx 그대로다:
+       *   제목 "가실 곳을 확인해 주세요" / 들은 말: "병원"
+       *   후보 여러 개: "가시려는 곳을 하나 골라 주세요" + 후보마다 고르는 카드 (DESTINATION_CONFIRMED)
+       *   후보 1개: "OO" 맞나요? (분류) + '예' (DESTINATION_CONFIRMED)
+       *   오른쪽: 모두 아니에요 / 다른 곳 말하기 / 처음으로
+       * 왼쪽 칸 위쪽에 제목과 들은 말, 남은 높이의 세로 가운데에 고를 것(후보 목록, 또는 물음 + '예').
+       * 제목과 들은 말은 36px. 들은 말은 따옴표 안만 굵게 (2026-11-18 팀장: 후보 이름 48px 이 먼저 보이게 들은 말을 낮춘다).
+       * 후보 데이터는 앱 mock(frontend/src/api/mock/data/pois.js)의 병원 3개다.
+       *
+       * 주소: ?n=1 후보 1개 (없으면 3개), ?left=15 남은 시간 알림 (timeout-notice.js), ?names=long 긴 이름 시험 */
+      .confirm {
+        position: absolute;
+        top: 32px;
+        bottom: var(--pad);
+        left: 0;
+        right: 0;
+        display: flex;
+        flex-direction: column;
+      }
+      .screen .confirm-title {
+        margin: 0;
+        font-size: var(--font-body);
+        font-weight: 400;
+        line-height: 1.4;
+      }
+      .screen .heard {
+        margin: 8px 0 0;
+        font-size: var(--font-body);
+        line-height: 1.4;
+      }
+      .heard b {
+        font-weight: 700;
+      }
+      /* 고를 것: 남은 높이의 세로 가운데 */
+      .choose {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        min-height: 0;
+      }
+      .screen .choose-lead {
+        margin: 0 0 20px;
+        font-size: var(--font-body);
+        line-height: 1.4;
+      }
+      .picks {
+        grid-template-columns: 1fr;
+        grid-auto-rows: minmax(var(--card-height), auto);
+      }
+      :root {
+        --card-height: 168px; /* ROUTE_GUIDE 경로 카드와 같은 높이 */
+      }
+
+      /* 후보 1개: 큰 물음 + 바로 아래 '예' 주 버튼 (문서 2절의 주 버튼 예외: 본문에 있다) */
+      .screen .ask {
+        margin: 0;
+        font-size: var(--font-display);
+        font-weight: 700;
+        line-height: 1.2;
+        letter-spacing: -0.02em;
+        word-break: keep-all;
+      }
+      .screen .ask-kind {
+        margin: 8px 0 0;
+        font-size: var(--font-body);
+        line-height: 1.4;
+      }
+      /* '예': 오른쪽 칸 주 버튼과 같은 모양·크기 (flow.css 의 .right .btn-primary). 너비도 오른쪽 칸과 같은 600px */
+      .screen .yes {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        width: var(--col-right);
+        min-height: var(--btn-primary-height);
+        margin: 32px 0 var(--btn-depth);
+        font-size: var(--font-title);
+        line-height: 1.15;
+        border-radius: 28px;
+        box-shadow:
+          0 var(--btn-depth) 0 var(--color-primary-pressed),
+          0 20px 32px rgba(8, 58, 125, 0.28);
+        transition: background-color var(--motion-press);
+      }
+      .screen .yes svg {
+        width: var(--btn-icon-primary);
+        height: var(--btn-icon-primary);
+        fill: currentColor;
+      }
+      [hidden] {
+        display: none !important;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="screen" data-screen="CONFIRMING">
+      <header class="thin" data-zone="band">
+        <div class="thin-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <service-name></service-name>
+        </div>
+        <div class="thin-place">종로3가</div>
+        <div class="thin-now"><span data-date>11월 18일 수요일</span> <span data-clock>오후 2:30</span></div>
+        <div class="thin-alert" data-zone="alert" role="status">
+          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m627-287 45-45-159-160v-201h-60v225l174 181ZM480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-82 31.5-155t86-127.5Q252-817 325-848.5T480-880q82 0 155 31.5t127.5 86Q817-708 848.5-635T880-480q0 82-31.5 155t-86 127.5Q708-143 635-111.5T480-80Zm0-400Zm0 340q140 0 240-100t100-240q0-140-100-240T480-820q-140 0-240 100T140-480q0 140 100 240t240 100Z" /></svg>
+          <p><b><span data-left>15</span>초 뒤에 처음으로 돌아가요</b><span>계속하시려면 화면을 눌러 주세요</span></p>
+        </div>
+      </header>
+
+      <div class="body">
+        <main class="left">
+          <div class="confirm">
+            <h1 class="confirm-title">가실 곳을 확인해 주세요</h1>
+            <p class="heard v3-core" data-zone="heard">들은 말: “<b>병원</b>”</p>
+
+            <!-- 후보 여러 개 -->
+            <div class="choose" data-variant="many">
+              <p class="choose-lead">가시려는 곳을 하나 골라 주세요</p>
+              <ul class="picks" data-zone="primary"></ul>
+            </div>
+
+            <!-- 후보 1개 -->
+            <div class="choose" data-variant="one" hidden>
+              <p class="ask" data-zone="ask">“<span data-one-name>동국대병원</span>” 맞나요?</p>
+              <p class="ask-kind" data-one-kind>병원</p>
+              <button type="button" class="btn btn-primary yes" data-zone="yes">
+                <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M378-246 154-470l43-43 181 181 384-384 43 43-427 427Z" /></svg>
+                <span>예</span>
+              </button>
+            </div>
+          </div>
+        </main>
+
+        <div class="right" data-zone="actions">
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m249-207-42-42 231-231-231-231 42-42 231 231 231-231 42 42-231 231 231 231-42 42-231-231-231 231Z" /></svg>
+            <span>모두 아니에요</span>
+          </button>
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-423q-43 0-72-30.92-29-30.91-29-75.08v-251q0-41.67 29.44-70.83Q437.88-880 479.94-880t71.56 29.17Q581-821.67 581-780v251q0 44.17-29 75.08Q523-423 480-423Zm0-228Zm-30 531v-136q-106-11-178-89t-72-184h60q0 91 64.29 153t155.5 62q91.21 0 155.71-62Q700-438 700-529h60q0 106-72 184t-178 89v136h-60Zm30-363q18 0 29.5-13.5T521-529v-251q0-17-11.79-28.5T480-820q-17.42 0-29.21 11.5T439-780v251q0 19 11.5 32.5T480-483Z" /></svg>
+            <span>다른 곳 말하기</span>
+          </button>
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M220-180h150v-250h220v250h150v-390L480-765 220-570v390Zm-60 60v-480l320-240 320 240v480H530v-250H430v250H160Zm320-353Z" /></svg>
+            <span>처음으로</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <template id="pick">
+      <li>
+        <button type="button" class="btn pick">
+          <span class="pick-text"><span class="pick-name"></span><small class="pick-kind"></small></span>
+          <svg class="pick-arrow" viewBox="0 -960 960 960" aria-hidden="true"><path d="M504-480 320-664l56-56 240 240-240 240-56-56 184-184Z" /></svg>
+        </button>
+      </li>
+    </template>
+
+    <script>
+      // 후보 데이터. 기본은 앱 mock 의 병원 3개. ?names=long 은 넘침 시험용으로 지어낸 긴 이름
+      const query = new URLSearchParams(location.search)
+      const CANDIDATES = {
+        mock: [
+          { name: '동국대병원', category: '병원' },
+          { name: '서울병원', category: '병원' },
+          { name: '중앙병원', category: '병원' },
+        ],
+        long: [
+          { name: '서울특별시 동부병원 응급의료센터 별관', category: '종합병원' },
+          { name: '동국대학교 일산불교병원', category: '대학병원' },
+          { name: '중앙병원', category: '병원' },
+        ],
+      }[query.get('names') === 'long' ? 'long' : 'mock']
+      const one = query.get('n') === '1'
+      // 쓰지 않는 쪽은 지운다 (숨겨 두면 하한선 검사가 0px 짜리 버튼으로 센다)
+      document.querySelector(`[data-variant="${one ? 'many' : 'one'}"]`).remove()
+      document.querySelector(`[data-variant="${one ? 'one' : 'many'}"]`).hidden = false
+      if (one) {
+        document.querySelector('[data-one-name]').textContent = CANDIDATES[0].name
+        document.querySelector('[data-one-kind]').textContent = CANDIDATES[0].category
+      } else {
+        const list = document.querySelector('.picks')
+        const tpl = document.getElementById('pick')
+        for (const poi of CANDIDATES) {
+          const li = tpl.content.cloneNode(true)
+          li.querySelector('.pick-name').textContent = poi.name
+          li.querySelector('.pick-kind').textContent = poi.category // 괄호 없이 (2026-11-18 팀장)
+          list.append(li)
+        }
+      }
+    </script>
+    <script src="timeout-notice.js"></script>
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>

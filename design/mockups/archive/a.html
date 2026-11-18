@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 A. 공공 안내형</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="a.css" />
+  </head>
+  <body>
+    <!-- IDLE -->
+    <section class="screen" data-screen="IDLE">
+      <div class="a-band">
+        <div class="a-band-label">지금 계신 곳</div>
+        <div class="a-band-place">종로3가.탑골공원 정류장</div>
+      </div>
+      <div class="a-space"></div>
+      <div class="a-board">
+        <h1 class="a-core">어디로 가시나요?</h1>
+        <p>버튼을 누르고 말씀하시거나, 손으로 골라 주세요</p>
+      </div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-primary">말하기</button>
+        <button type="button" class="btn btn-secondary">손으로 고르기</button>
+      </div>
+    </section>
+
+    <!-- LISTENING (실제 마이크 모드: 글 입력창 없음) -->
+    <section class="screen" data-screen="LISTENING">
+      <div class="a-band">
+        <div class="a-band-label">지금 계신 곳</div>
+        <div class="a-band-place">종로3가.탑골공원 정류장</div>
+      </div>
+      <div class="a-space"></div>
+      <div class="a-board">
+        <h1 class="a-label">말씀해 주세요</h1>
+        <p class="a-core a-now">듣고 있어요<span class="a-dots"><i></i><i></i><i></i></span></p>
+        <p class="hint">가실 곳을 말씀해 주세요. 말씀이 끝나면 자동으로 넘어가요</p>
+      </div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-primary">다 말했어요</button>
+        <button type="button" class="btn btn-secondary">취소</button>
+        <button type="button" class="btn btn-secondary">처음으로</button>
+      </div>
+    </section>
+
+    <!-- ROUTING -->
+    <section class="screen" data-screen="ROUTING">
+      <div class="a-band">
+        <div class="a-band-label">지금 계신 곳</div>
+        <div class="a-band-place">종로3가.탑골공원 정류장</div>
+      </div>
+      <div class="a-space"></div>
+      <div class="a-board a-board-last">
+        <ol class="a-steps">
+          <li>1 가실 곳</li>
+          <li>2 확인</li>
+          <li class="is-now">3 길 찾기</li>
+        </ol>
+        <h1 class="a-core">가는 길을 찾고 있어요<span class="a-dots"><i></i><i></i><i></i></span></h1>
+        <p>목적지: 서울병원</p>
+      </div>
+    </section>
+
+    <!-- CHECKING -->
+    <section class="screen" data-screen="CHECKING">
+      <div class="a-band">
+        <div class="a-band-label">지금 계신 곳</div>
+        <div class="a-band-place">종로3가.탑골공원 정류장</div>
+      </div>
+      <div class="a-space"></div>
+      <div class="a-board a-board-last">
+        <h1 class="a-label">잠시만 기다려 주세요</h1>
+        <div class="a-notice">
+          <p class="a-core">잠시 문제가 생겼어요</p>
+          <p><span class="a-count">3</span>초 뒤에 다시 해 볼게요</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ROUTE_GUIDE -->
+    <section class="screen" data-screen="ROUTE_GUIDE">
+      <div class="a-band">
+        <div class="a-band-label">지금 계신 곳</div>
+        <div class="a-band-place">종로3가.탑골공원 정류장</div>
+      </div>
+      <div class="a-space"></div>
+      <div class="a-board">
+        <h1 class="a-label">이렇게 가세요</h1>
+        <p>목적지: 서울병원</p>
+        <div class="a-route-best">
+          <div class="a-row a-core"><span>지하철 3호선 → 4호선</span><span>약 25분</span></div>
+          <div>환승 1회</div>
+        </div>
+        <p class="hint">다른 방법</p>
+        <div class="a-others">
+          <div class="a-row"><span>2. 버스 100번</span><span>약 32분 · 환승 없음</span></div>
+          <div class="a-row"><span>3. 지하철 3호선 → 버스 200번</span><span>약 35분 · 환승 1회</span></div>
+        </div>
+      </div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-primary">휴대폰으로 보내기</button>
+        <button type="button" class="btn btn-secondary">처음으로</button>
+      </div>
+    </section>
+
+    <!-- MANUAL_SELECT (목적지 12개) -->
+    <section class="screen" data-screen="MANUAL_SELECT">
+      <div class="a-band">
+        <div class="a-band-label">지금 계신 곳</div>
+        <div class="a-band-place">종로3가.탑골공원 정류장</div>
+      </div>
+      <div class="a-space"></div>
+      <div class="a-board">
+        <h1 class="a-label">가실 곳을 골라 주세요</h1>
+        <ul class="btn-list">
+          <li><button type="button" class="btn btn-primary">서울역 <small>(지하철역)</small></button></li>
+          <li><button type="button" class="btn btn-primary">시청 <small>(지하철역)</small></button></li>
+          <li><button type="button" class="btn btn-primary">동국대학교 <small>(학교)</small></button></li>
+          <li><button type="button" class="btn btn-primary">남산타워 <small>(관광지)</small></button></li>
+          <li><button type="button" class="btn btn-primary">고속터미널 <small>(터미널)</small></button></li>
+          <li><button type="button" class="btn btn-primary">동국대병원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">서울병원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">중앙병원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">국립중앙의료원 <small>(병원)</small></button></li>
+          <li><button type="button" class="btn btn-primary">남대문시장 <small>(시장)</small></button></li>
+          <li><button type="button" class="btn btn-primary">광장시장 <small>(시장)</small></button></li>
+          <li><button type="button" class="btn btn-primary">종로구청 <small>(관공서)</small></button></li>
+        </ul>
+      </div>
+      <div class="screen-actions">
+        <button type="button" class="btn btn-secondary">말로 하기</button>
+        <button type="button" class="btn btn-secondary">처음으로</button>
+      </div>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+  </body>
+</html>

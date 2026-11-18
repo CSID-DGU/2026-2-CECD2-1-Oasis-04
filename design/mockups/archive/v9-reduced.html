@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>시안 v9. IDLE_REDUCED (음성을 쓸 수 없을 때)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="v8.css" />
+    <link rel="stylesheet" href="v9-extra.css" />
+  </head>
+  <body>
+        <!-- (build-v9.mjs 가 v8-subway.html 에서 만든 파일) 띠 시험용. 주소에 ?case=seoul 처럼 붙인다 (v9-cases.js) -->
+    <script src="v9-cases.js"></script>
+    <script>
+      window.PLACE = window.V8_CASES[new URLSearchParams(location.search).get('case') ?? 'jongno3ga'] ?? null
+      // 비교용: 주소에 ?ql=220 을 붙이면 질문 묶음의 왼쪽 끝(--question-left)을 그 값(px)으로 바꿔 보여 준다
+      const ql = new URLSearchParams(location.search).get('ql')
+      if (ql) document.documentElement.style.setProperty('--question-left', Number(ql) + 'px')
+      // 비교용: 주소에 ?pn=128 을 붙이면 역·정류장 이름의 글씨 크기(--place-name-size)를 그 값(px)으로 바꿔 보여 준다
+      const pn = new URLSearchParams(location.search).get('pn')
+      if (pn) document.documentElement.style.setProperty('--place-name-size', Number(pn) + 'px')
+      // 시험용: 주소에 ?name=아주 긴 이름 을 붙이면 그 이름으로 보여 준다 (이름 규칙이 어떻게 적용되는지 보려고)
+      // 주소에 ?soft=1 을 붙이면 노선 선을 예전의 옅은 색으로 보여 준다 (v9-extra.css. 기본은 진한 선)
+      if (new URLSearchParams(location.search).has('soft')) document.documentElement.classList.add('is-soft-lines')
+      const testName = new URLSearchParams(location.search).get('name')
+      if (testName && window.PLACE) window.PLACE.name = testName
+    </script>
+
+    <section class="screen" data-screen="IDLE_REDUCED">
+      <!-- 역명판 띠: 지금 계신 곳 표시를 겸한다. 안쪽은 v8-band.js 가 그린다 -->
+      <header class="v8-band" data-zone="band">
+        <div class="v8-lines"></div>
+        <div class="v8-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <span>말길</span>
+        </div>
+        <div class="v8-note"></div>
+        <div class="v8-now"><span data-date>11월 16일 월요일</span> <span data-clock>오후 2:30</span></div>
+        <div class="v8-plate" data-zone="plate"></div>
+      </header>
+
+      <!-- 본문 왼쪽: 질문과 예시. 왼쪽 끝은 이름판의 왼쪽 끝과 같은 세로선, 세로 가운데는 버튼 묶음과 같다 -->
+      <main class="v8-left">
+        <div data-zone="content">
+          <h1 class="v8-question v3-core">어디로 가시나요?</h1>
+          <!-- 문구는 frontend/src/screens/IdleReducedScreen.jsx 의 것 그대로다 -->
+          <p class="v9-notice">지금은 음성 안내를 쓸 수 없어요.<br />손으로 골라 주세요</p>
+        </div>
+      </main>
+
+      <!-- 본문 오른쪽: 버튼 묶음 -->
+      <div class="v8-actions" data-zone="actions">
+        <button type="button" class="btn btn-primary" data-zone="primary">
+          <span class="v9-hand-big"><svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M445-80q-29 0-56-12t-45-35L127-403l21-23q14-15 34.5-18.5T221-438l99 53v-365q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v465l-144-77 156 198q10 12 23.76 18 13.76 6 29.24 6h205q38 0 64-26t26-64v-170q0-25.5-17.25-42.75T680-460H460v-60h219.65q50.14 0 85.25 35 35.1 35 35.1 85v170q0 63-43.5 106.5T650-80H445ZM203-665q-11.07-18.75-17.04-40.49-5.96-21.74-5.96-44.76 0-70.75 49.73-120.25Q279.45-920 350-920t120.27 49.74Q520-820.52 520-749.96q0 22.96-5.96 44.62Q508.07-683.68 497-665l-52-30q7-12 11-26t4-29.48Q460-796 427.88-828q-32.12-32-78-32T272-827.92q-32 32.09-32 77.92 0 15 4 29t11 26l-52 30Zm285 335Z"/></svg></span>
+          <span>손으로 고르기</span>
+        </button>
+      </div>
+    </section>
+
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+    <script src="v8-name.js"></script>
+    <script src="v9-band.js"></script>
+  </body>
+</html>

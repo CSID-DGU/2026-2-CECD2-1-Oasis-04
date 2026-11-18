@@ -1,0 +1,149 @@
+/* C. 큰 단계형 — 내용과 버튼이 화면 가운데에서 한 덩어리로 만난다.
+ * 화면당 큰 상징 하나 + 아주 큰 한 줄. 옅은 배경은 되짚는 한 줄에만 쓴다 */
+
+:root {
+  /* 시안 전용 토큰 (디자인 문서에 아직 없음).
+   * --font-display 는 "글씨 단계는 세 개뿐"(문서 3-3절)을 바꾸는 값이다. 시안에서만 써 보기로 했다 (2026-11-16) */
+  --font-display: 72px;
+  --font-count: 200px; /* CHECKING 의 남은 초. 글이 아니라 상징 자리에 놓는 숫자 */
+  --gap-lg: 48px;
+  --symbol-size: 360px;
+  --symbol-stroke: 10px;
+  --focus-width: 4px;
+  --focus-offset: 3px;
+}
+
+.screen {
+  justify-content: center;
+  text-align: center;
+}
+
+/* 첫 화면의 '지금 계신 곳'. 가운데 덩어리에 끼지 않게 맨 위에 둔다 */
+.c-top {
+  position: absolute;
+  top: var(--screen-padding);
+  left: var(--screen-padding);
+  right: var(--screen-padding);
+}
+
+/* 화면 제목이 핵심이 아닐 때: 본문 크기로 핵심 위에 */
+.c-kicker {
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 700;
+  color: var(--color-text-sub);
+}
+
+.c-core {
+  margin: 0;
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: var(--line-height);
+}
+
+.c-title {
+  margin: 0;
+  font-size: var(--font-title);
+  font-weight: 700;
+}
+
+/* 되짚는 한 줄 (목적지, 들은 말) */
+.c-echo {
+  align-self: center;
+  padding: var(--block-gap) var(--gap-lg);
+  background: var(--color-bg-highlight);
+  border-radius: var(--radius);
+}
+
+.c-others {
+  display: flex;
+  flex-direction: column;
+  gap: var(--block-gap);
+  font-size: var(--font-sub);
+  color: var(--color-text-sub);
+}
+
+/* 버튼은 핵심 바로 아래. 선으로 나누지 않는다 */
+.c-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--btn-gap);
+  margin-top: var(--gap-lg);
+}
+
+.screen .c-gap {
+  margin-top: var(--gap-lg);
+}
+
+/* 상징: 버튼이 아니므로 파랑을 쓰지 않고 본문색 선 그림 */
+.c-symbol {
+  position: relative;
+  align-self: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--symbol-size);
+  height: var(--symbol-size);
+  margin-bottom: var(--block-gap);
+  color: var(--color-text);
+}
+
+.c-symbol svg {
+  width: 70%;
+  height: 70%;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: var(--symbol-stroke);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.c-symbol .is-solid {
+  fill: currentColor;
+  stroke: none;
+}
+
+/* 듣는 중: 고리가 퍼진다 */
+.c-ring {
+  position: absolute;
+  inset: 0;
+  border: var(--border-width) solid currentColor;
+  border-radius: 50%;
+  animation: c-pulse var(--motion-loop) ease-out infinite;
+}
+
+.c-ring + .c-ring {
+  animation-delay: calc(var(--motion-loop) / 2);
+}
+
+@keyframes c-pulse {
+  from {
+    transform: scale(0.6);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1);
+    opacity: 0;
+  }
+}
+
+/* 길 찾는 중: 점선이 목적지 쪽으로 흐른다 */
+.c-flow {
+  stroke-dasharray: 14 18;
+  animation: c-flow var(--motion-loop) linear infinite;
+}
+
+@keyframes c-flow {
+  to {
+    stroke-dashoffset: -64;
+  }
+}
+
+/* CHECKING: 상징 자리에 남은 초 */
+.c-count {
+  border: var(--symbol-stroke) solid currentColor;
+  border-radius: 50%;
+  font-size: var(--font-count);
+  font-weight: 700;
+  line-height: 1;
+}

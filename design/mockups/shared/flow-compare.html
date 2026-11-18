@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>화면 나란히 보기</title>
+    <style>
+      /* 스크린샷 여러 장을 나란히 놓는 도구 페이지 (confirmed/wait-shoot.sh 등이 쓴다. 그림 경로는 이 파일 기준).
+         주소: flow-compare.html?imgs=../confirmed/shots/a.png,../confirmed/shots/b.png&labels=IDLE,LISTENING&cols=2
+         한 장은 960×540 (원본의 절반)으로 보인다 */
+      body {
+        margin: 0;
+        padding: 24px;
+        font: 28px/1.4 'Malgun Gothic', sans-serif;
+        color: #111111;
+        background: #dcdcdc;
+      }
+      .grid {
+        display: grid;
+        gap: 24px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        margin-bottom: 8px;
+      }
+      img {
+        display: block;
+        width: 960px;
+        height: 540px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="grid" id="grid"></div>
+    <script>
+      const p = new URLSearchParams(location.search)
+      const imgs = (p.get('imgs') ?? '').split(',')
+      const labels = (p.get('labels') ?? '').split(',')
+      const grid = document.getElementById('grid')
+      grid.style.gridTemplateColumns = `repeat(${Number(p.get('cols')) || 2}, 960px)`
+      imgs.forEach((src, i) => {
+        const figure = document.createElement('figure')
+        const caption = document.createElement('figcaption')
+        caption.textContent = labels[i] ?? ''
+        const img = document.createElement('img')
+        img.src = src
+        img.alt = labels[i] ?? ''
+        figure.append(caption, img)
+        grid.append(figure)
+      })
+    </script>
+  </body>
+</html>

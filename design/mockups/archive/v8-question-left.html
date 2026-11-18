@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>v8: 질문 묶음의 왼쪽 위치 비교</title>
+    <style>
+      /* 비교용 도구 페이지 (키오스크 화면이 아님) */
+      @import url('../../../frontend/src/styles/global.css');
+      html,
+      body {
+        width: auto;
+        height: auto;
+      }
+      body {
+        padding: 24px;
+        font-size: 18px;
+        background: #dddddd;
+      }
+      h1 {
+        margin: 0 0 16px;
+        font-size: 26px;
+      }
+      .row {
+        display: flex;
+        gap: 20px;
+      }
+      figure {
+        margin: 0;
+      }
+      img {
+        display: block;
+        width: 768px;
+        height: 432px;
+        border: 1px solid var(--color-text-sub);
+      }
+      figcaption {
+        margin-top: 8px;
+        font-weight: 700;
+      }
+      figcaption span {
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>v8 지하철역: 질문 묶음의 왼쪽 끝(--question-left) 세 가지 (1920×1080 을 40%로 줄여 봄)</h1>
+    <div class="row">
+      <figure>
+        <a href="v8-subway.html?ql=140"><img src="shots/v8-subway-ql140.png" alt="140px" /></a>
+        <figcaption>140px <span>앞 역 이름 글자가 시작하는 선(138px)과 거의 같다</span></figcaption>
+      </figure>
+      <figure>
+        <a href="v8-subway.html?ql=220"><img src="shots/v8-subway-ql220.png" alt="220px" /></a>
+        <figcaption>220px</figcaption>
+      </figure>
+    </div>
+    <div class="row" style="margin-top: 20px">
+      <figure>
+        <a href="v8-subway.html?ql=300"><img src="shots/v8-subway-ql300.png" alt="300px" /></a>
+        <figcaption>300px</figcaption>
+      </figure>
+      <figure>
+        <a href="v8-subway.html"><img src="shots/v8-subway.png" alt="138px" /></a>
+        <figcaption>138px <span>지금 파일에 들어 있는 값 (앞 역 이름 글자 시작선)</span></figcaption>
+      </figure>
+    </div>
+  </body>
+</html>

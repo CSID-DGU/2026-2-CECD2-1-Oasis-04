@@ -1,11 +1,14 @@
 /* ------------------------------------------------------------------
  * global.css — 고령자 키오스크 최소 디자인 (계획서 Phase 6-1)
  *
- * 기준 (2026-11-10 확정)
- *   글씨   제목 40px / 본문·버튼 32px / 보조 설명 28px (이보다 작은 글씨는 화면에 두지 않는다). 줄 간격 1.4
- *   버튼   최소 높이 96px, 최소 너비 280px, 버튼 사이 24px, 테두리 3px, 모서리 16px
- *   색     4색뿐: 검정 #111111 / 흰색 #FFFFFF / 파랑 #0A4A9F / 오류 빨강 #B3261E
- *          명도 대비(WCAG 2.1): 본문 18.9:1, 주 버튼 8.4:1, 보조 설명 9.7:1, 오류 6.5:1 (모두 AA, 오류 외 AAA)
+ * 기준: docs/design-guidelines.md (2026-11-16). 값을 바꿀 때는 그 문서를 먼저 고치고 이 파일을 맞춘다
+ *   글꼴   Pretendard (굵기 400·700, 파일은 src/assets/fonts/). 못 읽으면 기기의 한글 글꼴로 대체
+ *   글씨   제목 48px / 본문·버튼 36px / 보조 설명 30px (세 단계뿐. 30px 보다 작은 글씨는 화면에 두지 않는다). 줄 간격 1.4
+ *   버튼   최소 높이 112px, 최소 너비 280px, 버튼 사이 24px, 테두리 3px, 모서리 16px
+ *   색     검정 #111111 / 보조 글씨 #444444 / 흰색 #FFFFFF / 파랑 #0A4A9F / 오류 빨강 #8C1D18 (빨강은 오류에만)
+ *          옅은 배경 2색(묶음 #F2F2F2, 강조 #EAF2FC)은 토큰만 있고 아직 쓰는 곳이 없다 (문서 4절 6번, 시안에서 정함)
+ *          명도 대비(WCAG 2.1, 흰 배경): 본문 18.88:1, 보조 설명 9.74:1, 오류 9.11:1, 주 버튼 흰 글씨 8.42:1 (모두 7:1 이상)
+ *          글씨·배경은 문서 3-2절 '허용 조합' 표에 있는 것만 쓴다
  *   배치   세로 1열. 위에서 아래로 주 버튼 → 보조 버튼 → '처음으로'(복귀)
  *
  * 주 버튼 / 보조 버튼 규칙
@@ -19,14 +22,49 @@
  *   모든 규칙은 .screen (ScreenFrame 의 section) 아래에만 건다.
  *   DevPanel 은 .screen 바깥의 형제 요소이고 인라인 스타일(12px, 우하단 고정)을 쓰므로 이 파일의 영향을 받지 않는다.
  *
- * 레이아웃
- *   .screen 은 화면 높이를 꽉 채우는 세로 flex 다. 제목(.screen-title)과 버튼 영역(.screen-actions)은 줄어들지 않고
+ * 캔버스 (문서 1절)
+ *   무대는 가로 1920×1080 고정이다. 반응형을 만들지 않고, 무대(.stage, components/Stage.jsx)를 창 크기에 맞춰 통째로 줄인다.
+ *   무대는 가로로 맞췄다. 화면 배치는 아직 세로로 쌓는 예전 구조다 (제목 → 본문 → 버튼 영역).
+ *   문서 6절의 좌우 두 칸(왼쪽 1160 / 사이 64 / 오른쪽 600)과 8절의 첫 화면·띠는 아직 옮기지 않았다.
+ *
+ * 레이아웃 (지금의 세로로 쌓는 구조)
+ *   .screen 은 무대 높이(1080px)를 꽉 채우는 세로 flex 다. 제목(.screen-title)과 버튼 영역(.screen-actions)은 줄어들지 않고
  *   본문(.screen-body)만 남는 높이를 차지하며 넘치면 본문 안에서 스크롤한다.
  *   → 목록이 아무리 길어도 '처음으로'·'취소' 는 항상 화면 아래에 보인다.
- *   1080×1920 기준 MANUAL_SELECT 목적지 10개는 2열 그리드 5줄(96px×5 + 20px×4 = 560px)이라 스크롤 없이 들어간다.
+ *
+ * 세로 공간 (무대 높이 1080px, 지금 구조 기준)
+ *   바깥 여백 48×2 + 제목 67 + 구역 사이 24×2 = 211px 를 빼면 본문과 버튼 영역에 869px 가 남는다.
+ *   버튼 영역은 버튼 1개 139px, 2개 275px, 3개 411px (구분선 3 + 위 여백 24 + 버튼 112 + 사이 24).
+ *   MANUAL_SELECT(버튼 2개)는 본문이 594px 인데 목적지 12개는 2열 6줄 772px 라서 본문 안에서 스크롤된다.
+ *   문서 6절의 배치(목록은 왼쪽 칸 3열 4줄, 버튼은 오른쪽 칸)로 옮기면 스크롤 없이 들어간다 (문서 6절 '세로 공간 계산').
  * ------------------------------------------------------------------ */
 
+/* ---------- 글꼴 (문서 3-3절) ----------
+ * Pretendard 1.3.9, SIL Open Font License 1.1 (라이선스: ../assets/fonts/LICENSE.txt)
+ * 받은 곳: npm 패키지 pretendard@1.3.9 의 dist/web/static/woff2/ (https://github.com/orioncactus/pretendard)
+ * 키오스크는 네트워크가 끊길 수 있어서 CDN 을 쓰지 않고 파일을 frontend/ 안에 둔다.
+ * 굵기는 문서에서 쓰는 400 과 700 만 넣었다. 다른 굵기를 쓰려면 파일부터 추가해야 한다.
+ * font-display: swap → 파일을 읽는 동안에는 대체 글꼴로 먼저 보여 준다 (글자가 안 보이는 순간이 없게) */
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('../assets/fonts/Pretendard-Regular.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Pretendard';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('../assets/fonts/Pretendard-Bold.woff2') format('woff2');
+}
+
 :root {
+  /* Pretendard 뒤는 파일을 못 읽었을 때 보일 대체 글꼴 (기기에 깔린 한글 글꼴) */
+  --font-family: 'Pretendard', system-ui, 'Segoe UI', Roboto, 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+
   --color-text: #111111;
   --color-text-sub: #444444;
   --color-bg: #ffffff;
@@ -34,14 +72,17 @@
   --color-primary-pressed: #083a7d; /* 눌렸을 때 약 10% 어둡게 */
   --color-on-primary: #ffffff;
   --color-secondary-pressed: #e6e6e6;
-  --color-error: #b3261e;
+  --color-error: #8c1d18;
+  --color-bg-group: #f2f2f2; /* 묶음 배경. 아직 쓰는 곳 없음 */
+  --color-bg-highlight: #eaf2fc; /* 강조 배경. 아직 쓰는 곳 없음 */
+  --color-band: #111111; /* 머리말 띠·남은 시간 알림 판 (문서 3-1절). 위에는 흰 글씨만. 아직 화면에서 쓰는 곳 없음 */
 
-  --font-title: 40px;
-  --font-body: 32px;
-  --font-sub: 28px;
+  --font-title: 48px;
+  --font-body: 36px;
+  --font-sub: 30px;
   --line-height: 1.4;
 
-  --btn-height: 96px;
+  --btn-height: 112px;
   --btn-min-width: 280px;
   --btn-gap: 24px;
   --btn-padding: 24px 32px;
@@ -70,12 +111,34 @@ body,
 }
 
 body {
-  font-family: system-ui, 'Segoe UI', Roboto, 'Noto Sans KR', 'Malgun Gothic', sans-serif;
+  font-family: var(--font-family);
   font-size: var(--font-body);
   line-height: var(--line-height);
   color: var(--color-text);
   background: var(--color-bg);
   -webkit-font-smoothing: antialiased;
+}
+
+/* ---------- 무대 (components/Stage.jsx) ----------
+ * 무대 밖(.stage-outside)은 창 전체를 덮고, 그 가운데에 1920×1080 무대(.stage)를 배율만큼 줄여서 놓는다.
+ * 크기와 배율은 Stage.jsx 가 CSS 변수(--stage-width, --stage-height, --stage-scale)로 넘긴다.
+ * 창의 비율이 16:9 가 아니면 남는 자리에 무대 밖 바탕색이 보인다 (세로 창이면 위아래, 넓은 창이면 좌우) */
+.stage-outside {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  background: var(--color-text);
+}
+
+.stage {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: var(--stage-width);
+  height: var(--stage-height);
+  overflow: hidden;
+  background: var(--color-bg);
+  transform: translate(-50%, -50%) scale(var(--stage-scale));
 }
 
 /* ---------- 화면 틀 (ScreenFrame) ---------- */
@@ -167,7 +230,7 @@ body {
   outline-offset: 3px;
 }
 
-/* 버튼 안의 부가 정보(카테고리 등). 보조 설명 크기 28px, 굵기는 보통 */
+/* 버튼 안의 부가 정보(카테고리 등). 보조 설명 크기 30px, 굵기는 보통 */
 .screen .btn small {
   font-size: var(--font-sub);
   font-weight: 400;
@@ -188,7 +251,7 @@ body {
   margin: 0;
 }
 
-/* 2열 그리드 안에서는 칸 너비를 따른다 (1080px 기준 한 칸 약 480px 으로 최소 너비 280px 를 넘는다) */
+/* 2열 그리드 안에서는 칸 너비를 따른다 (무대 너비 1920px 기준 한 칸 약 902px 으로 최소 너비 280px 를 넘는다) */
 .screen .btn-list .btn {
   min-width: 0;
   height: 100%;
@@ -214,9 +277,16 @@ body {
   outline-offset: 3px;
 }
 
+/* 입력창 안내글. 브라우저 기본 회색(#757575, 4.61:1)은 7:1 미달이라 보조 글씨색(9.74:1)으로 바꾼다.
+   opacity: 1 이 없으면 Firefox 가 글씨를 반투명하게 만들어 대비가 다시 낮아진다 */
+.screen .text-input::placeholder {
+  color: var(--color-text-sub);
+  opacity: 1;
+}
+
 /* ---------- 글 종류 ---------- */
 
-/* 보조 설명: 남은 초, 개발용 안내, 참고용 경로 등. 28px 아래로는 내려가지 않는다 */
+/* 보조 설명: 남은 초, 개발용 안내, 참고용 경로 등. 30px 아래로는 내려가지 않는다 */
 .screen .hint {
   font-size: var(--font-sub);
   color: var(--color-text-sub);
@@ -251,6 +321,12 @@ body {
   padding-left: 1.2em;
   font-size: var(--font-sub);
   color: var(--color-text-sub);
+}
+
+/* 2·3순위의 괄호 글씨(소요 시간·환승). <small> 은 브라우저 기본값이 부모보다 작게(약 0.83배)라서
+   그대로 두면 30px 아래로 내려간다. 보조 설명 크기로 고정한다 */
+.screen .route-others small {
+  font-size: var(--font-sub);
 }
 
 /* QR_HANDOFF 의 URL 텍스트 (QR 이미지 도입 전 임시) */

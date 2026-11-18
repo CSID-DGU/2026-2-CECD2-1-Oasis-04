@@ -8,6 +8,7 @@ import { KioskProvider, useKiosk } from './state/KioskContext.jsx'
 import { useKioskEffects } from './effects/useKioskEffects.js'
 import { SCREEN_BY_STATE } from './screens/index.js'
 import DevPanelToggle from './components/DevPanelToggle.jsx'
+import Stage from './components/Stage.jsx'
 
 // 화면을 그리지 않고 effect 만 돌리는 컴포넌트. 앱 전체에서 정확히 한 번만 마운트된다.
 function KioskEffects() {
@@ -29,8 +30,12 @@ export default function App() {
   return (
     <KioskProvider>
       <KioskEffects />
-      <CurrentScreen />
-      {/* 개발 서버에서는 기본 표시, 빌드에서는 숨김. Ctrl+Shift+D 로 토글 (components/DevPanelToggle.jsx) */}
+      {/* 화면은 1920×1080 무대 안에 그린다. 무대가 창 크기에 맞춰 통째로 줄어든다 (components/Stage.jsx) */}
+      <Stage>
+        <CurrentScreen />
+      </Stage>
+      {/* 개발 서버에서는 기본 표시, 빌드에서는 숨김. Ctrl+Shift+D 로 토글 (components/DevPanelToggle.jsx).
+          무대 밖에 두어서 창 크기와 상관없이 같은 크기로 보인다 */}
       <DevPanelToggle />
     </KioskProvider>
   )
