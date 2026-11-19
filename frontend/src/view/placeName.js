@@ -2,16 +2,23 @@
 // 큰 띠(PlaceBand)와 얇은 띠(ThinBand)가 함께 쓴다. 데이터의 이름은 바꾸지 않고 화면에 그릴 때만 뗀다.
 //   지하철역    끝의 "역" 을 뗀다       "종로3가역" → "종로3가"
 //   버스정류장  끝의 "정류장" 을 뗀다   "종로3가.탑골공원 정류장" → "종로3가.탑골공원"
+//   그 전에 이름 끝의 " 키오스크" 를 먼저 뗀다   "종로3가역 키오스크" → "종로3가" (2026-11-20, 디자인 문서 8절 머리)
 // 한 줄 규칙(7절 규칙 1)과 72px 까지 줄이기(규칙 3)는 그리는 쪽 CSS 와 useFitText 가 맡는다.
 
 export const PLACE_TYPES = Object.freeze({ SUBWAY_STATION: 'SUBWAY_STATION', BUS_STOP: 'BUS_STOP' })
 
 /** 장소 정보(8-5절 형식) → 화면에 보일 이름. 종류를 모르면 이름 그대로 */
 export function displayPlaceName(place) {
-  if (!place?.name) return ''
-  if (place.type === PLACE_TYPES.SUBWAY_STATION) return place.name.replace(/\s*역$/, '')
-  if (place.type === PLACE_TYPES.BUS_STOP) return place.name.replace(/\s*정류장$/, '')
-  return place.name
+  const name = stripKiosk(place?.name)
+  if (!name) return ''
+  if (place.type === PLACE_TYPES.SUBWAY_STATION) return name.replace(/\s*역$/, '')
+  if (place.type === PLACE_TYPES.BUS_STOP) return name.replace(/\s*정류장$/, '')
+  return name
+}
+
+/** 이름 끝의 " 키오스크" 를 먼저 뗀다. 서버의 고정 위치 이름이 "종로3가역 키오스크" 처럼 온다 (docs/team-requests.md #1) */
+function stripKiosk(name) {
+  return (name || '').trim().replace(/\s*키오스크$/, '')
 }
 
 /**
@@ -43,7 +50,7 @@ function typeFromName(name) {
 export function bandPlaceName(location) {
   const place = location?.place
   if (placeKind(place)) return displayPlaceName(place)
-  const name = (place?.name || location?.name || '').trim()
+  const name = stripKiosk(place?.name || location?.name)
   if (!name) return ''
   return displayPlaceName({ type: place?.type ?? typeFromName(name), name })
 }

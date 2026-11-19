@@ -40,8 +40,18 @@ describe('displayPlaceName (7절 규칙 2)', () => {
   it('얇은 띠 이름: 장소 정보가 없어도 위치 응답의 이름을 같은 규칙으로, 이름도 없으면 빈 글자', () => {
     expect(bandPlaceName({ name: '종로3가역', place: PLACES.subway })).toBe('종로3가')
     expect(bandPlaceName({ name: '경동시장앞 정류장', place: null })).toBe('경동시장앞')
-    expect(bandPlaceName({ name: '종로3가역 키오스크', place: null })).toBe('종로3가역 키오스크')
     expect(bandPlaceName({ name: '청량리역', place: null })).toBe('청량리')
+  })
+
+  it('이름 끝의 " 키오스크" 를 먼저 떼고 "역"·"정류장" 을 뗀다 (8절 머리, 2026-11-20)', () => {
+    expect(bandPlaceName({ name: '종로3가역 키오스크', place: null })).toBe('종로3가')
+    expect(bandPlaceName({ name: '경동시장앞 정류장 키오스크', place: null })).toBe('경동시장앞')
+    expect(bandPlaceName({ name: '시청 키오스크', place: null })).toBe('시청')
+    expect(bandPlaceName({ name: '  종로3가역키오스크 ' })).toBe('종로3가')
+    expect(displayPlaceName({ type: 'SUBWAY_STATION', name: '종로3가역 키오스크' })).toBe('종로3가')
+    expect(displayPlaceName({ type: 'BUS_STOP', name: '키오스크 정류장' })).toBe('키오스크')
+    expect(bandPlaceName({ name: '키오스크', place: null })).toBe('')
+    expect(bandPlaceName({ name: '키오스크앞 정류장', place: null })).toBe('키오스크앞')
     expect(bandPlaceName({ name: '경동시장앞 정류장 근처' })).toBe('경동시장앞 정류장 근처')
     expect(bandPlaceName({ place: { type: 'SUBWAY_STATION', name: '어딘가역', lines: [] } })).toBe('어딘가')
     expect(bandPlaceName({ name: '', place: null })).toBe('')
