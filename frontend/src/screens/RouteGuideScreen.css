@@ -1,0 +1,21 @@
+/* ROUTE_GUIDE 왼쪽 칸: 제목 + 타임라인. 기준: route-guide-final.html .guide, .guide-title
+ * 칸 위 32px(오른쪽 칸 경로 카드와 같은 줄, FlowFrame 의 --top-gap)부터 아래 여백 48px 까지. 타임라인이 남는 높이를 쓴다 */
+.route-guide {
+  --title-after: 24px;
+
+  position: absolute;
+  top: var(--top-gap);
+  bottom: var(--screen-padding);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.route-guide-title {
+  flex-shrink: 0;
+  margin: 0 0 var(--title-after);
+  font-size: var(--font-title);
+  font-weight: 700;
+  line-height: var(--line-height);
+}

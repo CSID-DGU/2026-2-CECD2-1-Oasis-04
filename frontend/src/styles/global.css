@@ -375,32 +375,6 @@ body {
   font-weight: 700;
 }
 
-/* ROUTE_GUIDE 1순위 경로: 제목 크기로 강조 */
-.screen .route-best {
-  margin: 0 0 var(--block-gap);
-  font-size: var(--font-title);
-  font-weight: 700;
-}
-
-.screen .route-best-detail {
-  font-size: var(--font-body);
-  font-weight: 400;
-}
-
-/* ROUTE_GUIDE 2·3순위: 표시만, 선택 불가 */
-.screen .route-others {
-  margin: 0;
-  padding-left: 1.2em;
-  font-size: var(--font-sub);
-  color: var(--color-text);
-}
-
-/* 2·3순위의 괄호 글씨(소요 시간·환승). <small> 은 브라우저 기본값이 부모보다 작게(약 0.83배)라서
-   그대로 두면 30px 아래로 내려간다. 보조 설명 크기로 고정한다 */
-.screen .route-others small {
-  font-size: var(--font-sub);
-}
-
 /* QR_HANDOFF 의 URL 텍스트 (QR 이미지 도입 전 임시) */
 .screen .qr-url {
   font-size: var(--font-title);

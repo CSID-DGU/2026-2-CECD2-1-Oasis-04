@@ -380,7 +380,7 @@ mock이 가정하고 있는 요청·응답 형식이다. 백엔드 확정 후 �
 | `GET /health` | 없음 | `{ server: bool, stt: bool }` | STT 가용 여부를 `/health`가 알려주는지, 별도 엔드포인트인지 |
 | `POST /stt` | 녹음 파일 (`FormData`, Blob) | `{ text: string }` | 파일 포맷(webm/wav), 스트리밍 여부, 빈 음성일 때 응답 |
 | `POST /resolve` | `{ text: string }` | `{ status: 'OK' \| 'NOT_UNDERSTOOD' \| 'OUT_OF_SCOPE', needConfirm: bool, poi?: Poi, candidates?: Poi[] }` | "못 알아들음"과 "범위 밖"을 구분하는 필드, 후보 최대 개수, `Poi` 구조(`id`, `name`, `category`) |
-| `POST /route` 또는 `GET /route?poi_id=` | `{ poiId: string }` | `{ routes: Route[] }` (최대 3개, 1순위가 첫 번째). `Route` = 디자인 문서 9-2절 형식 `{ id, durationMin, exit, start, legs[] }` + 지금 화면용 `{ rank, summary, transfers }` (아래 '경로 모양', 8단계) | 노선 ID·출구·마지막 걷기·버스 종류 값(`team-requests.md` #2~#6). 경로 없음은 빈 배열 |
+| `POST /route` 또는 `GET /route?poi_id=` | `{ poiId: string }` | `{ routes: Route[] }` (최대 3개, 1순위가 첫 번째). `Route` = 디자인 문서 9-2절 형식 `{ id, durationMin, exit, start, legs[] }` (아래 '경로 모양', 8단계. 예전 필드 `rank`·`summary`·`transfers` 는 9단계에서 지움) | 노선 ID·출구·마지막 걷기·버스 종류 값(`team-requests.md` #2~#6). 경로 없음은 빈 배열 |
 | `GET /pois` (가정) | 없음 | `Poi[]` | 손으로 고르기 목록을 서버에서 주는지, 키오스크에 내장하는지 (6절 1번) |
 | `POST /location` | `{ kiosk_id, x?, y?, accuracy? }` | `{ name, easy_text, source, snapped, accuracy_m, fallback_reason, place? }` → 앱 `{ name, text, source, snapped, accuracyM, reason, place }` | `place`(디자인 문서 8-5절)를 서버가 주는지 (`team-requests.md` #1). 주기 전에는 `place: null` → 큰 띠는 "정보 없음", 얇은 띠는 위치 응답의 `name` 을 이름 규칙으로 보이고 이름도 없을 때만 비움 (7단계, 2026-11-20 보완) |
 | `POST /qr` (가정) | `{ routeId: string }` | `{ url: string }` | QR을 서버가 만드는지, 프론트가 URL로 직접 그리는지 (6절 2번) |
@@ -401,14 +401,14 @@ Route = {
     { mode: 'BUS', kind: 'TRUNK' | ... | null, number: '472', stops: 6, to: { name: '명동입구', kind: 'STOP' } },
     { mode: 'WALK', minutes: 3, to?: { name, kind: 'STATION' | 'STOP' | 'PLACE' } },   // to 없음 = 같은 역 안
   ],
-  rank, summary, transfers,         // 지금 ROUTE_GUIDE 가 쓰는 예전 필드. 9단계 뒤 summary 는 DevPanel·기록용
 }
 ```
 
 - mock: `api/mock/data/routes.js`(지하철역 묶음 A·B·C), 경우별 시험 데이터는 `api/mock/data/routeCases.js`(시안 `route-cases.js` 10가지, 버스정류장 묶음, 긴 경로). mock 은 지나는 이름 `via[]` 를 두고 정거장 수는 그 개수다
 - real: `api/real/routeLegs.js` 가 서버 `steps[]` 를 `legs[]` 로 바꾼다. 서버 모양 두 가지(지금 `/api/v1/route`, `feature/backend-route` 의 `/routes/transit`)를 모두 받는다. 대체 동작은 그 파일 머리 주석과 `team-requests.md` #2~#6
 - `toRouteGuide` 가 미리 정하는 것: R1(환승 2회 이하 최대 3개, 없으면 가장 적은 하나 = `fallback`), R3(`single`), 환승 횟수(타는 구간 수 - 1), 노선 표지 모양(원·평평한 표지·버스 네모)과 색 토큰 이름, "N번째 역에서 내려요", 걷기만(`walkOnly`), 마지막 걷기(`lastWalk`)·장소 목적지(`endsAtPlace`), 출구 유무(`hasExit`), 단계별 타임라인 항목(`timeline.full`/`merged`/`folded`), 도착 시각(`arriveAt`, `clockText`)
-- 화면 부품이 정하는 것: 글자 너비가 있어야 하는 판단(카드 노선 줄 접기 R5, 타임라인 ①~④ 중 어느 단계를 쓸지 R2, 두 줄 이름 36px)
+- 화면 부품이 정하는 것: 글자 너비가 있어야 하는 판단(카드 노선 줄 접기 R5 는 `RouteLines` 의 CSS 줄 바꿈, 타임라인 ①~④ 중 어느 단계를 쓸지 R2 와 두 줄 이름 36px 은 `Timeline` 이 그려 보고 재서 `view/routeFit.js` 로 고른다, 9단계)
+- 화면이 쓰는 지금 계신 곳(경로에 `start` 가 없을 때): `LocationContext` 의 위치를 `view/placeName.js` 의 `bandPlaceName` 으로 (띠와 같은 이름, 9단계)
 
 ## 검증 방법
 

@@ -8,6 +8,7 @@
 | `shoot-screens.js` | 실제 앱 14화면을 1920×1080 으로 찍고, 화면마다 하한선 숫자를 돌려준다. 흐림(12px) 그림도 고른 화면만 찍는다 |
 | `shoot-pick.js` | CONFIRMING·MANUAL_SELECT 의 9가지 경우를 앱과 확정 시안에서 나란히 찍는다 (5단계에서 생김). 비교는 `compare-shots.js` 의 `a`·`b` 를 `mock-step5`·`current-step5` 로 |
 | `shoot-timeout.js` | 남은 시간 알림을 무입력 화면 4개에서 앱(`?inactivityMs=15000`)과 시안(`?left=15`)으로 나란히 찍고, 긴 띠 이름(종로3가.탑골공원)도 찍는다. 판 자리와 띠 이름과의 거리(gap)를 돌려준다 (6단계에서 생김). 그림은 `mock-step6`·`current-step6` |
+| `shoot-route.js` | ROUTE_GUIDE 의 모든 경우(`?set=subway`, 버스 묶음, `?set=long`, `?pick=2·3`, `?case=` 10가지)를 앱과 시안에서 나란히 찍고, real 응답 예시 두 가지(`real-v1`, `real-transit`)는 앱만 찍는다 (9단계에서 생김). 시안 전용 안내 줄은 빼고 찍고 원래 시안의 줄이기 결과도 돌려준다. 앱 주소는 `OPTIONS.app`. 그림은 `mock-step9`·`current-step9` |
 | `compare-shots.js` | 그림 폴더 두 개를 같은 이름끼리 픽셀로 비교한다 (다른 픽셀 수와 다른 곳의 상자) |
 | `serve-repo.mjs` | 저장소 전체를 `http://127.0.0.1:8800/` 으로 보여 주는 작은 서버. 비교와 확정 시안 찍기에 쓴다 |
 

@@ -24,7 +24,9 @@ import { recorder } from '../devices/recorder.js'
 import { kioskError } from '../state/errorCodes.js'
 import { POIS, MYEONGDONG } from '../api/mock/data/pois.js'
 import { PLACES, PLACE_LABELS, BAND_CASES, getMockPlaceKey, setMockPlaceKey } from '../api/mock/data/places.js'
-import { ROUTE_A, ROUTE_BUS } from '../api/mock/data/routeCases.js'
+import { ROUTE_SUBWAY, ROUTE_BUS, ROUTE_LONG, ROUTE_CASES } from '../api/mock/data/routeCases.js'
+import { ROUTES } from '../api/mock/data/routes.js'
+import { REAL_V1_ROUTES, REAL_TRANSIT_ROUTES } from '../api/mock/data/realRouteSamples.js'
 import { useLocation, useLocationRefresh } from '../state/LocationContext.jsx'
 
 // 위치를 받지 못해 서버 설정의 고정 위치를 쓰게 된 이유 (예전 CurrentLocation 의 문구 그대로)
@@ -117,12 +119,8 @@ const FAKE_CANDIDATES = [
   { id: 'poi-hospital-a', name: '동국대병원', category: '병원' },
   { id: 'poi-hospital-b', name: '서울병원', category: '병원' },
 ]
-// summary 는 지금 ROUTE_GUIDE 가 보이는 글자라 그대로 둔다. legs·start·exit 는 디자인 문서 9-2절 모양 (8단계, 9단계부터 화면이 쓴다)
-const FAKE_ROUTES = [
-  { ...ROUTE_A, id: 'route-1', summary: '지하철 3호선 → 4호선, 25분', durationMin: undefined },
-  { ...ROUTE_BUS[0], id: 'route-2', summary: '버스 100번, 32분', durationMin: undefined },
-  { ...ROUTE_BUS[2], id: 'route-3', summary: '지하철 3호선 → 버스 200번, 35분', durationMin: undefined },
-]
+// ROUTE_FOUND 의 기본 경로: mock /route 와 같은 지하철역 묶음 A·B·C (디자인 문서 9-2절 모양)
+const FAKE_ROUTES = ROUTES
 const DEV_PAYLOADS = {
   [EVENTS.HEALTH_OK]: { health: { server: true, mic: true, stt: true } },
   [EVENTS.HEALTH_SERVER_DOWN]: { health: { server: false, mic: true, stt: true } },
@@ -162,6 +160,18 @@ const FAKE_CANDIDATE_SETS = {
   ],
 }
 
+// ROUTE_FOUND 에 실을 경로 묶음. 패널의 '경로 묶음' 으로 고른다 (ROUTE_GUIDE 의 경우를 보려고, 시안 route-guide-final.html).
+// ''(기본)이면 위 FAKE_ROUTES(= ?set=subway). bus·long 은 시안의 기본·?set=long, 나머지는 ?case= (route-cases.js),
+// real-v1·real-transit 은 real 서버 응답 두 모양을 실제 변환 코드로 바꾼 것. 이벤트는 그대로이고 payload 만 다르다
+const FAKE_ROUTE_SETS = {
+  subway: ROUTE_SUBWAY,
+  bus: ROUTE_BUS,
+  long: [ROUTE_LONG, ROUTE_BUS[1], ROUTE_BUS[2]],
+  ...ROUTE_CASES,
+  'real-v1': REAL_V1_ROUTES,
+  'real-transit': REAL_TRANSIT_ROUTES,
+}
+
 const ERROR_EVENTS = new Set([EVENTS.ROUTE_FAILED, EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR])
 
 const panelStyle = {
@@ -187,12 +197,14 @@ export default function DevPanel() {
   const [scenario, setScenarioView] = useState(getScenario)
   const [devError, setDevError] = useState('') // FAKE_ERRORS 의 키. '' 이면 이벤트별 기본값
   const [devCandidates, setDevCandidates] = useState('') // FAKE_CANDIDATE_SETS 의 키
+  const [devRoutes, setDevRoutes] = useState('') // FAKE_ROUTE_SETS 의 키
 
   const payloadOf = (event) => {
     if (devError && ERROR_EVENTS.has(event)) return { error: FAKE_ERRORS[devError] }
     if (devCandidates && event === EVENTS.RESOLVE_NEED_CONFIRM) {
       return { resolve: { status: 'OK', needConfirm: true, candidates: FAKE_CANDIDATE_SETS[devCandidates] } }
     }
+    if (devRoutes && event === EVENTS.ROUTE_FOUND) return { routes: FAKE_ROUTE_SETS[devRoutes] }
     return DEV_PAYLOADS[event] ?? {}
   }
 
@@ -269,6 +281,17 @@ export default function DevPanel() {
           {Object.entries(FAKE_CANDIDATE_SETS).map(([key, list]) => (
             <option key={key} value={key}>
               후보 묶음: {key} ({list.length}개)
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ marginTop: 2 }}>
+        <select value={devRoutes} onChange={(e) => setDevRoutes(e.target.value)} aria-label="경로 묶음">
+          <option value="">경로 묶음: 기본 (지하철역 A·B·C)</option>
+          {Object.entries(FAKE_ROUTE_SETS).map(([key, list]) => (
+            <option key={key} value={key}>
+              경로 묶음: {key} ({list.length}개)
             </option>
           ))}
         </select>

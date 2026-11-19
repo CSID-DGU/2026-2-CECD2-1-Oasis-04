@@ -520,7 +520,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 9. 경로 안내 (ROUTE_GUIDE, 확정 2026-11-17)
 
-확정 시안은 `design/mockups/confirmed/route-guide-final.html`, 시험 데이터는 같은 폴더의 `route-cases.js`(10가지)다. `frontend/` 에는 데이터 모양만 옮겼다 (2026-11-20, 옮기기 계획 8단계: `view/routeView.js`, mock `api/mock/data/routeCases.js`, real 변환 `api/real/routeLegs.js`). 화면은 아직 옮기지 않았다.
+확정 시안은 `design/mockups/confirmed/route-guide-final.html`, 시험 데이터는 같은 폴더의 `route-cases.js`(10가지)다. `frontend/` 에 옮겼다: 데이터 모양 (2026-11-20, 옮기기 계획 8단계: `view/routeView.js`, mock `api/mock/data/routeCases.js`, real 변환 `api/real/routeLegs.js`), 화면 (2026-11-20, 9단계: `screens/RouteGuideScreen.jsx`, `components/Timeline.jsx`·`RouteCard.jsx`·`RouteSummary.jsx`·`RouteLines.jsx`·`LineMark.jsx`, 줄이기 단계 고르기 `view/routeFit.js`).
 
 ### 9-1. 경로 규칙
 
@@ -537,7 +537,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 역 라벨 정리: 첫 점 "타는 곳"(먼저 걸어가면 "지금 계신 곳"), 다음 차를 타는 곳 "갈아타는 곳", 마지막 차에서 내리는 곳 "내리는 곳", 장소 목적지 "가실 곳".
 
-왼쪽 칸 맨 아래의 예시 안내("버스 번호, 시간, 출구는 예시예요" / 버스가 없으면 "시간과 출구는 예시예요")는 시안 전용이다. 실제 앱에는 넣지 않는다.
+왼쪽 칸 맨 아래의 예시 안내("버스 번호, 시간, 출구는 예시예요" / 버스가 없으면 "시간과 출구는 예시예요")는 시안 전용이다. 실제 앱에는 넣지 않는다. 그래서 앱의 타임라인 칸은 시안보다 그 줄만큼(약 58px) 길고, R2 줄이기는 덜 줄일 수 있다 (2026-11-20 팀장 확인, 그대로 둔다). 시안의 `?case=transfer3` 은 ① → ② → ④ 인데 앱은 ① → ④, `?case=longcard`·`?case=longthree` 는 시안 ① 인데 앱은 줄이지 않는다. 안내 줄을 뺀 시안과는 15가지 경우가 모두 같다
 
 시안에서 확인한 것: 탈것 3개가 모두 긴 이름(공항철도 → 9401-1 → 경의중앙선)이어도 카드 노선 줄이 두 줄에 들어간다(표지 사이 간격은 줄이지 않았다). 소요 시간이 세 자리(100분 이상)인 경우는 찍어 보지 않았다.
 

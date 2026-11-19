@@ -1,6 +1,6 @@
 Material Symbols (SVG) — Apache License 2.0
 출처: npm 패키지 @material-symbols/svg-400@0.27.0 (https://github.com/marella/material-symbols), Google Material Symbols 를 SVG 로 묶은 것
-이 폴더의 Material 아이콘 파일(ring/ 폴더와 logo.svg 를 뺀 *.svg)에 적용된다. ring/ 과 logo.svg 는 이 팀이 그린 것이다.
+이 폴더의 Material 아이콘 파일(ring/ 폴더와 logo.svg, route_arrow.svg 를 뺀 *.svg)에 적용된다. ring/ 과 logo.svg, route_arrow.svg(경로 카드의 화살표, 시안 route-guide-final.html 의 ARROW) 는 이 팀이 그린 것이다.
 디자인 문서: docs/design-guidelines.md 3-7절
 
 
