@@ -6,6 +6,7 @@
 //   left      왼쪽 칸 내용
 //   actions   오른쪽 칸 버튼 (주 버튼이 있으면 맨 위)
 //   showHome  true 면 맨 아래에 '처음으로'(HomeButton). GO_HOME 전이가 있는 화면에서만 켠다
+//   countdown true 면 띠에 무입력 남은 시간 알림을 보인다 (무입력 화면 6개, 11-4절)
 //   rightTop  오른쪽 칸 위쪽에 붙는 것 (ROUTE_GUIDE 의 경로 카드, 9-1 R3). 없으면 그리지 않는다
 //
 // 화면 제목(screens/titles.js)은 이 틀이 그리지 않는다. 제목이 필요한 화면은 left 안에 직접 둔다
@@ -15,10 +16,10 @@ import ThinBand from './ThinBand.jsx'
 import HomeButton from './HomeButton.jsx'
 import './FlowFrame.css'
 
-export default function FlowFrame({ left, actions = null, showHome = false, rightTop = null }) {
+export default function FlowFrame({ left, actions = null, showHome = false, rightTop = null, countdown = false }) {
   return (
     <section className="flow">
-      <ThinBand />
+      <ThinBand countdown={countdown} />
       <div className="flow-body">
         <main className="flow-left">{left}</main>
         {rightTop && <div className="flow-right-top">{rightTop}</div>}

@@ -158,7 +158,7 @@ useEffect(() => {
 | `RESOLVING` | `api.stt(audio)` → `api.resolve(text)` | `RESOLVE_NEED_CONFIRM` / `RESOLVE_CONFIRMED` / `RESOLVE_NOT_UNDERSTOOD` / `RESOLVE_OUT_OF_SCOPE_OR_ERROR` | `stt()` 또는 `resolve()` throw → `RESOLVE_OUT_OF_SCOPE_OR_ERROR` |
 | `FAIL_COUNT_CHECK` | `failCount` 확인 (동기) | `FAIL_COUNT_1` (failCount === 1) / `FAIL_COUNT_2` (>= 2) | 없음 (동기) |
 | `ROUTING` | `api.route(selectedPoi.id)` | `ROUTE_FOUND` / `ROUTE_FAILED` | `route()` throw → `ROUTE_FAILED`; `selectedPoi` 없음 → API 호출 없이 `ROUTE_FAILED` |
-| `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF` | 공통 `inactivity` 핸들러. `config.inactivityMs`(60초) 타이머. `document`의 `pointerdown`/`keydown` 이 오면 타이머 리셋 | `INACTIVITY_TIMEOUT` | 없음 (타이머만) |
+| `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF` | 공통 `inactivity` 핸들러. `config.inactivityMs`(60초) 타이머. `document`의 `pointerdown`/`keydown` 이 오면 타이머 리셋. 타이머를 걸 때 마감 시각을 `effects/inactivityClock.js` 에 적고 지울 때 비운다(화면의 남은 시간 알림이 `hooks/useInactivityCountdown.js` 로 읽는다. 디자인 문서 11-4절, 2026-11-19) | `INACTIVITY_TIMEOUT` | 없음 (타이머만. 마감 시각은 reducer 밖 저장소) |
 | `IDLE` | 없음 (사용자 버튼이 이벤트를 낸다) | - | - |
 
 - 판단 노드(`STARTUP_CHECK`, `FAIL_COUNT_CHECK`)는 화면 없이 `Spinner`를 잠깐 보여준다
@@ -175,6 +175,8 @@ Spring의 `@ConfigurationProperties`처럼 env를 한 곳에서 읽어 기본값
 | `noSpeechMs` | `VITE_NO_SPEECH_MS` | 10000 | 4000 | `LISTENING` (recorder) |
 | `silenceMs` | `VITE_SILENCE_MS` | 2500 | 2500 | `LISTENING` (recorder) |
 | `inactivityMs` | `VITE_INACTIVITY_MS` | 60000 | 8000 | 무입력 복귀 6개 상태 |
+
+개발 모드에서만 주소 값으로 덮어쓸 수 있다: `http://localhost:5173/?inactivityMs=60000` (모든 키 같음, 운영 빌드에서는 무시). 개발 설정 8초는 남은 시간 알림(15초 이하)이 들어가자마자 보이므로, 알림 없는 화면을 볼 때 쓴다 (2026-11-19)
 
 ```js
 // src/config.js

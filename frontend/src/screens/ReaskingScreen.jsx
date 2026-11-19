@@ -29,6 +29,7 @@ export default function ReaskingScreen() {
   const showExamples = heardLines < HIDE_EXAMPLES_AT_HEARD_LINES
   return (
     <FlowFrame
+      countdown
       showHome
       left={
         <RingStack ring={RING} title={SCREEN_TITLES[STATES.REASKING]} core="잘 못 알아들었어요">

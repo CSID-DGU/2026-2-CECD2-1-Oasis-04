@@ -66,6 +66,7 @@ export default function ConfirmingScreen() {
 
   return (
     <FlowFrame
+      countdown
       showHome
       left={
         <div className="confirm">

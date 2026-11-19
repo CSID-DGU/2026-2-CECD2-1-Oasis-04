@@ -69,6 +69,7 @@ export default function ManualSelectScreen() {
 
   return (
     <FlowFrame
+      countdown
       showHome
       left={
         <>

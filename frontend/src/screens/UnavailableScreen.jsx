@@ -21,6 +21,7 @@ export default function UnavailableScreen() {
   const [first, rest] = splitFirstSentence(reason.text)
   return (
     <FlowFrame
+      countdown
       showHome
       left={
         <RingStack ring={{ tone: 'text', icon: reason.icon }} title={SCREEN_TITLES[STATES.UNAVAILABLE]} core={first} coreError>

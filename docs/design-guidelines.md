@@ -667,7 +667,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 | 항목 | 지금 상태 |
 |---|---|
-| 실제 앱의 남은 시간 | 지금 `frontend/src/effects/handlers/inactivity.js` 는 타이머만 있고 남은 시간을 화면에 알려 주지 않는다. 구현할 때 바꿔야 한다 |
+| 실제 앱의 남은 시간 | 해결 (2026-11-19, 옮기기 계획 6단계). 핸들러가 마감 시각을 `effects/inactivityClock.js` 에 적고, 띠(`ThinBand` 의 `countdown`)가 `TimeoutNotice` 로 보인다. CONFIRMING·REASKING·UNAVAILABLE·MANUAL_SELECT 에 붙였고 ROUTE_GUIDE·QR_HANDOFF 는 화면을 옮길 때(9·10단계) 같은 부품을 쓴다 |
 
 ## 12. REASKING, UNAVAILABLE, QR_HANDOFF, MANUAL_SELECT 불러오는 중·오류 (확정 2026-11-19)
 
@@ -738,4 +738,4 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 |---|---|
 | 서울 밖 문구 불일치 | 서버(`stt/api.py`)와 앱의 범위 밖 문구가 다르다. `docs/team-requests.md` #8 |
 | QR 이 보내는 경로 | `QrHandoffScreen.jsx` 는 늘 1순위 경로(`state.routes[0]`)로 QR 을 만든다. 고른 경로를 보내도록 고친다 (2026-11-19 결정, `docs/design-implementation-plan.md` 11단계). 공유는 `docs/team-requests.md` #9, 서버 주소는 #7 |
-| 남은 시간 알림 | 11-5절과 같다. 앱의 무입력 타이머는 남은 시간을 화면에 알려 주지 않는다 |
+| 남은 시간 알림 | 11-5절과 같다. 해결됨 (2026-11-19) |
