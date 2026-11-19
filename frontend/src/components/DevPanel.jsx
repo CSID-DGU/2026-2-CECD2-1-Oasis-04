@@ -8,6 +8,8 @@
 //     effect 가 생겨도 디버깅용으로 남겨 둔다.
 //   - mock 마이크 입력 (LISTENING, mock 모드에서만): 말 대신 글을 넣는다. 화면 시안에 입력창이 없어서 화면에서 옮겨 왔다
 //     (계획서 4-2절). 글이 바뀔 때마다 recorder.onInput 을 불러 예전처럼 무발화·무음 타이머가 돈다
+//   - 장소 (mock 모드): 큰 띠에 보일 장소(지하철역 / 버스정류장 / 정보 없음 + 띠 시험 데이터)를 고르고 바로 다시 조회한다
+//   - 위치: 조회 결과 한 줄과, GPS 대신 고정 위치를 쓰게 된 이유 (예전 첫 화면의 작은 글씨. 화면 시안에 없어서 옮겨 왔다)
 // 워크플로우 코드가 아니므로 스타일은 이 파일 안 inline 으로만 둔다.
 
 import { useState } from 'react'
@@ -21,6 +23,50 @@ import { USE_MOCK } from '../api/index.js'
 import { recorder } from '../devices/recorder.js'
 import { kioskError } from '../state/errorCodes.js'
 import { POIS, MYEONGDONG } from '../api/mock/data/pois.js'
+import { PLACES, PLACE_LABELS, BAND_CASES, getMockPlaceKey, setMockPlaceKey } from '../api/mock/data/places.js'
+import { useLocation, useLocationRefresh } from '../state/LocationContext.jsx'
+
+// 위치를 받지 못해 서버 설정의 고정 위치를 쓰게 된 이유 (예전 CurrentLocation 의 문구 그대로)
+const FALLBACK_HINT = {
+  PERMISSION_DENIED: '위치 사용이 꺼져 있어서 미리 정해 둔 곳으로 안내해요',
+  LOW_ACCURACY: '위치가 정확하지 않아서 미리 정해 둔 곳으로 안내해요',
+  OUT_OF_AREA: '안내할 수 있는 지역 밖이라 미리 정해 둔 곳으로 안내해요',
+}
+const DEFAULT_FALLBACK_HINT = '위치를 확인하지 못해서 미리 정해 둔 곳으로 안내해요'
+
+function LocationInfo() {
+  const { location, status } = useLocation()
+  const refresh = useLocationRefresh()
+  const [placeKey, setPlaceKeyView] = useState(getMockPlaceKey)
+  const onPlaceChange = (e) => {
+    setMockPlaceKey(e.target.value)
+    setPlaceKeyView(e.target.value)
+    refresh()
+  }
+  const hint = location && location.source !== 'GPS' && location.reason ? (FALLBACK_HINT[location.reason] ?? DEFAULT_FALLBACK_HINT) : null
+  return (
+    <div style={{ marginTop: 6 }}>
+      <strong>location</strong> {status} {location?.text || '(이름 없음)'} {location?.place ? `[${location.place.type}]` : '[place 없음]'}
+      {hint && <div>{hint}</div>}
+      {USE_MOCK && (
+        <div style={{ marginTop: 2 }}>
+          <select value={placeKey} onChange={onPlaceChange} aria-label="mock 장소">
+            {Object.keys(PLACES).map((key) => (
+              <option key={key} value={key}>
+                장소: {PLACE_LABELS[key]}
+              </option>
+            ))}
+            {Object.keys(BAND_CASES).map((key) => (
+              <option key={key} value={key}>
+                장소(띠 시험): {key}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
+    </div>
+  )
+}
 
 const toSeconds = (ms) => (ms / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })
 
@@ -183,6 +229,8 @@ export default function DevPanel() {
           .map(([k, v]) => `${k}=${v}`)
           .join(' ')}
       </div>
+
+      <LocationInfo />
 
       {USE_MOCK && state.state === STATES.LISTENING && <MockSpeechInput />}
 

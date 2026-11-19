@@ -1,30 +1,33 @@
-// IDLE: 1 대기. 마이크 버튼 + 손으로 고르기. '처음으로' 없음 (표에 GO_HOME 전이가 없다).
-// 본문 아래에 '지금 계신 곳' 한 줄을 보여 준다 (CurrentLocation. 표시용 조회라 전이가 없다).
-import ScreenFrame from '../components/ScreenFrame.jsx'
-import CurrentLocation from '../components/CurrentLocation.jsx'
+// IDLE: 1 대기. '말하기'(주 버튼) + '손으로 고르기'. '처음으로' 없음 (표에 GO_HOME 전이가 없다).
+// 모양: 확정 시안 idle-final-subway.html / -bus.html / -default.html, 디자인 문서 8절.
+//   위쪽 큰 띠(PlaceBand)에 지금 계신 곳을 보인다 (위치 조회는 LocationContext. 표시용 조회라 전이가 없다)
+//   왼쪽 질문 "어디로 가시나요?" + 예시 세 줄, 오른쪽 큰 버튼 묶음
+import IdleFrame from '../components/IdleFrame.jsx'
+import IdleButtons from '../components/IdleButtons.jsx'
+import SayExamples from '../components/SayExamples.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { SCREEN_TITLES } from './titles.js'
+import { SAY_EXAMPLES } from './sayExamples.js'
 
 export default function IdleScreen() {
   const { dispatch } = useKiosk()
   return (
-    <ScreenFrame
-      title={SCREEN_TITLES[STATES.IDLE]}
-      actions={
+    <IdleFrame
+      left={
         <>
-          <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.MIC_BUTTON_PRESSED })}>
-            말하기
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.MANUAL_SELECT_PRESSED })}>
-            손으로 고르기
-          </button>
+          <h1 className="idle-question">{SCREEN_TITLES[STATES.IDLE]}</h1>
+          <SayExamples examples={SAY_EXAMPLES} />
         </>
       }
-    >
-      <p>버튼을 누르고 말씀하시거나, 손으로 골라 주세요</p>
-      <CurrentLocation />
-    </ScreenFrame>
+      actions={
+        <IdleButtons
+          voice
+          onSpeak={() => dispatch({ type: EVENTS.MIC_BUTTON_PRESSED })}
+          onManual={() => dispatch({ type: EVENTS.MANUAL_SELECT_PRESSED })}
+        />
+      }
+    />
   )
 }

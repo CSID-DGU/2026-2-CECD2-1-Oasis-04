@@ -7,12 +7,14 @@
 // 3) 위치를 못 받았거나 서버가 쓸 수 없다고 판단하면(오차가 큼·서울 밖) 서버 설정의 키오스크 고정 위치가 쓰인다.
 //    좌표 없이도 서버에 알리는 이유: 전에 기억해 둔 위치를 지우고 고정 위치로 돌아가게 하려는 것.
 //
-// 결과: { name, text, source: 'GPS' | 'KIOSK', snapped, accuracyM, reason }
+// 결과: { name, text, source: 'GPS' | 'KIOSK', snapped, accuracyM, reason, place }
 //   text    화면에 그대로 보여 줄 문장. 예) '지금 계신 곳: 경동시장앞 정류장'
 //   snapped 정류장·역 바로 근처라 그곳으로 맞췄으면 true. 조금 떨어져 있으면 false 이고 이름이 '○○ 정류장 근처'
 //   reason  고정 위치를 쓰게 된 이유. GPS 를 썼으면 null
 //           브라우저 쪽: NO_GEOLOCATION(기능 없음·보안 연결 아님) / PERMISSION_DENIED / POSITION_UNAVAILABLE / TIMEOUT
 //           서버 쪽:    LOW_ACCURACY(오차가 큼) / OUT_OF_AREA(안내 범위 밖) / INVALID_POSITION
+//   place   큰 띠의 장소 정보 (디자인 문서 8-5절 형식). 서버가 아직 주지 않으므로 지금은 늘 null → 띠는 "정보 없음"
+//           서버가 data.place 를 주면 그대로 쓴다 (docs/team-requests.md #1)
 // 서버 호출이 실패하면 Error 를 throw 한다. 화면은 위치 줄을 비워 둔다 (전이 없음).
 
 import { apiFetch, errorMessageOf, KIOSK_ID } from './http.js'
@@ -59,6 +61,7 @@ export async function getLocation() {
     snapped: Boolean(d.snapped),
     accuracyM: d.accuracy_m ?? null,
     reason: d.source === 'GPS' ? null : (browserReason ?? d.fallback_reason ?? null),
+    place: d.place ?? null,
   }
   console.info('[location]', result.source, result.name, result.reason ?? '', result.accuracyM !== null ? `±${result.accuracyM}m` : '')
   return result

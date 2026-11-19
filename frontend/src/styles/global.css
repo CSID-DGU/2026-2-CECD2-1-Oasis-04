@@ -105,6 +105,16 @@
   --btn-icon-primary: 64px;
   --btn-icon: 44px;
 
+  /* 첫 화면 큰 띠 (문서 7절, 8-2·8-3절). 이름 크기만 바꾸면 이름 상자·띠 높이·본문 자리가 함께 바뀐다 */
+  --place-name-size: 112px; /* 역·정류장 이름의 기본 크기. 줄이는 최소·단계는 PlaceBand.css */
+  --place-plate-height: calc(var(--place-name-size) * 1.12 + 104px); /* 이름 상자: 한 줄 + 위아래 52 */
+  --place-band-height: calc(var(--band-thin-height) + var(--place-plate-height) + 12px); /* 337px */
+  --idle-col-right: 740px; /* 첫 화면의 버튼 칸 */
+  --idle-primary-height: 500px; /* 첫 화면 주 버튼 */
+  --idle-secondary-height: 160px; /* 첫 화면 보조 버튼 */
+  --idle-depth: 12px; /* 첫 화면 주 버튼 아래 턱 (버튼이 커서 8px 은 얇아 보인다) */
+  --font-question: 96px; /* 첫 화면 질문 "어디로 가시나요?" */
+
   /* 고리 (문서 3-4절, 10-2절) */
   --ring-r: 118px; /* 안쪽 주 색 원 */
   --halo-r: 152px; /* 바깥 옅은 원 */
@@ -357,11 +367,6 @@ body {
 .screen .hint {
   font-size: var(--font-sub);
   color: var(--color-text);
-}
-
-/* 첫 화면의 '지금 계신 곳' 한 줄. 본문과 같은 크기에 굵게 */
-.screen .location {
-  font-weight: 700;
 }
 
 /* 오류 문구: UNAVAILABLE 이유, 목록·QR 불러오기 실패. 빨강은 오류에만 쓴다 */

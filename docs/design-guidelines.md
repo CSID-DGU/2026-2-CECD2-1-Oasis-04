@@ -406,7 +406,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 | 4 | 버스 번호가 이름보다 먼저 양보한다. 번호가 전부 들어가지 않으면 번호 대신 개수 표지("간선 버스 10개")를 쓰고, 이름은 그 표지가 들어갈 자리(300px)만 남기면 된다. 이름이 그 자리까지 차지하면 글씨를 최소 크기까지 줄이고, 그래도 넘치면 오른쪽 표지를 숨기고, 그래도 넘치면 좌우 요소를 모두 숨긴다 (2026-11-17 변경. 전에는 번호를 뒤에서부터 하나씩 숨겼다) | 번호를 일부만 보이면 자기 버스가 안 서는 줄 오해한다 |
 | 5 | 띠와 이름 상자의 높이는 한 줄 기준으로 고정한다. 이름 길이에 따라 바뀌지 않는다 | 장소가 달라도 본문(질문, 버튼)의 자리가 같아야 한다 |
 
-값 (모두 임시. 시안에서 쓰는 CSS 변수 이름이다. `global.css` 에는 아직 없다):
+값 (모두 임시. 시안에서 쓰는 CSS 변수 이름이다. 앱에서는 `--place-name-size` 가 `global.css` 토큰, 최소·단계는 `components/PlaceBand.css` 지역 변수다, 2026-11-19):
 
 | 변수 | 값 | 뜻 |
 |---|---|---|
@@ -431,7 +431,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 8. 첫 화면과 띠 (확정, 2026-11-17)
 
-확정 시안은 `design/mockups/confirmed/` 의 `idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`, `idle-reduced-final.html`, `band-thin.html` 이다. `frontend/` 의 화면에는 아직 반영하지 않았다 (무대만 가로로 맞췄다).
+확정 시안은 `design/mockups/confirmed/` 의 `idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`, `idle-reduced-final.html`, `band-thin.html` 이다. `frontend/` 에 옮겼다 (2026-11-19, 옮기기 계획 7단계: `components/PlaceBand.jsx`, `IdleFrame.jsx`, `IdleButtons.jsx`, 규칙은 `view/placeBand.js`). 띠 이름(끝의 "역"·"정류장" 떼기)은 얇은 띠도 같은 함수(`view/placeName.js`)를 쓰고, 장소 정보가 없으면 얇은 띠 이름도 비운다.
 
 ### 8-1. 화면의 구역
 

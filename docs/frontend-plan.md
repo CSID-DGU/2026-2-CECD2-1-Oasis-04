@@ -239,8 +239,8 @@ export function routingHandler(state, dispatch, api) {
 |---|---|---|---|
 | `STARTUP_CHECK` | `StartupCheckScreen.jsx` | "점검 중..." 스피너 | 없음 (effect가 처리) |
 | `CHECKING` | `CheckingScreen.jsx` | "서버 연결 중, 잠시 후 다시 시도" + 남은 초 | 없음 (타이머) |
-| `IDLE` | `IdleScreen.jsx` | 안내 문구, 큰 마이크 버튼, 손으로 고르기 버튼 | `MIC_BUTTON_PRESSED`, `MANUAL_SELECT_PRESSED` |
-| `IDLE_REDUCED` | `IdleReducedScreen.jsx` | 안내 문구, 손으로 고르기 버튼만 (마이크 숨김). 60초마다 자동 재점검 | `MANUAL_SELECT_PRESSED` (`RECHECK_TIMER`는 effect) |
+| `IDLE` | `IdleScreen.jsx` | 큰 띠(지금 계신 곳) + 질문·예시 세 줄 + 큰 '말하기' + 손으로 고르기 (`IdleFrame`, 디자인 문서 8절) | `MIC_BUTTON_PRESSED`, `MANUAL_SELECT_PRESSED` |
+| `IDLE_REDUCED` | `IdleReducedScreen.jsx` | 큰 띠 + 질문·안내 문장 + 큰 '손으로 고르기' 하나 (마이크 숨김). 60초마다 자동 재점검 | `MANUAL_SELECT_PRESSED` (`RECHECK_TIMER`는 effect) |
 | `LISTENING` | `ListeningScreen.jsx` | 듣는 중 표시 + "듣고 있어요" + "다 말했어요" / "취소" / "처음으로" (mock 입력창은 DevPanel) | `SPEECH_END` (버튼은 화면이 직접, 타이머는 recorder 경유), `LISTEN_CANCEL`, `GO_HOME` |
 | `RESOLVING` | `ResolvingScreen.jsx` | "말씀 알아듣는 중..." 스피너 | 없음 |
 | `CONFIRMING` | `ConfirmingScreen.jsx` | "OO 맞나요?" 또는 후보 목록, 예 / 모두 아니에요 / 다른 곳 말하기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `DESTINATION_CONFIRMED`(poi), `CONFIRM_NONE_OF_THEM`, `CONFIRM_SAY_OTHER_PLACE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
@@ -268,6 +268,7 @@ export function routingHandler(state, dispatch, api) {
 | `route(poiId)` | 문자열 | `{ routes: [1순위, 2순위, 3순위] }` | `poiId === 'poi-no-route'` → `{ routes: [] }`; 시나리오 `routeError` → `Error('ROUTE_ERROR')` |
 | `getPois()` | 없음 | `[{ id, name, category }]` 10개 내외 | 시나리오 `poisError` → `Error` (화면에 "목록을 불러올 수 없어요" 표시, 전이 없음) |
 | `createQr(routeId)` | 문자열 | `{ url: 'https://example/r/...' }` | 시나리오 `qrError` → `Error` (QR 화면에 오류 문구, 전이 없음) |
+| `getLocation()` | 없음 | `{ name, text, source, snapped, accuracyM, reason, place }`. `place` 는 디자인 문서 8-5절 형식 (DevPanel '장소': 지하철역 기본 / 버스정류장 / 정보 없음 `null` / 띠 시험 데이터, `api/mock/data/places.js`) | 없음. 전이 없는 표시용 조회 (`state/LocationContext.jsx` 가 처음 화면에 들어갈 때 부른다) |
 
 장치 mock (`src/devices/mockRecorder.js`):
 
@@ -381,6 +382,7 @@ mock이 가정하고 있는 요청·응답 형식이다. 백엔드 확정 후 �
 | `POST /resolve` | `{ text: string }` | `{ status: 'OK' \| 'NOT_UNDERSTOOD' \| 'OUT_OF_SCOPE', needConfirm: bool, poi?: Poi, candidates?: Poi[] }` | "못 알아들음"과 "범위 밖"을 구분하는 필드, 후보 최대 개수, `Poi` 구조(`id`, `name`, `category`) |
 | `POST /route` 또는 `GET /route?poi_id=` | `{ poiId: string }` | `{ routes: Route[] }` (최대 3개, 1순위가 첫 번째) | `Route` 구조(소요 시간, 환승, 요약 문구), 경로 없음을 빈 배열로 주는지 오류로 주는지 |
 | `GET /pois` (가정) | 없음 | `Poi[]` | 손으로 고르기 목록을 서버에서 주는지, 키오스크에 내장하는지 (6절 1번) |
+| `POST /location` | `{ kiosk_id, x?, y?, accuracy? }` | `{ name, easy_text, source, snapped, accuracy_m, fallback_reason, place? }` → 앱 `{ name, text, source, snapped, accuracyM, reason, place }` | `place`(디자인 문서 8-5절)를 서버가 주는지 (`team-requests.md` #1). 주기 전에는 `place: null` → 큰 띠는 "정보 없음", 얇은 띠 이름은 비움 (7단계) |
 | `POST /qr` (가정) | `{ routeId: string }` | `{ url: string }` | QR을 서버가 만드는지, 프론트가 URL로 직접 그리는지 (6절 2번) |
 | 공통 | - | - | 오류 응답 형식(HTTP 상태 코드 + `{ message }`), 타임아웃 기준, 연결 끊김을 프론트가 어떻게 감지할지 |
 

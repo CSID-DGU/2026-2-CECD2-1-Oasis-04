@@ -9,15 +9,18 @@
 // 실패하면 마지막으로 받은 결과를 그대로 둔다 (띠의 이름이 갑자기 사라지지 않게). 한 번도 못 받았으면 status 가 'error'.
 //
 // 값: { location, status }
-//   location  api.getLocation() 의 결과 ({ name, text, source, reason, ... }) 또는 null
+//   location  api.getLocation() 의 결과 ({ name, text, source, reason, place, ... }) 또는 null
+//             place 는 큰 띠의 장소 정보 (디자인 문서 8-5절). 띠 이름은 view/placeName.js 의 bandPlaceName 으로 만든다
 //   status    'loading'(아직 결과 없음) | 'ready' | 'error'(결과 없이 실패)
 
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react'
 import { api } from '../api/index.js'
 import { useKiosk } from './KioskContext.jsx'
 import { STATES } from './states.js'
 
 const LocationContext = createContext(null)
+// 개발자 패널이 mock 장소를 바꾼 뒤 바로 다시 조회하게 하는 함수. 값 모양({ location, status })을 바꾸지 않으려고 따로 둔다
+const LocationRefreshContext = createContext(() => {})
 
 const HOME_STATES = new Set([STATES.IDLE, STATES.IDLE_REDUCED])
 
@@ -26,9 +29,15 @@ export function LocationProvider({ children }) {
   // IDLE ↔ IDLE_REDUCED 사이를 오갈 때도 다시 조회하도록, "처음 화면에 들어간 횟수"가 아니라 상태 이름을 쓴다
   const homeState = HOME_STATES.has(state.state) ? state.state : null
   const [value, setValue] = useState({ location: null, status: 'loading' })
+  const [asked, setAsked] = useState(0) // 개발자 패널이 다시 조회를 부탁한 횟수
+  const refresh = useCallback(() => setAsked((n) => n + 1), [])
+  const answered = useRef(0) // 마지막으로 조회한 때의 asked
 
   useEffect(() => {
-    if (homeState === null) return undefined
+    // 처음 화면에 들어갔을 때, 또는 개발자 패널이 새로 부탁했을 때만 조회한다 (처음 화면을 떠날 때는 조회하지 않는다)
+    const newAsk = asked !== answered.current
+    answered.current = asked
+    if (homeState === null && !newAsk) return undefined
     let cancelled = false
     ;(async () => {
       try {
@@ -45,9 +54,13 @@ export function LocationProvider({ children }) {
     return () => {
       cancelled = true
     }
-  }, [homeState])
+  }, [homeState, asked])
 
-  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>
+  return (
+    <LocationRefreshContext.Provider value={refresh}>
+      <LocationContext.Provider value={value}>{children}</LocationContext.Provider>
+    </LocationRefreshContext.Provider>
+  )
 }
 
 // 정해 둔 값을 그대로 나눠 주는 Provider. 조회하지 않는다. 화면 테스트가 쓴다 (screens/__tests__/providers.jsx, 계획서 6-2절)
@@ -62,4 +75,10 @@ export function useLocation() {
     throw new Error('useLocation() 은 <LocationProvider> 안에서만 쓸 수 있습니다')
   }
   return ctx
+}
+
+/** 위치를 다시 조회하는 함수. 개발자 패널의 '장소' 고르기가 쓴다 (전이 없음) */
+// eslint-disable-next-line react-refresh/only-export-components -- 위와 같음
+export function useLocationRefresh() {
+  return useContext(LocationRefreshContext)
 }

@@ -249,11 +249,19 @@ describe('real API: getLocation (현재 위치)', () => {
       snapped: true,
       accuracyM: 18,
       reason: null,
+      place: null, // 서버가 장소 정보를 주기 전에는 null → 띠는 "정보 없음" (team-requests.md #1)
     })
     const [url, init] = fetchFn.mock.calls[0]
     expect(url).toBe('/api/v1/location') // 좌표는 주소에 싣지 않는다
     expect(init.method).toBe('POST')
     expect(sentBody(fetchFn)).toEqual({ kiosk_id: 'KIOSK_JONGNO_01', x: 127.0383, y: 37.5786, accuracy: 18 })
+  })
+
+  it('서버가 장소 정보(place)를 주면 그대로 싣는다', async () => {
+    stubGeolocation((onOk) => onOk(HERE))
+    const place = { type: 'BUS_STOP', name: '경동시장앞 정류장', buses: [{ kind: 'TRUNK', numbers: ['120'] }] }
+    mockFetch(ok({ source: 'GPS', name: '경동시장앞 정류장', snapped: true, accuracy_m: 18, place }))
+    expect((await getLocation()).place).toEqual(place)
   })
 
   it('위치 사용을 거절하면 좌표 없이 알리고, 고정 위치와 그 이유를 돌려준다', async () => {

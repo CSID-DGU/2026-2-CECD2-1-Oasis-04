@@ -11,6 +11,12 @@
 //   false 최소 크기에서 멈추고 한 줄로 둔다 (7단계 IDLE 띠 이름: 7절 규칙 1 "이름은 항상 한 줄")
 //   재는 동안에는 data-wrap 을 떼서 한 줄 너비로 잰다. 그래서 쓰는 쪽 CSS 는 기본이 white-space: nowrap 이어야 한다
 //
+// maxPx (선택)
+//   너비 한계를 토큰 대신 숫자로 받는다. 큰 띠 이름처럼 한계가 측정으로 정해질 때 쓴다 (PlaceBand: 좌우 요소에서 40px).
+//   max 토큰도 maxPx 도 없으면(null) 아직 한계를 모르는 것이라 재지 않는다
+// onFit (선택)
+//   다 잰 뒤 { size, overflow, el } 로 부른다. 큰 띠는 이것으로 이름 상자 너비를 읽어 버스 번호·좌우 요소를 숨길지 정한다
+//
 // 글꼴을 다 읽기 전에 재면 틀리므로 document.fonts.ready 뒤에 한 번 더 잰다 (계획서 6-2절)
 
 import { useLayoutEffect, useRef } from 'react'
@@ -22,17 +28,21 @@ function readPx(el, name) {
 
 export function useFitText(text, tokens) {
   const ref = useRef(null)
-  const { start, min, step, max, wrapAtMin = false } = tokens
+  const { start, min, step, max, maxPx = null, wrapAtMin = false, onFit = null } = tokens
+  const onFitRef = useRef(onFit)
+  useLayoutEffect(() => {
+    onFitRef.current = onFit
+  })
 
   useLayoutEffect(() => {
     const el = ref.current
-    if (!el) return undefined
+    if (!el || (!max && maxPx === null)) return undefined
     let cancelled = false
     const fit = () => {
       if (cancelled) return
       el.style.fontSize = ''
       delete el.dataset.wrap
-      const limit = readPx(el, max)
+      const limit = maxPx ?? readPx(el, max)
       const fits = (s) => {
         el.style.fontSize = `${s}px`
         return el.scrollWidth <= limit
@@ -41,13 +51,14 @@ export function useFitText(text, tokens) {
       const overflow = !fits(size)
       el.dataset.size = String(size)
       if (wrapAtMin && overflow) el.dataset.wrap = 'true'
+      onFitRef.current?.({ size, overflow, el })
     }
     fit()
     document.fonts?.ready.then(fit)
     return () => {
       cancelled = true
     }
-  }, [text, start, min, step, max, wrapAtMin])
+  }, [text, start, min, step, max, maxPx, wrapAtMin])
 
   return ref
 }

@@ -10,7 +10,7 @@
 
 | # | 누구에게 | 무엇을 | 왜 | 지금은 어떻게 대신하고 있나 | 생긴 단계 | 상태 |
 |---|---|---|---|---|---|---|
-| 1 | 백엔드 (박영하, 페이자) | `POST /api/v1/location` 응답 `data` 에 `place` 추가. 형식은 디자인 문서 8-5절: `{ type: "SUBWAY_STATION" \| "BUS_STOP", name, lines: [{ lineId, label, prev, next }], buses: [{ kind, numbers: [] }] }` | 첫 화면 위쪽 띠(역명판)에 노선·앞뒤 역·버스 번호를 그린다 | mock 은 장소 세 가지(지하철역·버스정류장·없음). real 은 `place: null` → 회색 선 세 줄과 "지금 계신 곳을 확인하고 있어요" | 계획 작성 (관련 7단계) | 안 보냄 |
+| 1 | 백엔드 (박영하, 페이자) | `POST /api/v1/location` 응답 `data` 에 `place` 추가. 형식은 디자인 문서 8-5절: `{ type: "SUBWAY_STATION" \| "BUS_STOP", name, lines: [{ lineId, label, prev, next }], buses: [{ kind, numbers: [] }] }` | 첫 화면 위쪽 띠(역명판)에 노선·앞뒤 역·버스 번호를 그린다 | mock 은 장소 세 가지(지하철역·버스정류장·없음). real 은 `place: null` → 회색 선 세 줄과 "지금 계신 곳을 확인하고 있어요". 다른 화면의 얇은 띠 이름도 비운다 (7단계에 구현, `api/real/location.js` 는 `data.place` 가 오면 그대로 쓴다) | 계획 작성 (관련 7단계) | 안 보냄 |
 | 2 | 백엔드 | `GET /api/v1/route` 지하철 단계에 노선 ID: `steps[].line_id: "seoul-3"`, `"arex"` 등. location 의 `lines[].lineId` 와 같은 값 | 노선색. "3호선" 같은 글자로 색을 짐작하지 않기로 했다 (디자인 문서 3-6절) | 노선 원 테두리를 회색으로 | 계획 작성 (관련 8단계) | 안 보냄 |
 | 3 | 백엔드 | `GET /api/v1/route` 출구 번호를 필드로: `routes[].exit: "6"` (마지막 차에서 내린 역의 출구). 지금은 걷기 안내 문장 안에만 있다 | 경로 안내 타임라인의 "내리는 곳" 옆 출구 표시 (9-1절 R7·R8) | 출구를 표시하지 않는다 | 계획 작성 (관련 8단계) | 안 보냄 |
 | 4 | 백엔드 | `GET /api/v1/route` 목적지까지 마지막 걷는 구간(`WALK`, `minutes`)을 늘 넣기 | 목적지가 역이 아닐 때 "걸어서 N분 → 가실 곳" (9-1절 R7) | 카카오가 줄 때만 보이고, 없으면 내리는 곳에서 끝난다 | 계획 작성 (관련 8단계) | 안 보냄 |

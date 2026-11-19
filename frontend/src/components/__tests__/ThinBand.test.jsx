@@ -4,6 +4,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import ThinBand from '../ThinBand.jsx'
 import { setInactivityDeadline } from '../../effects/inactivityClock.js'
 import { withProviders } from '../../screens/__tests__/providers.jsx'
+import { PLACES } from '../../api/mock/data/places.js'
 
 const render = (props) => renderToStaticMarkup(withProviders(<ThinBand {...props} />, { location: { name: '종로3가' } }))
 
@@ -36,5 +37,18 @@ describe('ThinBand 남은 시간 알림', () => {
     vi.useFakeTimers({ now: 100000 })
     setInactivityDeadline(100000 + 5000)
     expect(render({})).not.toContain('timeout-notice')
+  })
+})
+
+describe('ThinBand 가운데 이름 (7절 규칙 2, 큰 띠와 같은 규칙)', () => {
+  const nameOf = (location) =>
+    renderToStaticMarkup(withProviders(<ThinBand />, { location })).match(/<div class="thin-band-place">(.*?)<\/div>/)[1]
+  it('지하철역은 끝의 "역", 버스정류장은 끝의 "정류장" 을 뗀다', () => {
+    expect(nameOf({ name: '종로3가역', place: PLACES.subway })).toBe('종로3가')
+    expect(nameOf({ name: '종로3가.탑골공원 정류장', place: PLACES.bus })).toBe('종로3가.탑골공원')
+  })
+  it('장소 정보가 없으면 비운다 (큰 띠의 "확인하고 있어요" 와 같은 때)', () => {
+    expect(nameOf({ name: '경동시장앞 정류장', place: null })).toBe('')
+    expect(nameOf(null)).toBe('')
   })
 })
