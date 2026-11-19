@@ -17,7 +17,7 @@
            STARTUP_CHECK     로고    준비하고 있어요 / 잠시만 기다려 주세요
            FAIL_COUNT_CHECK  말풍선  잠시만요 / 확인하고 있어요
            CHECKING          남은 초 잠시만 기다려 주세요 / 잠시 문제가 생겼어요. 3초 뒤에 다시 해 볼게요 (호가 남은 시간만큼 줄어든다)
-         주소에 ?s=RESOLVING 처럼 붙이면 그 화면이 보인다. ?s=RESOLVING&heard= 는 들은 말이 빈 경우(10초 무발화). 스크린샷용: ?freeze=0.5 는 그 시각(초)의 모습으로 멈춘다 -->
+         주소에 ?s=RESOLVING 처럼 붙이면 그 화면이 보인다. ?s=RESOLVING&heard= 는 들은 말이 빈 경우(10초 무발화), &heard=명동 은 들은 말을 바꾼다. 스크린샷용: ?freeze=0.5 는 그 시각(초)의 모습으로 멈춘다 -->
     <script>
       if (!new URLSearchParams(location.search).get('s')) {
         document.addEventListener('DOMContentLoaded', () => {
@@ -140,6 +140,10 @@
         resolving.querySelector('.wait-label').remove()
         resolving.querySelector('.wait-sub').remove()
         resolving.querySelector('.wait-core').textContent = '말씀을 알아듣는 중이에요'
+      }
+      // 들은 말을 바꾼다: ?s=RESOLVING&heard=명동 (시연 페이지 demo.html 1번 흐름이 쓴다, 2026-11-19). 값이 없으면 기본 “병원”
+      if (query.get('heard')) {
+        document.querySelector('[data-screen="RESOLVING"] .wait-core').textContent = `“${query.get('heard')}”`
       }
 
       // 큰 글씨가 화면 너비(양쪽 140px 안쪽)에 안 들어가면 8px 씩 72px 까지 줄인다 (문서 3-3절, 7절의 이름 규칙)

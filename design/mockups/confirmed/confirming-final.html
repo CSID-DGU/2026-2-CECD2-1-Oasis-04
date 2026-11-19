@@ -174,8 +174,15 @@
 
     <script>
       // 후보 데이터. 기본은 앱 mock 의 병원 3개. ?names=long 은 넘침 시험용으로 지어낸 긴 이름
+      // ?set=myeongdong: 들은 말 “명동”과 후보 3개 (시연 페이지 demo.html 1번 흐름이 쓴다, 2026-11-19). 분류는 manual-select-final.html 처럼 노선·시설 종류
       const query = new URLSearchParams(location.search)
-      const CANDIDATES = {
+      const HEARD = { myeongdong: '명동' }[query.get('set')]
+      if (HEARD) document.querySelector('.heard b').textContent = HEARD
+      const CANDIDATES = query.get('set') === 'myeongdong' ? [
+        { name: '명동역', category: '지하철 4호선' },
+        { name: '명동성당', category: '성당' },
+        { name: '명동입구', category: '버스정류장' },
+      ] : {
         mock: [
           { name: '동국대병원', category: '병원' },
           { name: '서울병원', category: '병원' },
