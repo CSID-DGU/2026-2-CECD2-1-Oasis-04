@@ -1,6 +1,6 @@
 // 큰 띠 규칙 (디자인 문서 7절, 8-4절). 시험 데이터는 시안 design/mockups/archive/v9-cases.js 와 확정 시안의 장소 그대로다.
 import { describe, it, expect } from 'vitest'
-import { displayPlaceName, bandPlaceName, placeKind } from '../placeName.js'
+import { displayPlaceName, bandPlaceName, placeKind, startPlaceName } from '../placeName.js'
 import {
   BAND,
   bandRows,
@@ -52,6 +52,14 @@ describe('displayPlaceName (7절 규칙 2)', () => {
     expect(displayPlaceName({ type: 'BUS_STOP', name: '키오스크 정류장' })).toBe('키오스크')
     expect(bandPlaceName({ name: '키오스크', place: null })).toBe('')
     expect(bandPlaceName({ name: '키오스크앞 정류장', place: null })).toBe('키오스크앞')
+  })
+
+  it('타임라인 첫 점 이름은 " 키오스크" 만 떼고 "역"·"정류장" 은 남긴다 (9-1절, 2026-11-20)', () => {
+    expect(startPlaceName({ name: '종로3가역 키오스크', place: null })).toBe('종로3가역')
+    expect(startPlaceName({ name: '경동시장앞 정류장 키오스크' })).toBe('경동시장앞 정류장')
+    expect(startPlaceName({ name: '종로3가역 키오스크', place: { type: 'SUBWAY_STATION', name: '종로3가역', lines: [] } })).toBe('종로3가역')
+    expect(startPlaceName({ name: '', place: null })).toBe('')
+    expect(startPlaceName(null)).toBe('')
     expect(bandPlaceName({ name: '경동시장앞 정류장 근처' })).toBe('경동시장앞 정류장 근처')
     expect(bandPlaceName({ place: { type: 'SUBWAY_STATION', name: '어딘가역', lines: [] } })).toBe('어딘가')
     expect(bandPlaceName({ name: '', place: null })).toBe('')

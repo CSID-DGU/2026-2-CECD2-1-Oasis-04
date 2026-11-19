@@ -4,7 +4,7 @@
 // 데이터: reducer 의 state.routes (ROUTING 핸들러가 ROUTE_FOUND 에 담아 준 /route 응답, 1순위가 첫 번째)를
 //   view/routeView.js 의 toRouteGuide 로 바꾼 것만 쓴다. 어떤 경로를 보일지(R1), 카드인지 요약 판인지(R3),
 //   라벨·구간 줄(R7·R8)은 거기서 정하고, 이 화면은 판단하지 않는다.
-//   경로에 출발 장소(start)가 없으면(real) 지금 계신 곳 이름을 LocationContext 에서 가져와 띠와 같은 이름 규칙으로 쓴다.
+//   경로에 출발 장소(start)가 없으면(real) 지금 계신 곳 이름을 LocationContext 에서 가져와 " 키오스크" 만 떼고 쓴다("역"·"정류장" 은 남김, view/placeName.js startPlaceName).
 //
 // 왼쪽 칸: 제목 + 고른 경로의 타임라인 (Timeline 이 재서 줄이기 단계를 고른다, R2)
 // 오른쪽 칸: 경로가 2~3개면 위쪽에 경로 카드, 1개면 요약 판을 버튼 바로 위에 (R3).
@@ -23,7 +23,7 @@ import { useLocation } from '../state/LocationContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { toRouteGuide } from '../view/routeView.js'
-import { bandPlaceName, PLACE_TYPES } from '../view/placeName.js'
+import { startPlaceName, PLACE_TYPES } from '../view/placeName.js'
 import { SCREEN_TITLES } from './titles.js'
 import './RouteGuideScreen.css'
 
@@ -31,7 +31,7 @@ const KIND_OF_PLACE_TYPE = { [PLACE_TYPES.SUBWAY_STATION]: 'STATION', [PLACE_TYP
 
 /** 위치 조회 결과 → 타임라인 첫 점에 쓸 지금 계신 곳 { name, kind }. 이름이 없으면 null (routeView 가 '지금 계신 곳') */
 function hereOf(location) {
-  const name = bandPlaceName(location)
+  const name = startPlaceName(location)
   if (!name) return null
   return { name, kind: KIND_OF_PLACE_TYPE[location?.place?.type] ?? 'PLACE' }
 }

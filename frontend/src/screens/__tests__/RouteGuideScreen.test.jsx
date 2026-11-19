@@ -65,10 +65,10 @@ describe('RouteGuideScreen', () => {
     expect(kiosk.dispatch).toHaveBeenCalledWith({ type: EVENTS.SEND_TO_PHONE_PRESSED })
   })
 
-  it('경로에 출발 장소가 없으면 지금 계신 곳 이름을 띠와 같은 규칙으로 쓴다', async () => {
+  it('경로에 출발 장소가 없으면 지금 계신 곳 이름에서 " 키오스크" 만 떼고 쓴다 (역·정류장은 남김)', async () => {
     const legs = [{ mode: 'WALK', minutes: 2, to: { name: '종로3가역', kind: 'STATION' } }, ...ROUTE_A.legs]
     await renderWith([{ id: 'r', durationMin: 10, legs }], { name: '종로3가역 키오스크', place: null })
-    expect(firstStopName()).toBe('종로3가')
+    expect(firstStopName()).toBe('종로3가역')
   })
 
   it('경로가 없으면 안내 문구만', async () => {

@@ -10,6 +10,8 @@ async (page) => {
   const APP = 'http://localhost:5173/'
   const MOCK = 'http://127.0.0.1:8800/design/mockups/confirmed/'
   await page.setViewportSize({ width: 1920, height: 1080 })
+  // 움직임 줄이기로 찍는다: 움직이는 부분(마이크 고리, 음량 막대, 도는 호, 나타나기)이 멈춰 그림마다 같다 (10단계 전 보완)
+  await page.emulateMedia({ reducedMotion: 'reduce' })
   const T0 = new Date('2026-11-19T14:30:00').getTime()
   await page.clock.install({ time: T0 })
   await page.clock.pauseAt(T0 + 10)

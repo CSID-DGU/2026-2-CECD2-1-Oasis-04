@@ -54,3 +54,12 @@ export function bandPlaceName(location) {
   if (!name) return ''
   return displayPlaceName({ type: place?.type ?? typeFromName(name), name })
 }
+
+/**
+ * 위치 조회 결과 → 경로 안내 타임라인 첫 점(타는 곳·지금 계신 곳)에 쓸 이름 (디자인 문서 9-1절, 2026-11-20).
+ * 띠와 달리 끝의 "역"·"정류장" 은 남기고 " 키오스크" 만 뗀다: "종로3가역 키오스크" → "종로3가역".
+ * 타임라인에는 띠의 선·표지가 없어 "역"·"정류장" 이 있어야 어디인지 안다. 이름이 없으면 빈 글자
+ */
+export function startPlaceName(location) {
+  return stripKiosk(location?.place?.name || location?.name)
+}
