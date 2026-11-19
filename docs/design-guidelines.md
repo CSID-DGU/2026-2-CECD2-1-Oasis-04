@@ -574,7 +574,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 10. LISTENING과 기다림 화면 (확정 2026-11-17)
 
-확정 시안은 `design/mockups/confirmed/listening-final.html`, `wait-final.html`(`wait.css`)이다. LISTENING 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 2단계. 음량 막대는 가짜 음량, 실제 음량은 12단계). 기다림 화면은 아직 반영하지 않았다.
+확정 시안은 `design/mockups/confirmed/listening-final.html`, `wait-final.html`(`wait.css`)이다. LISTENING 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 2단계. 음량 막대는 가짜 음량, 실제 음량은 12단계). 기다림 화면 5개도 옮겼다(2026-11-19, 옮기기 계획 3단계. `components/WaitFrame.jsx`, 글씨 줄이기는 `hooks/useFitText.js`). 72px 까지 줄여도 넘치는 글은 시안처럼 자르지 않는다(`docs/team-requests.md` #14).
 
 ### 10-1. LISTENING
 

@@ -44,3 +44,43 @@
   align-items: center;
   justify-content: center;
 }
+
+/* 호: 바깥 고리 위, 12시 방향에서 시작. 기준: design/mockups/confirmed/wait.css .ring-arc, 디자인 문서 10-2절.
+ * 도는 호는 둘레의 22%, 줄어드는 호(CHECKING)는 남은 비율을 Ring.jsx 가 strokeDasharray 로 넣는다.
+ * 그리는 순서가 바깥 원 → 호 → 안쪽 원이라 시안처럼 안쪽 흰 원이 호의 안쪽 가장자리를 덮는다 */
+.ring-circles .ring-arc {
+  --arc-spin-length: 22 78;
+
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: var(--arc-width);
+  stroke-linecap: round;
+  stroke-dasharray: var(--arc-spin-length);
+  r: var(--halo-r);
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+}
+
+@keyframes ring-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ring-arc.is-spinning {
+    animation: ring-spin var(--motion-wait) linear infinite;
+  }
+}
+
+/* CHECKING: 고리 가운데의 남은 초. 숫자 폭을 고정해서 3 → 2 → 1 로 바뀔 때 흔들리지 않게 */
+.ring-count {
+  font-size: var(--font-figure);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
