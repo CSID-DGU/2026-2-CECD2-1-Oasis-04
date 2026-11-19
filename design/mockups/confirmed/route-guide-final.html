@@ -65,7 +65,7 @@
         margin: auto 0 0; /* 칸 맨 아래 */
         padding-top: 16px;
         font-size: var(--font-sub);
-        color: var(--color-text-sub);
+        color: var(--color-text);
       }
       .timeline {
         --name-line: 64px;
@@ -115,7 +115,7 @@
         grid-column: 2;
         font-size: var(--font-sub);
         line-height: 1.2;
-        color: var(--color-text-sub);
+        color: var(--color-text);
       }
       .stop-dot {
         grid-column: 1;
@@ -199,7 +199,7 @@
       }
       .walk-text {
         grid-column: 2;
-        color: var(--color-text-sub);
+        color: var(--color-text);
         white-space: nowrap;
       }
       /* 구간 줄 (문서 3-6절): 노선 표시 옆에 한 줄 "N번째 역에서 내려요". 지나는 역 이름은 보이지 않는다 */
@@ -245,11 +245,11 @@
         font-weight: 400;
         border-radius: 50%;
       }
-      /* 버스: 둥근 네모 안에 번호만. 번호는 굵게 (지하철 원의 번호와 같은 30px) */
+      /* 버스: 둥근 네모 안에 번호만. 번호는 지하철 원의 번호와 같은 30px 보통 굵기 (문서 3-6절) */
       .bus-no {
         min-width: var(--mark-height);
         padding: 0 14px;
-        font-weight: 700;
+        font-weight: 400;
         border-radius: 12px;
       }
 
@@ -363,6 +363,7 @@
       .card-time b {
         margin: 0 6px;
         font-size: var(--font-display);
+        font-weight: 700; /* <b> 의 기본값(bolder → 900) 대신. 글꼴 파일은 400·700 뿐 (문서 3-3절) */
         letter-spacing: -0.02em;
       }
       /* 도착 시각은 소요 시간 칸의 너비를 정하지 않는다(너비 0, 글자는 오른쪽으로 넘쳐 보인다).

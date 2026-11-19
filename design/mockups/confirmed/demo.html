@@ -1,0 +1,451 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>시연: 키오스크 흐름 다섯 가지</title>
+    <style>
+      /* 발표 시연 페이지 (2026-11-19). 확정본(confirmed/)만 iframe 으로 불러와 흐름 순서대로 넘긴다. 확정 파일은 고치지 않는다.
+       *   처음에는 흐름을 고르는 화면(발표자용)이 보인다. 숫자 키 1~5 또는 줄을 눌러 흐름을 고른다
+       *   다음: 화면 누르기, →, 스페이스, Enter, PageDown   이전: ←, PageUp   처음: Home   흐름 고르기로: Esc
+       *   숫자 키 1~5: 그 흐름의 처음으로 바로 간다 (어느 화면에서나)
+       *   D: 발표자용 표시 (오른쪽 아래에 "흐름 이름 · 상태 이름 · 3/8")
+       *   A: 기다림 화면(RESOLVING, FAIL_COUNT_CHECK, ROUTING)을 2초 뒤 저절로 넘기기. 기본은 끔
+       *   흐름의 마지막 화면에서 '다음'은 아무 일도 하지 않는다 (전이 표에 없는 이동을 만들지 않기 위해)
+       *   ROUTE_GUIDE 에서 경로 카드를 누르면 카드 선택만 바뀐다. 카드가 아닌 곳을 누르면 다음으로 (확정본이 postMessage 로 알려 준다)
+       *   전환은 0.25초 나타나기 (디자인 문서 --motion-screen). 움직임 줄이기 설정이면 바로 바뀐다
+       *   무대는 1920×1080 고정이고 창 크기에 맞춰 통째로 줄여 가운데에 둔다 (실제 앱의 Stage 와 같은 방식)
+       *   주소 값: ?flow=2&at=3 은 2번 흐름의 3번째 화면부터, &auto=1 자동 넘김 켬, &hud=1 발표자용 표시 켬
+       *   흐름은 아래 FLOWS 한 곳만 고친다. 전이는 docs/kiosk-workflow.md 의 전이 표에 있는 것만 쓴다
+       * 이 페이지는 시연 도구라 키오스크 토큰(global.css)을 쓰지 않는다. 발표자용 화면은 일부러 키오스크와 다른 모양이다 */
+      :root {
+        --demo-bg: #111111;
+        --demo-panel: #1d1d1d;
+        --demo-line: #3a3a3a;
+        --demo-text: #f2f2f2;
+        --demo-sub: #b5b5b5;
+        --demo-key: #ffd23f;
+        --demo-font: ui-monospace, 'Cascadia Mono', Consolas, 'Malgun Gothic', monospace;
+      }
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        overflow: hidden;
+        background: var(--demo-bg);
+      }
+
+      /* ---------- 무대 (키오스크 화면) ---------- */
+      .stage {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        width: 1920px;
+        height: 1080px;
+        overflow: hidden;
+        background: #ffffff;
+        transform: translate(-50%, -50%) scale(var(--scale, 1));
+        cursor: pointer;
+        outline: none;
+      }
+      .stage iframe {
+        position: absolute;
+        inset: 0;
+        width: 1920px;
+        height: 1080px;
+        border: 0;
+        opacity: 0;
+        pointer-events: none; /* 누르는 것은 무대가 받는다 */
+      }
+      .stage iframe.is-on {
+        z-index: 1;
+        opacity: 1;
+        transition: opacity 250ms ease-out;
+      }
+      /* 바로 앞 화면은 새 화면이 다 나타날 때까지 아래에 둔다 (사이에 흰 바탕이 비치지 않게) */
+      .stage iframe.is-under {
+        opacity: 1;
+      }
+      /* 경로 카드가 있는 화면은 보이는 동안 직접 눌린다 */
+      .stage iframe.is-on[data-live] {
+        pointer-events: auto;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .stage iframe.is-on {
+          transition: none;
+        }
+      }
+
+      /* ---------- 발표자용 표시 (D) ---------- */
+      .hud,
+      .toast {
+        position: fixed;
+        z-index: 10;
+        padding: 4px 10px;
+        border-radius: 4px;
+        background: rgba(0, 0, 0, 0.72);
+        color: var(--demo-text);
+        font: 13px/1.4 var(--demo-font);
+        pointer-events: none;
+      }
+      .hud {
+        right: 8px;
+        bottom: 8px;
+      }
+      .toast {
+        left: 50%;
+        bottom: 8px;
+        transform: translateX(-50%);
+      }
+
+      /* ---------- 흐름 고르기 (발표자용) ---------- */
+      .picker {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        overflow: auto;
+        background: var(--demo-bg);
+        color: var(--demo-text);
+        font: 18px/1.5 var(--demo-font);
+      }
+      .picker-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px;
+      }
+      .picker h1 {
+        margin: 0 0 4px;
+        font-size: 26px;
+      }
+      .picker .lead {
+        margin: 0 0 24px;
+        color: var(--demo-sub);
+      }
+      .flows {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+      }
+      .flow {
+        display: grid;
+        grid-template-columns: 40px 1fr;
+        gap: 4px 16px;
+        width: 100%;
+        padding: 14px 16px;
+        border: 1px solid var(--demo-line);
+        border-radius: 6px;
+        background: var(--demo-panel);
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+      }
+      .flow:hover,
+      .flow:focus-visible {
+        border-color: var(--demo-key);
+        outline: none;
+      }
+      .flow kbd {
+        grid-row: span 2;
+        align-self: center;
+        justify-self: center;
+        display: grid;
+        place-items: center;
+        width: 32px;
+        height: 32px;
+        border: 1px solid var(--demo-key);
+        border-radius: 4px;
+        color: var(--demo-key);
+        font: inherit;
+        font-weight: 700;
+      }
+      .flow-name {
+        font-weight: 700;
+      }
+      .flow-steps {
+        color: var(--demo-sub);
+        font-size: 16px;
+        word-break: keep-all;
+      }
+      .flow-steps b {
+        color: var(--demo-text);
+        font-weight: 400;
+      }
+      .picker-foot {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px 32px;
+        margin-top: 24px;
+        color: var(--demo-sub);
+        font-size: 16px;
+      }
+      .picker-foot label {
+        color: var(--demo-text);
+        cursor: pointer;
+      }
+      .picker-foot kbd {
+        padding: 0 5px;
+        border: 1px solid var(--demo-line);
+        border-radius: 3px;
+        font: inherit;
+        color: var(--demo-text);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="stage" id="stage" role="button" tabindex="0" aria-label="다음 화면으로"></div>
+    <p class="hud" id="hud" hidden></p>
+    <p class="toast" id="toast" hidden></p>
+
+    <section class="picker" id="picker" aria-label="흐름 고르기">
+      <div class="picker-inner">
+        <h1>시연 흐름 고르기</h1>
+        <p class="lead">발표자용 화면이다. 숫자 키를 누르거나 줄을 눌러 시작한다. 키오스크 화면은 모두 confirmed/ 의 확정본이다.</p>
+        <ol class="flows" id="flows"></ol>
+        <div class="picker-foot">
+          <label><input type="checkbox" id="auto" /> 기다림 화면 2초 뒤 저절로 넘기기 (<kbd>A</kbd>)</label>
+          <label><input type="checkbox" id="hud-on" /> 발표자용 표시 (<kbd>D</kbd>)</label>
+        </div>
+        <p class="picker-foot">
+          <span>다음 <kbd>화면 누르기</kbd> <kbd>→</kbd> <kbd>Space</kbd></span>
+          <span>이전 <kbd>←</kbd></span>
+          <span>처음 <kbd>Home</kbd></span>
+          <span>흐름 바꾸기 <kbd>1</kbd>~<kbd>5</kbd></span>
+          <span>이 화면 <kbd>Esc</kbd></span>
+        </p>
+      </div>
+    </section>
+
+    <script>
+      // 확정본이 있는 폴더 (이 페이지 기준. 같은 confirmed/ 안에 있다)
+      const BASE = ''
+
+      // 화면 = 상태 이름 + 확정 파일과 주소 값 (확정 파일이 이미 받는 값만 쓴다)
+      const SCREEN = {
+        IDLE: 'idle-final-subway.html',
+        IDLE_REDUCED: 'idle-reduced-final.html',
+        LISTENING: 'listening-final.html',
+        RESOLVING: 'wait-final.html?s=RESOLVING',
+        FAIL_COUNT_CHECK: 'wait-final.html?s=FAIL_COUNT_CHECK',
+        CONFIRMING: 'confirming-final.html',
+        // 1번 흐름은 "명동" 이야기로 맞춘다: 들은 말 “명동” → 후보 명동역·명동성당·명동입구 → 명동역 길 찾기
+        RESOLVING_MYEONGDONG: 'wait-final.html?s=RESOLVING&heard=명동',
+        CONFIRMING_MYEONGDONG: 'confirming-final.html?set=myeongdong',
+        REASKING: 'reasking-final.html',
+        ROUTING: 'wait-final.html?s=ROUTING',
+        ROUTE_GUIDE: 'route-guide-final.html?set=subway',
+        QR_HANDOFF: 'qr-handoff-final.html',
+        UNAVAILABLE: 'unavailable-final.html?r=noroute',
+        MANUAL_SELECT: 'manual-select-final.html',
+        MANUAL_SELECT_NO_VOICE: 'manual-select-final.html?voice=0',
+      }
+      // 기다림 화면: 자동 넘김(A)이 켜져 있으면 2초 뒤 다음으로
+      const WAIT = new Set(['RESOLVING', 'FAIL_COUNT_CHECK', 'ROUTING'])
+      const AUTO_MS = 2000
+
+      // 흐름 다섯 가지. 이웃한 두 화면 사이는 모두 docs/kiosk-workflow.md 전이 표의 한 행이다 (오른쪽 주석)
+      const FLOWS = [
+        {
+          name: '기본',
+          steps: [
+            ['IDLE'], //            MIC_PRESSED
+            ['LISTENING'], //       SPEECH_END
+            ['RESOLVING', 'RESOLVING_MYEONGDONG'], //   need_confirm=true
+            ['CONFIRMING', 'CONFIRMING_MYEONGDONG'], // 후보 선택 (후보 3개 중 명동역)
+            ['ROUTING'], //         ROUTE_FOUND
+            ['ROUTE_GUIDE'], //     SEND_TO_PHONE_PRESSED
+            ['QR_HANDOFF'], //      GO_HOME
+            ['IDLE'],
+          ],
+        },
+        {
+          // 표에 LISTENING → REASKING 은 없다. 못 알아들은 경우는 RESOLVING → FAIL_COUNT_CHECK(1회) → REASKING 으로 간다
+          name: '다시 말하기',
+          steps: [
+            ['LISTENING'], //       SPEECH_END
+            ['RESOLVING'], //       못 알아들음
+            ['FAIL_COUNT_CHECK'], // FAIL_COUNT_1
+            ['REASKING'], //        RETRY_SPEECH
+            ['LISTENING'],
+          ],
+        },
+        {
+          name: '안내 불가',
+          steps: [
+            ['ROUTING'], //         ROUTE_FAILED (경로 없음)
+            ['UNAVAILABLE'], //     MANUAL_SELECT_PRESSED
+            ['MANUAL_SELECT'],
+          ],
+        },
+        {
+          name: '손으로 고르기',
+          steps: [
+            ['IDLE'], //            손으로 고르기
+            ['MANUAL_SELECT'], //   POI_SELECTED (명동역)
+            ['ROUTING'], //         ROUTE_FOUND
+            ['ROUTE_GUIDE'],
+          ],
+        },
+        {
+          name: '음성 불가',
+          steps: [
+            ['IDLE_REDUCED'], //    손으로 고르기
+            ['MANUAL_SELECT', 'MANUAL_SELECT_NO_VOICE'], // 마이크·STT 불가라 '말로 하기' 숨김
+          ],
+        },
+      ].map((flow) => ({ ...flow, steps: flow.steps.map(([state, key = state]) => ({ state, src: BASE + SCREEN[key] })) }))
+
+      const stage = document.getElementById('stage')
+      const picker = document.getElementById('picker')
+      const hud = document.getElementById('hud')
+      const toast = document.getElementById('toast')
+      const autoBox = document.getElementById('auto')
+      const hudBox = document.getElementById('hud-on')
+      const query = new URLSearchParams(location.search)
+
+      // ---------- 무대 크기 ----------
+      const fit = () => stage.style.setProperty('--scale', Math.min(innerWidth / 1920, innerHeight / 1080))
+      fit()
+      addEventListener('resize', fit)
+
+      // ---------- 흐름 고르기 화면 ----------
+      document.getElementById('flows').innerHTML = FLOWS.map(
+        (flow, i) => `
+          <li><button type="button" class="flow" data-flow="${i}">
+            <kbd>${i + 1}</kbd>
+            <span class="flow-name">${flow.name} <small>(${flow.steps.length}화면)</small></span>
+            <span class="flow-steps">${flow.steps.map((s) => `<b>${s.state}</b>`).join(' → ')}</span>
+          </button></li>`,
+      ).join('')
+      document.getElementById('flows').addEventListener('click', (e) => {
+        const row = e.target.closest('[data-flow]')
+        if (row) startFlow(Number(row.dataset.flow))
+      })
+
+      // ---------- 상태 ----------
+      let flowIndex = -1
+      let index = 0
+      let frames = []
+      let auto = query.get('auto') === '1'
+      let hudOn = query.get('hud') === '1'
+      let autoTimer = 0
+      let toastTimer = 0
+
+      // 흐름을 고르면 그 흐름의 화면을 모두 미리 불러 둔다 (넘길 때 기다리지 않게). 같은 상태가 두 번 나오면 따로 불러 처음 모습으로 보인다
+      function startFlow(i, at = 0) {
+        flowIndex = i
+        const flow = FLOWS[i]
+        stage.replaceChildren(
+          ...flow.steps.map((s) => {
+            const f = document.createElement('iframe')
+            f.src = s.src
+            f.title = s.state
+            f.tabIndex = -1
+            if (s.state === 'ROUTE_GUIDE') f.dataset.live = ''
+            return f
+          }),
+        )
+        frames = [...stage.children]
+        index = -1
+        picker.hidden = true
+        show(Math.min(Math.max(at, 0), frames.length - 1), false)
+        stage.focus()
+      }
+
+      function show(next, animate = true) {
+        frames.forEach((f, i) => {
+          f.classList.toggle('is-under', animate && i === index && i !== next)
+          f.classList.toggle('is-on', i === next)
+          if (!animate) f.style.transition = 'none'
+        })
+        if (!animate) requestAnimationFrame(() => frames.forEach((f) => (f.style.transition = '')))
+        index = next
+        render()
+        scheduleAuto()
+      }
+
+      function render() {
+        hud.hidden = !hudOn || picker.hidden === false
+        if (flowIndex >= 0) {
+          const flow = FLOWS[flowIndex]
+          hud.textContent = `${flow.name} · ${flow.steps[index].state} · ${index + 1}/${flow.steps.length}${auto ? ' · 자동' : ''}`
+        }
+        autoBox.checked = auto
+        hudBox.checked = hudOn
+      }
+
+      function scheduleAuto() {
+        clearTimeout(autoTimer)
+        if (!auto || flowIndex < 0 || !picker.hidden) return
+        if (WAIT.has(FLOWS[flowIndex].steps[index].state) && index < frames.length - 1) autoTimer = setTimeout(() => step(1), AUTO_MS)
+      }
+
+      // 마지막 다음, 처음 앞으로는 가지 않는다 (흐름 끝에서 처음으로 돌아가는 전이는 표에 없을 수 있다)
+      function step(by) {
+        if (flowIndex < 0 || !picker.hidden) return
+        const next = index + by
+        if (next >= 0 && next < frames.length) show(next)
+      }
+
+      function say(text) {
+        toast.textContent = text
+        toast.hidden = false
+        clearTimeout(toastTimer)
+        toastTimer = setTimeout(() => (toast.hidden = true), 1500)
+      }
+      function setAuto(on) {
+        auto = on
+        render()
+        scheduleAuto()
+        if (picker.hidden) say(`기다림 화면 자동 넘김 ${auto ? '켬' : '끔'}`)
+      }
+      function setHud(on) {
+        hudOn = on
+        render()
+      }
+      function openPicker() {
+        clearTimeout(autoTimer)
+        picker.hidden = false
+        render()
+        picker.querySelector(`[data-flow="${Math.max(flowIndex, 0)}"]`).focus()
+      }
+      autoBox.addEventListener('change', () => setAuto(autoBox.checked))
+      hudBox.addEventListener('change', () => setHud(hudBox.checked))
+
+      // ---------- 조작 ----------
+      stage.addEventListener('click', () => step(1))
+      // ROUTE_GUIDE 화면이 "카드가 아닌 곳을 눌렀다"고 알려 오면 다음으로 넘긴다
+      addEventListener('message', (e) => {
+        if (e.data?.type === 'demo-next' && frames[index] && e.source === frames[index].contentWindow) step(1)
+      })
+      addEventListener('keydown', (e) => {
+        if (e.altKey || e.ctrlKey || e.metaKey) return
+        const key = e.key
+        if (/^[1-5]$/.test(key)) return startFlow(Number(key) - 1)
+        if (key === 'a' || key === 'A') return setAuto(!auto)
+        if (key === 'd' || key === 'D') return setHud(!hudOn)
+        if (!picker.hidden) return // 흐름 고르기 화면에서는 Enter·스페이스가 그 줄의 버튼을 누른다
+        if (['ArrowRight', ' ', 'Enter', 'PageDown'].includes(key)) step(1)
+        else if (['ArrowLeft', 'PageUp'].includes(key)) step(-1)
+        else if (key === 'Home') show(0)
+        else if (key === 'Escape') openPicker()
+        else return
+        e.preventDefault()
+      })
+      // 경로 카드를 누르면 포커스가 iframe 으로 넘어가 이 페이지가 키를 받지 못한다. 곧바로 무대로 되돌린다.
+      // iframe 안을 들여다보지 않는 방법이라 file:// 로 열어도 같다 (overview.html 과 같은 방법)
+      addEventListener('blur', () => {
+        setTimeout(() => {
+          if (document.activeElement?.tagName === 'IFRAME') stage.focus()
+        })
+      })
+
+      // ---------- 시작 ----------
+      const startAt = Number(query.get('flow'))
+      if (startAt >= 1 && startAt <= FLOWS.length) startFlow(startAt - 1, (Number(query.get('at')) || 1) - 1)
+      else openPicker()
+    </script>
+  </body>
+</html>

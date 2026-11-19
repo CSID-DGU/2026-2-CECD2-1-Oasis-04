@@ -21,7 +21,7 @@
        *   단계 안내: 그림 없이 단계만 48px 굵게 (2026-11-19 팀장, (나)안 확정. 휴대폰 그림을 둔 (가)안은 지웠다).
        *     QR 상자와의 사이는 좌우 칸 사이와 같은 64px. 쓸 수 있는 폭이 440px 라 첫 단계는 "휴대폰 / 카메라를 켜요" 두 줄
        *     번호는 글꼴의 ①②③ 대신 ROUTE_GUIDE 노선 번호 원과 같은 모양 (52px, 테두리 6px, 숫자 30px). 색은 본문색 테두리 + 검정 숫자
-       * 오른쪽 칸: 보내는 경로의 요약 판 + 처음으로. ROUTE_GUIDE 의 경로가 1개일 때(R3)와 같은 요약 판 (묶음 바탕, 테두리 없음, 버튼 아님)과
+       * 오른쪽 칸: 보내는 경로의 요약 판 + 처음으로. ROUTE_GUIDE 의 경로가 1개일 때(R3)와 같은 요약 판 (묶음 바탕, 투명 테두리, 빈 체크 자리, 버튼 아님)과
        *   같은 묶음 배치(칸 아래쪽에 붙임). 소요 시간, 노선 표시, 도착 시각. 이름표 같은 새 문구는 없다 (2026-11-19 팀장)
        *   경로는 ROUTE_GUIDE 지하철역 묶음의 1순위(A, 약 12분, 3 → 4)
        *
@@ -31,6 +31,7 @@
         --qr-quiet: 40px;
         --qr-box: calc(var(--qr-size) + var(--qr-quiet) * 2);
         --card-height: 168px;
+        --check-size: 40px; /* route-guide-final.html 의 체크 자리. 요약 판에서는 비워 둔다 */
         --mark-height: 52px;
       }
       .screen .qr-title {
@@ -113,21 +114,24 @@
         text-wrap: balance;
       }
 
-      /* ---------- 오른쪽 칸: 요약 판 (route-guide-final.html 의 .card.is-only 와 같은 모양) ---------- */
+      /* ---------- 오른쪽 칸: 요약 판 (route-guide-final.html 의 .card.is-only 와 같은 모양) ----------
+       * 2026-11-19 (문서 12-5절): 경로 1개 요약 판과 같게 맞췄다. 투명 테두리 2px, 여백 20 20 20 16,
+       * 경로 카드의 체크 자리(40 + 12)를 비워 두어 글자 시작이 ROUTE_GUIDE 카드와 같다. 전에는 테두리 없이 왼쪽 여백 32 */
       .summary {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-columns: var(--check-size) auto minmax(0, 1fr);
         align-content: center;
         column-gap: 12px;
         row-gap: 4px;
         min-height: var(--card-height);
-        padding: 20px 20px 20px 32px;
+        padding: 20px 20px 20px 16px;
         color: var(--color-text);
         background: var(--color-bg-group);
+        border: 2px solid transparent;
         border-radius: 24px;
       }
       .card-time {
-        grid-column: 1;
+        grid-column: 2;
         grid-row: 1;
         align-self: center;
         font-size: var(--font-body);
@@ -138,18 +142,21 @@
       .card-time b {
         margin: 0 6px;
         font-size: var(--font-display);
+        font-weight: 700; /* <b> 의 기본값(bolder → 900) 대신. 글꼴 파일은 400·700 뿐 (문서 3-3절) */
         letter-spacing: -0.02em;
       }
+      /* route-guide-final.html 의 .card.is-only .card-arrive 와 같다: 도착 시각은 둘째 줄 전체 */
       .card-arrive {
-        grid-column: 1 / span 2;
+        grid-column: 2 / span 2;
         grid-row: 2;
         margin-top: 8px;
         font-size: var(--font-body);
         line-height: 1.2;
         white-space: nowrap;
       }
+      /* route-guide-final.html 의 .card.is-only .lines 와 같다: 노선 줄은 첫 줄에서만 */
       .lines {
-        grid-column: 2;
+        grid-column: 3;
         grid-row: 1;
         align-self: center;
         justify-self: end;
@@ -158,6 +165,7 @@
         justify-content: flex-end;
         align-items: center;
         gap: 8px;
+        row-gap: 8px;
       }
       .line-step {
         display: inline-flex;

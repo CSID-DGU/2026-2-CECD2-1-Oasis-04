@@ -4,8 +4,8 @@
 
 | 폴더 | 기준 | 들어 있는 것 |
 |---|---|---|
-| `confirmed/` | 확정된 시안. 팀장 결정이 난 것만 둔다 | IDLE 세 가지(`idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`), IDLE_REDUCED(`idle-reduced-final.html`), 얇은 띠(`band-thin.html`), 그 스타일과 띠 부품(`idle-final.css`, `idle-band.js`), LISTENING(`listening-final.html`), 기다림 화면 5개(`wait-final.html`, `wait.css`, 찍기 `wait-shoot.sh`), ROUTE_GUIDE(`route-guide-final.html`, 시험 데이터 `route-cases.js`, 찍기 `route-shoot.sh`), CONFIRMING(`confirming-final.html`)·MANUAL_SELECT(`manual-select-final.html`)와 두 화면의 고르는 카드·남은 시간 알림(`pick.css`, `timeout-notice.js`, 찍기 `pick-shoot.sh`, 2026-11-18), REASKING(`reasking-final.html`)·UNAVAILABLE(`unavailable-final.html`)·QR_HANDOFF(`qr-handoff-final.html`)와 MANUAL_SELECT 불러오는 중·오류(`manual-select-final.html?state=loading|error`), 네 화면의 공통 스타일(`states.css`, 찍기 `states-shoot.sh`, 2026-11-19), 모아 보기(`overview.html`, 상태 14개 모두), 확정 스크린샷(`shots/`) |
-| `wip/` | 작성 중인 시안. 아직 결정 전 | 시연(`demo.html`, 확정본만 쓴다: IDLE → LISTENING → RESOLVING → ROUTING → ROUTE_GUIDE) |
+| `confirmed/` | 확정된 시안. 팀장 결정이 난 것만 둔다 | IDLE 세 가지(`idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`), IDLE_REDUCED(`idle-reduced-final.html`), 얇은 띠(`band-thin.html`), 그 스타일과 띠 부품(`idle-final.css`, `idle-band.js`), LISTENING(`listening-final.html`), 기다림 화면 5개(`wait-final.html`, `wait.css`, 찍기 `wait-shoot.sh`), ROUTE_GUIDE(`route-guide-final.html`, 시험 데이터 `route-cases.js`, 찍기 `route-shoot.sh`), CONFIRMING(`confirming-final.html`)·MANUAL_SELECT(`manual-select-final.html`)와 두 화면의 고르는 카드·남은 시간 알림(`pick.css`, `timeout-notice.js`, 찍기 `pick-shoot.sh`, 2026-11-18), REASKING(`reasking-final.html`)·UNAVAILABLE(`unavailable-final.html`)·QR_HANDOFF(`qr-handoff-final.html`)와 MANUAL_SELECT 불러오는 중·오류(`manual-select-final.html?state=loading|error`), 네 화면의 공통 스타일(`states.css`, 찍기 `states-shoot.sh`, 2026-11-19), 모아 보기(`overview.html`, 상태 14개 모두), 발표 시연(`demo.html`, 흐름 다섯 가지, 2026-11-19), 확정 스크린샷(`shots/`) |
+| `wip/` | 작성 중인 시안. 아직 결정 전 | 지금은 비어 있다 (`demo.html` 은 2026-11-19 `confirmed/` 로 옮겼다) |
 | `archive/` | 폐기했거나 제안으로 끝난 시안, 확정안을 만들어 온 과정 | 방향 A·B·C(`a.html`, `b.html`, `c.html`, `index.html`), v2~v10, 만들기·찍기 스크립트(`build-*.mjs`, `*-shoot.sh`), 그때의 스크린샷(`shots/`) |
 | `shared/` | 세 폴더가 함께 쓰는 것 | `base.css`(실제 앱의 `global.css` 를 불러온다), `flow.css`(IDLE 다음 화면들의 공통 틀: 얇은 띠, 좌우 칸, 버튼, 고리), `brand.js`(서비스 이름. 이 한 곳만 고친다), `mock.js`(화면 하나만 보이기, 하한선 검사), `v3.js`(시각·날짜), `derive.html`(흐림·흑백 변환), `flow-compare.html`(스크린샷 나란히 놓기), `icons/` |
 
@@ -14,7 +14,7 @@
 - 서비스 이름은 `shared/brand.js` 의 `SERVICE_NAME` 한 곳에서 바꾼다 (2026-11-17, "말길" → "오아시스"). 화면에는 이름 자리 `<service-name></service-name>` 만 두고 `<head>` 에서 `brand.js` 를 불러온다. IDLE 파일은 `build-final.mjs` 가 원본의 이름을 이 자리로 바꿔 넣는다. `archive/` 의 지난 시안은 "말길" 그대로 두었다
 - 스크립트는 자기 폴더에서 실행한다: `confirmed/` 에서 `bash route-shoot.sh`, `bash wait-shoot.sh`, `bash pick-shoot.sh`(이름 앞부분을 주면 그 화면만: `bash pick-shoot.sh confirming`), `archive/` 에서 `bash v8-shoot.sh` 등
 - `confirmed/band-thin.html` 은 얇은 띠 확정 때의 예시라 고치지 않고 둔다. **띠 모양만 참고하고, 목록 배치는 `manual-select-final.html` 을 따른다** (band-thin 은 왼쪽 칸이 x 48px·한 칸 373px 인 예전 배치다. 지금은 x 140px·한 칸 343px, 디자인 문서 6절. 2026-11-18)
-- 시안 주소: `confirming-final.html`(후보 3개), `?n=1`(후보 1개), `?names=long`(긴 이름 시험), `manual-select-final.html`, `?voice=0`(말로 하기 숨김), `?names=long`, `?lines=1`(카드 이름 줄 수를 제목에 적음). `manual-select-final.html?state=loading | error`(불러오는 중·목록 오류), `reasking-final.html?heard=`(들은 말 없음), `unavailable-final.html?r=noroute | close | scope | upstream | generic`(이유 5가지, 그 밖의 드문 이유는 파일의 REASONS), `qr-handoff-final.html`. 모든 무입력 화면에서 `?left=15` 는 남은 시간 알림, `&live=1` 을 더하면 1초씩 줄어든다
+- 시안 주소: `confirming-final.html`(후보 3개), `?n=1`(후보 1개), `?names=long`(긴 이름 시험), `?set=myeongdong`(들은 말 "명동"과 후보 명동역·명동성당·명동입구, 시연용), `wait-final.html?s=RESOLVING&heard=명동`(들은 말 바꾸기, 시연용), `manual-select-final.html`, `?voice=0`(말로 하기 숨김), `?names=long`, `?lines=1`(카드 이름 줄 수를 제목에 적음). `manual-select-final.html?state=loading | error`(불러오는 중·목록 오류), `reasking-final.html?heard=`(들은 말 없음), `unavailable-final.html?r=noroute | close | scope | upstream | generic`(이유 5가지, 그 밖의 드문 이유는 파일의 REASONS), `qr-handoff-final.html`. 모든 무입력 화면에서 `?left=15` 는 남은 시간 알림, `&live=1` 을 더하면 1초씩 줄어든다
 - **아래 기록은 만든 순서대로 적은 것이다.** 폴더 표시 없이 적힌 파일 이름은 따로 적지 않았으면 `archive/` 에 있다 (`base.css`, `mock.js`, `derive.html`, `icons/` 는 `shared/`. `idle-final-*`, `idle-reduced-final`, `band-thin`, `idle-final.css`, `idle-band.js` 는 `confirmed/`)
 
 ## 시안: 디자인 방향 세 가지 (2026-11-16) — archive/
@@ -343,7 +343,7 @@ IDLE 확정안과 얇은 띠(`band-thin.html`)를 바탕으로 만든 시안이�
 | `route-guide.html` | ROUTE_GUIDE. 오른쪽 칸의 경로 카드 3개를 눌러 왼쪽 타임라인을 바꾼다. `?pick=2` 는 2순위가 선택된 채로, `?labels=ends` 는 역 라벨을 타는 곳·내리는 곳만 |
 | `../confirmed/route-guide-final.html` `route-shoot.sh` | ROUTE_GUIDE 확정본으로 옮겼다 (2026-11-17). 경로 규칙 R1~R8 은 디자인 문서 9절과 파일 맨 위 주석. `?pick=2`, `?set=long`, `?case=...` |
 | `../confirmed/route-cases.js` | ROUTE_GUIDE 시험 데이터 10가지(옮김). `route-guide-final.html?case=transfer3` 처럼 쓴다 (one, two, walk, longcard, longname, named, place, noexit, longthree). 그림은 `confirmed/shots/case-*.png` |
-| `demo.html` | 시연. 화면을 누르면 IDLE → LISTENING → ROUTING → ROUTE_GUIDE 로 넘어간다 (0.25초 나타나기). `?bg=blue`, `?at=2` |
+| `demo.html` | 시연. 화면을 누르면 IDLE → LISTENING → ROUTING → ROUTE_GUIDE 로 넘어간다 (0.25초 나타나기). `?bg=blue`, `?at=2`. 흐름 다섯 가지로 다시 만들어 `confirmed/demo.html` 로 옮겼다 (2026-11-19, 아래 '발표 시연 페이지') |
 | `../shared/flow.css` | 세 화면의 공통 틀(옮김): 얇은 띠, 왼쪽 칸(x 140), 오른쪽 버튼 칸(600), 버튼 모양, 고리 |
 | `flow-shoot.sh` `flow-compare.html` | 다시 찍기: `wip/` 에서 `bash flow-shoot.sh`. 그림은 `wip/shots/flow-*.png`, 검사 값은 `wip/shots/flow-measure.txt` |
 
@@ -366,3 +366,30 @@ IDLE 확정안과 얇은 띠(`band-thin.html`)를 바탕으로 만든 시안이�
 
 - 시안 중간에 만든 안(REASKING 의 작은 고리 안, 핵심 줄을 주 버튼 높이에 맞춘 1차 안, QR 의 휴대폰 그림 (가)안, 예시 세 줄 `?say=3`)은 지웠다. 그때의 스크린샷도 남기지 않았다
 - QR 단계 문구는 실제 앱(`QrHandoffScreen.jsx`)과 다르다. 구현할 때 코드 문구를 바꿔야 한다 (문서 12절)
+
+## 발표 시연 페이지 (2026-11-19) — confirmed/demo.html
+
+확정본만 iframe 으로 불러와 흐름 순서대로 넘기는 발표용 페이지다. 확정 파일은 고치지 않았다. 더블클릭(`file://`)으로 열어도 된다.
+
+- 열면 흐름 고르기 화면(발표자용, 검은 바탕)이 먼저 보인다. 숫자 키 1~5 또는 줄을 눌러 시작한다
+- 다음: 화면 누르기, →, Space, Enter, PageDown / 이전: ←, PageUp / 그 흐름의 처음: Home / 흐름 바꾸기: 1~5 / 흐름 고르기로: Esc
+- D: 오른쪽 아래에 작게 "흐름 이름 · 상태 이름 · 3/8" (발표자용 표시)
+- A: 기다림 화면(RESOLVING, FAIL_COUNT_CHECK, ROUTING)을 2초 뒤 저절로 넘긴다. 기본은 끔. 흐름 고르기 화면의 체크 상자와 같다
+- ROUTE_GUIDE 에서 경로 카드를 누르면 카드 선택만 바뀐다. 카드가 아닌 곳을 누르면 다음으로
+- 흐름의 마지막 화면에서 '다음'은 아무 일도 하지 않는다. 처음으로 돌아가는 이동이 전이 표에 없는 흐름이 있어서다
+- 전환은 0.25초 나타나기, 움직임 줄이기 설정이면 바로 바뀐다. 무대는 1920×1080 을 창에 맞춰 줄여 가운데에 둔다
+- 주소 값: `?flow=2&at=3`(2번 흐름 3번째 화면부터), `&auto=1`(자동 넘김 켬), `&hud=1`(발표자용 표시 켬)
+- 흐름은 파일 안 `FLOWS` 한 곳만 고친다. 이웃한 두 화면은 모두 `docs/kiosk-workflow.md` 전이 표의 한 행이다
+
+| 흐름 | 화면 순서 |
+|---|---|
+| 1 기본 | IDLE → LISTENING → RESOLVING → CONFIRMING(후보 3개) → ROUTING → ROUTE_GUIDE → QR_HANDOFF → IDLE |
+| 2 다시 말하기 | LISTENING → RESOLVING → FAIL_COUNT_CHECK → REASKING → LISTENING |
+| 3 안내 불가 | ROUTING → UNAVAILABLE(경로 없음) → MANUAL_SELECT |
+| 4 손으로 고르기 | IDLE → MANUAL_SELECT → ROUTING → ROUTE_GUIDE |
+| 5 음성 불가 | IDLE_REDUCED → MANUAL_SELECT(말로 하기 숨김) |
+
+- 2번 흐름: 전이 표에 LISTENING → REASKING 은 없다. 못 알아들은 경우의 길(RESOLVING → FAIL_COUNT_CHECK → REASKING)을 넣었다
+- 1번 흐름은 "명동" 이야기로 맞췄다: `wait-final.html?s=RESOLVING&heard=명동` → `confirming-final.html?set=myeongdong`(명동역 · 명동성당 · 명동입구) → 명동역 길 찾기. 두 주소 값은 이 페이지를 위해 확정 파일에 더한 것이고, 주소 값 없이 열 때의 기본 화면은 그대로다 (2026-11-19, 고치기 전후를 찍어 비교: 시계 분 말고 다른 픽셀 0)
+- 확인 (2026-11-19): Edge headless 로 `file://` 로 열어 다섯 흐름 22화면을 키로 넘기며 모두 찍었다. 빠진·깨진 화면 없음, 콘솔 오류·불러오기 실패 없음. 카드 누르기, 마지막·처음에서 멈춤, Home, 자동 넘김, 움직임 줄이기(전환 0s), 창 크기 1366×768·1440×900·1024×768 의 가운데 맞춤도 확인했다
+

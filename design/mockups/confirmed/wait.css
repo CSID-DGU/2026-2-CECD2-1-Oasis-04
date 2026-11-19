@@ -101,7 +101,7 @@
   margin: 24px 0 0;
   font-size: var(--font-sub);
   line-height: 1.2;
-  color: var(--color-text-sub);
+  color: var(--color-text);
 }
 
 .wait-core {
