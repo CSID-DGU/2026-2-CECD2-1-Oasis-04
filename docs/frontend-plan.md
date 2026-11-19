@@ -242,7 +242,7 @@ export function routingHandler(state, dispatch, api) {
 | `REASKING` | `ReaskingScreen.jsx` | "잘 못 알아들었어요, 다시 말씀해 주세요" + 다시 말하기 / 손으로 고르기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `RETRY_SPEECH`, `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + error 메시지 + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. `state.health`의 `mic` 또는 `stt`가 `false`면 '말로 하기'를 숨긴다 (전이 변경 없음). 무입력 60초 복귀 | `POI_SELECTED`(poi), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 1순위 크게 + 2·3순위 작게, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 경로 카드(최대 3개, 화면 안에서 고른다. 처음엔 1순위) + 선택된 경로의 타임라인, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 자리(텍스트/URL) 표시 + 처음으로. 무입력 60초 복귀 | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 
 - '처음으로' 버튼은 `ScreenFrame`의 `showHome` prop으로 넣는다. 사용자가 조작하는 7개 화면(`LISTENING`, `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF`)만 `showHome`을 켠다. 스피너 화면 5개와 `IDLE`, `IDLE_REDUCED`는 끈다
@@ -353,7 +353,7 @@ export const api = import.meta.env.VITE_USE_MOCK === 'true' ? mock : real;
 | 5 | `LISTENING` 탈출 조건 | 확인 필요 6 | **확정** | 진입 후 10초 무발화면 빈 텍스트로 `SPEECH_END` → 기존 NOT_UNDERSTOOD 흐름. 입력 시작 후엔 발화 후 2.5초 무음. '취소'(`LISTEN_CANCEL`) → IDLE. 시간값은 설정 |
 | 6 | 실패 횟수 초기화 시점과 누적 여부 | 확인 필요 7 | **확정** | 누적. 1회 → REASKING, 2회 이상 → MANUAL_SELECT. `IDLE` 진입(`INACTIVITY_TIMEOUT`, `GO_HOME`, `LISTEN_CANCEL`) 시 0. `SWITCH_TO_VOICE` 초기화 유지 |
 | 7 | 끝 상태·조작 화면에서 `IDLE` 복귀 | 확인 필요 8 | **확정** | `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF` 6곳에서 무입력 60초 → `INACTIVITY_TIMEOUT` (사용자가 자리를 떠나도 키오스크가 멈추지 않도록). 조작 화면 7곳에 '처음으로' → `GO_HOME`. `LISTENING`은 10초 무발화와 '취소'가 대신함. `DEV_RESET`은 개발 도구로 유지 |
-| 8 | `ROUTE_GUIDE`에서 2·3순위 경로 선택, 휴대폰으로 보내지 않고 종료 | 확인 필요 9 | 미정 | 2·3순위는 표시만, 선택 불가. 종료는 '처음으로'·무입력 복귀로 대체 |
+| 8 | `ROUTE_GUIDE`에서 2·3순위 경로 선택, 휴대폰으로 보내지 않고 종료 | 확인 필요 9 | **확정** (2026-11-19) | 경로 카드로 고른다. 화면 안 동작이라 상태·전이는 그대로다. 종료는 '처음으로'·무입력 복귀로 대체 |
 | 9 | 시작 점검에서 "서버 불가"와 "마이크·STT 불가" 동시 발생 시 우선순위 | 확인 필요 4 | 미정 | 서버 불가 우선 (서버 없으면 아무것도 못 하므로) |
 | 10 | `IDLE_REDUCED` 복구 경로 | 확인 필요 5 | **확정** | 60초마다 `RECHECK_TIMER` → `STARTUP_CHECK`에서 다시 점검. 정상이면 `IDLE`. 시간값은 설정 |
 | 11 | `CHECKING → STARTUP_CHECK` 점선의 의미 | 확인 필요 1 | 미정 | 30초 자동 재시도 타이머로 해석 |
