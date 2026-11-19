@@ -4,7 +4,7 @@
 
 | 폴더 | 기준 | 들어 있는 것 |
 |---|---|---|
-| `confirmed/` | 확정된 시안. 팀장 결정이 난 것만 둔다 | IDLE 세 가지(`idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`), IDLE_REDUCED(`idle-reduced-final.html`), 얇은 띠(`band-thin.html`), 그 스타일과 띠 부품(`idle-final.css`, `idle-band.js`), LISTENING(`listening-final.html`), 기다림 화면 5개(`wait-final.html`, `wait.css`, 찍기 `wait-shoot.sh`), ROUTE_GUIDE(`route-guide-final.html`, 시험 데이터 `route-cases.js`, 찍기 `route-shoot.sh`), CONFIRMING(`confirming-final.html`)·MANUAL_SELECT(`manual-select-final.html`)와 두 화면의 고르는 카드·남은 시간 알림(`pick.css`, `timeout-notice.js`, 찍기 `pick-shoot.sh`, 2026-11-18), 모아 보기(`overview.html`), 확정 스크린샷(`shots/`) |
+| `confirmed/` | 확정된 시안. 팀장 결정이 난 것만 둔다 | IDLE 세 가지(`idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`), IDLE_REDUCED(`idle-reduced-final.html`), 얇은 띠(`band-thin.html`), 그 스타일과 띠 부품(`idle-final.css`, `idle-band.js`), LISTENING(`listening-final.html`), 기다림 화면 5개(`wait-final.html`, `wait.css`, 찍기 `wait-shoot.sh`), ROUTE_GUIDE(`route-guide-final.html`, 시험 데이터 `route-cases.js`, 찍기 `route-shoot.sh`), CONFIRMING(`confirming-final.html`)·MANUAL_SELECT(`manual-select-final.html`)와 두 화면의 고르는 카드·남은 시간 알림(`pick.css`, `timeout-notice.js`, 찍기 `pick-shoot.sh`, 2026-11-18), REASKING(`reasking-final.html`)·UNAVAILABLE(`unavailable-final.html`)·QR_HANDOFF(`qr-handoff-final.html`)와 MANUAL_SELECT 불러오는 중·오류(`manual-select-final.html?state=loading|error`), 네 화면의 공통 스타일(`states.css`, 찍기 `states-shoot.sh`, 2026-11-19), 모아 보기(`overview.html`, 상태 14개 모두), 확정 스크린샷(`shots/`) |
 | `wip/` | 작성 중인 시안. 아직 결정 전 | 시연(`demo.html`, 확정본만 쓴다: IDLE → LISTENING → RESOLVING → ROUTING → ROUTE_GUIDE) |
 | `archive/` | 폐기했거나 제안으로 끝난 시안, 확정안을 만들어 온 과정 | 방향 A·B·C(`a.html`, `b.html`, `c.html`, `index.html`), v2~v10, 만들기·찍기 스크립트(`build-*.mjs`, `*-shoot.sh`), 그때의 스크린샷(`shots/`) |
 | `shared/` | 세 폴더가 함께 쓰는 것 | `base.css`(실제 앱의 `global.css` 를 불러온다), `flow.css`(IDLE 다음 화면들의 공통 틀: 얇은 띠, 좌우 칸, 버튼, 고리), `brand.js`(서비스 이름. 이 한 곳만 고친다), `mock.js`(화면 하나만 보이기, 하한선 검사), `v3.js`(시각·날짜), `derive.html`(흐림·흑백 변환), `flow-compare.html`(스크린샷 나란히 놓기), `icons/` |
@@ -14,7 +14,7 @@
 - 서비스 이름은 `shared/brand.js` 의 `SERVICE_NAME` 한 곳에서 바꾼다 (2026-11-17, "말길" → "오아시스"). 화면에는 이름 자리 `<service-name></service-name>` 만 두고 `<head>` 에서 `brand.js` 를 불러온다. IDLE 파일은 `build-final.mjs` 가 원본의 이름을 이 자리로 바꿔 넣는다. `archive/` 의 지난 시안은 "말길" 그대로 두었다
 - 스크립트는 자기 폴더에서 실행한다: `confirmed/` 에서 `bash route-shoot.sh`, `bash wait-shoot.sh`, `bash pick-shoot.sh`(이름 앞부분을 주면 그 화면만: `bash pick-shoot.sh confirming`), `archive/` 에서 `bash v8-shoot.sh` 등
 - `confirmed/band-thin.html` 은 얇은 띠 확정 때의 예시라 고치지 않고 둔다. **띠 모양만 참고하고, 목록 배치는 `manual-select-final.html` 을 따른다** (band-thin 은 왼쪽 칸이 x 48px·한 칸 373px 인 예전 배치다. 지금은 x 140px·한 칸 343px, 디자인 문서 6절. 2026-11-18)
-- 시안 주소: `confirming-final.html`(후보 3개), `?n=1`(후보 1개), `?names=long`(긴 이름 시험), `manual-select-final.html`, `?voice=0`(말로 하기 숨김), `?names=long`, `?lines=1`(카드 이름 줄 수를 제목에 적음). 두 화면 모두 `?left=15` 는 남은 시간 알림, `&live=1` 을 더하면 1초씩 줄어든다
+- 시안 주소: `confirming-final.html`(후보 3개), `?n=1`(후보 1개), `?names=long`(긴 이름 시험), `manual-select-final.html`, `?voice=0`(말로 하기 숨김), `?names=long`, `?lines=1`(카드 이름 줄 수를 제목에 적음). `manual-select-final.html?state=loading | error`(불러오는 중·목록 오류), `reasking-final.html?heard=`(들은 말 없음), `unavailable-final.html?r=noroute | close | scope | upstream | generic`(이유 5가지, 그 밖의 드문 이유는 파일의 REASONS), `qr-handoff-final.html`. 모든 무입력 화면에서 `?left=15` 는 남은 시간 알림, `&live=1` 을 더하면 1초씩 줄어든다
 - **아래 기록은 만든 순서대로 적은 것이다.** 폴더 표시 없이 적힌 파일 이름은 따로 적지 않았으면 `archive/` 에 있다 (`base.css`, `mock.js`, `derive.html`, `icons/` 는 `shared/`. `idle-final-*`, `idle-reduced-final`, `band-thin`, `idle-final.css`, `idle-band.js` 는 `confirmed/`)
 
 ## 시안: 디자인 방향 세 가지 (2026-11-16) — archive/
@@ -350,3 +350,19 @@ IDLE 확정안과 얇은 띠(`band-thin.html`)를 바탕으로 만든 시안이�
 시안에서 지어 넣은 것: 음량(가짜 값), 소요 시간·걷는 시간·출구 번호(모두 예시. 도착 시각은 지금 시각에 소요 시간을 더한 값).
 세 경로(3→4호선 충무로 환승, 1→4호선 서울역 환승, 5→4호선 동대문역사문화공원 환승)의 노선과 정거장 수는 아는 범위에서 맞췄고 공식 자료로 확인하지 않았다.
 경로 카드는 화면 안에서 선택된 경로만 바꾼다. 상태·전이는 그대로다 (`docs/kiosk-workflow.md` 의 '전이가 아닌 화면 안 동작'). '휴대폰으로 보내기'가 선택된 경로를 보내는지는 팀 확인 필요.
+
+## 확정 시안: REASKING, UNAVAILABLE, QR_HANDOFF, MANUAL_SELECT 불러오는 중·오류 (2026-11-19) — confirmed/
+
+기준은 `docs/design-guidelines.md` 12절. 지하철역(종로3가) 기준. 이것으로 상태 14개가 모두 확정본을 갖는다 (`overview.html` 14 / 14).
+
+| 파일 | 내용 |
+|---|---|
+| `reasking-final.html` | REASKING. LISTENING 자리(x 460, y 495)의 옅은 고리와 마이크(움직임 없음), 아래에 제목 → "잘 못 알아들었어요"(72px) → 들은 말 → IDLE 예시 한 줄. `?heard=` 들은 말 없음 |
+| `unavailable-final.html` | UNAVAILABLE. 같은 자리의 본문색 고리, 가운데 그림은 이유마다 (깃발·걷는 사람·지도 핀·시계). 이유 첫 문장만 72px 오류 색. `?r=` 로 이유를 고른다 |
+| `qr-handoff-final.html` | QR_HANDOFF. QR(그림 480 + 여백 40), 오른쪽에 단계 세 줄(48px 굵게, 번호는 노선 번호 원 모양), 오른쪽 칸에 보내는 경로 요약 판 + 처음으로. QR 그림은 예시(찍어도 열리지 않는다) |
+| `manual-select-final.html?state=loading` · `?state=error` | MANUAL_SELECT 불러오는 중(작은 고리 + 도는 호)·목록 오류. 별도 파일(`wip/manual-select-states.html`)이었던 것을 합쳤다 |
+| `states.css` | 위 네 화면의 공통 스타일 (큰 고리 묶음, 작은 고리, 핵심 줄·들은 말·오류 색) |
+| `states-shoot.sh` | 다시 찍기: `confirmed/` 에서 `bash states-shoot.sh` → `shots/reasking*.png`, `unavailable-*.png`, `qr*.png`, `manual-loading*.png`, `manual-error*.png` (+ -blur), `states-all.png`, `states-timeout.png`, `states-measure.txt` |
+
+- 시안 중간에 만든 안(REASKING 의 작은 고리 안, 핵심 줄을 주 버튼 높이에 맞춘 1차 안, QR 의 휴대폰 그림 (가)안, 예시 세 줄 `?say=3`)은 지웠다. 그때의 스크린샷도 남기지 않았다
+- QR 단계 문구는 실제 앱(`QrHandoffScreen.jsx`)과 다르다. 구현할 때 코드 문구를 바꿔야 한다 (문서 12절)

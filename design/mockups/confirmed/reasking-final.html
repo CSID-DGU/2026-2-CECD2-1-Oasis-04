@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>REASKING 확정 시안 (지하철역: 종로3가)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/flow.css" />
+    <link rel="stylesheet" href="pick.css" />
+    <link rel="stylesheet" href="states.css" />
+    <script src="../shared/brand.js"></script>
+    <style>
+      /* REASKING 확정본 (2026-11-19, 규칙은 docs/design-guidelines.md 12절). 눈이 가는 순서: 1 주 버튼 '다시 말하기' → 2 고리와 "잘 못 알아들었어요"·들은 말 → 3 나머지.
+       * 문구·버튼은 frontend/src/screens/ReaskingScreen.jsx 그대로다:
+       *   제목 "다시 한번 말씀해 주세요" / "잘 못 알아들었어요" / 들은 말: "병원" (비어 있으면 줄을 숨긴다)
+       *   오른쪽: 다시 말하기(주, RETRY_SPEECH) / 손으로 고르기(MANUAL_SELECT_PRESSED) / 처음으로(GO_HOME)
+       * 왼쪽 칸: LISTENING 확정안과 같은 자리·크기의 고리와 마이크 (가운데 x 460, y 495). 막대·움직임 없이 옅게 (states.css 의 .stack).
+       *   "다시 듣는 곳으로 돌아왔다"가 보이게. 고리 아래 한 덩어리로 제목(36px) → 핵심 줄(72px 굵게) → 들은 말(36px, 따옴표 안만 굵게)
+       *   → IDLE 확정안의 예시 문구("이렇게 말해 보세요" 30px + 따옴표 글자 52px).
+       * 탓하는 느낌이 없게: 오류 색·빨강·느낌표를 쓰지 않는다.
+       *
+       * 예시는 IDLE 의 첫 예시 한 줄 (2026-11-19 팀장 확정). 고리 자리가 정해져 있어 세 줄은 칸 아래로 121px 넘쳤다
+       * 주소: ?heard= 들은 말이 빈 경우, ?left=15 남은 시간 알림 */
+    </style>
+  </head>
+  <body>
+    <section class="screen" data-screen="REASKING">
+      <header class="thin" data-zone="band">
+        <div class="thin-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <service-name></service-name>
+        </div>
+        <div class="thin-place">종로3가</div>
+        <div class="thin-now"><span data-date>11월 19일 목요일</span> <span data-clock>오후 2:30</span></div>
+        <div class="thin-alert" data-zone="alert" role="status">
+          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m627-287 45-45-159-160v-201h-60v225l174 181ZM480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-82 31.5-155t86-127.5Q252-817 325-848.5T480-880q82 0 155 31.5t127.5 86Q817-708 848.5-635T880-480q0 82-31.5 155t-86 127.5Q708-143 635-111.5T480-80Zm0-400Zm0 340q140 0 240-100t100-240q0-140-100-240T480-820q-140 0-240 100T140-480q0 140 100 240t240 100Z" /></svg>
+          <p><b><span data-left>15</span>초 뒤에 처음으로 돌아가요</b><span>계속하시려면 화면을 눌러 주세요</span></p>
+        </div>
+      </header>
+
+      <div class="body">
+        <main class="left">
+          <div class="stack" data-zone="content">
+            <svg class="ring-big is-soft" data-zone="ring" viewBox="-170 -170 340 340" aria-hidden="true">
+              <circle class="ring-halo" />
+              <circle class="ring-core" />
+              <svg class="ring-icon" viewBox="0 -960 960 960">
+                <path d="M480-423q-43 0-72-30.92-29-30.91-29-75.08v-251q0-41.67 29.44-70.83Q437.88-880 479.94-880t71.56 29.17Q581-821.67 581-780v251q0 44.17-29 75.08Q523-423 480-423Zm0-228Zm-30 531v-136q-106-11-178-89t-72-184h60q0 91 64.29 153t155.5 62q91.21 0 155.71-62Q700-438 700-529h60q0 106-72 184t-178 89v136h-60Zm30-363q18 0 29.5-13.5T521-529v-251q0-17-11.79-28.5T480-820q-17.42 0-29.21 11.5T439-780v251q0 19 11.5 32.5T480-483Z" />
+              </svg>
+            </svg>
+            <h1 class="stack-title">다시 한번 말씀해 주세요</h1>
+            <p class="core-line v3-core" data-zone="core">잘 못 알아들었어요</p>
+            <p class="heard" data-zone="heard">들은 말: “<b data-heard>병원</b>”</p>
+            <p class="say-label">이렇게 말해 보세요</p>
+            <ul class="says" data-zone="says">
+              <li>“명동 어떻게 가요?”</li>
+            </ul>
+          </div>
+        </main>
+
+        <div class="right" data-zone="actions">
+          <button type="button" class="btn btn-primary" data-zone="primary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M480-423q-43 0-72-30.92-29-30.91-29-75.08v-251q0-41.67 29.44-70.83Q437.88-880 479.94-880t71.56 29.17Q581-821.67 581-780v251q0 44.17-29 75.08Q523-423 480-423Zm0-228Zm-30 531v-136q-106-11-178-89t-72-184h60q0 91 64.29 153t155.5 62q91.21 0 155.71-62Q700-438 700-529h60q0 106-72 184t-178 89v136h-60Zm30-363q18 0 29.5-13.5T521-529v-251q0-17-11.79-28.5T480-820q-17.42 0-29.21 11.5T439-780v251q0 19 11.5 32.5T480-483Z" /></svg>
+            <span>다시 말하기</span>
+          </button>
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M445-80q-29 0-56-12t-45-35L127-403l21-23q14-15 34.5-18.5T221-438l99 53v-365q0-12.75 8.68-21.38 8.67-8.62 21.5-8.62 12.82 0 21.32 8.62 8.5 8.63 8.5 21.38v465l-144-77 156 198q10 12 23.76 18 13.76 6 29.24 6h205q38 0 64-26t26-64v-170q0-25.5-17.25-42.75T680-460H460v-60h219.65q50.14 0 85.25 35 35.1 35 35.1 85v170q0 63-43.5 106.5T650-80H445ZM203-665q-11.07-18.75-17.04-40.49-5.96-21.74-5.96-44.76 0-70.75 49.73-120.25Q279.45-920 350-920t120.27 49.74Q520-820.52 520-749.96q0 22.96-5.96 44.62Q508.07-683.68 497-665l-52-30q7-12 11-26t4-29.48Q460-796 427.88-828q-32.12-32-78-32T272-827.92q-32 32.09-32 77.92 0 15 4 29t11 26l-52 30Zm285 335Z" /></svg>
+            <span>손으로 고르기</span>
+          </button>
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M220-180h150v-250h220v250h150v-390L480-765 220-570v390Zm-60 60v-480l320-240 320 240v480H530v-250H430v250H160Zm320-353Z" /></svg>
+            <span>처음으로</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      const query = new URLSearchParams(location.search)
+      // 고리 가운데 그림: LISTENING 과 같은 --ring-icon(152px)
+      const iconSize = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--ring-icon'))
+      document.querySelectorAll('svg.ring-icon').forEach((icon) => {
+        for (const [k, v] of Object.entries({ width: iconSize, height: iconSize, x: -iconSize / 2, y: -iconSize / 2 })) icon.setAttribute(k, v)
+      })
+      // 들은 말: 비어 있으면 줄을 숨긴다 (실제 화면과 같다)
+      if (query.has('heard')) {
+        const heard = query.get('heard')
+        if (heard) document.querySelector('[data-heard]').textContent = heard
+        else document.querySelector('.heard').remove()
+      }
+    </script>
+    <script src="timeout-notice.js"></script>
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>
