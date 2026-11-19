@@ -9,7 +9,7 @@ import { ICON_NAMES, RING_ICON_NAMES } from '../iconSource.js'
 
 // 확정 시안(design/mockups/confirmed/)에서 쓰는 아이콘
 const USED_IN_MOCKUPS = ['check', 'chevron_right', 'close', 'home', 'mic', 'schedule', 'smartphone', 'touch_app', 'logo']
-const RING_USED = ['flag', 'bubble', 'logo', 'walk', 'pin', 'clock']
+const RING_USED = ['flag', 'bubble', 'logo', 'walk', 'pin', 'clock', 'mic'] // mic: LISTENING 고리 (2단계)
 
 describe('Icon', () => {
   it('시안이 쓰는 아이콘 파일이 모두 있다', () => {
@@ -34,7 +34,7 @@ describe('Icon', () => {
 })
 
 describe('RingIcon', () => {
-  it('고리 안 그림 여섯 가지가 모두 있다 (시계는 Material schedule)', () => {
+  it('고리 안 그림 일곱 가지가 모두 있다 (시계·마이크는 Material)', () => {
     expect([...RING_ICON_NAMES].sort()).toEqual([...RING_USED].sort())
     for (const name of RING_USED) {
       expect(renderToStaticMarkup(<RingIcon name={name} />), name).toMatch(/^<svg[^>]*class="ring-icon/)

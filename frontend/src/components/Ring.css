@@ -1,0 +1,46 @@
+/* Ring — 고리. 기준: design/mockups/shared/flow.css .ring-halo .ring-core .ring-icon, 디자인 문서 3-4절
+ * 바깥 원 반지름 152·선 6·주 색 35%, 안쪽 원 반지름 118·선 6·흰 채움, 가운데 그림 152 본문색 */
+.ring {
+  --halo-opacity: 0.35;
+  /* 상자 크기: 바깥 원 + 선 굵기 절반씩. 고리의 가운데가 상자의 가운데다 */
+  --ring-box: calc(2 * var(--halo-r) + var(--ring-width));
+
+  position: relative;
+  width: var(--ring-box);
+  height: var(--ring-box);
+}
+
+.ring-circles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ring-circles circle {
+  cx: 50%;
+  cy: 50%;
+  stroke-width: var(--ring-width);
+}
+
+.ring-halo {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-opacity: var(--halo-opacity);
+  r: var(--halo-r);
+}
+
+.ring-core {
+  fill: var(--color-bg);
+  stroke: var(--color-primary);
+  r: var(--ring-r);
+}
+
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

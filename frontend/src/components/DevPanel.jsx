@@ -6,6 +6,8 @@
 //   - 현재 상태에서 가능한 이벤트 버튼: transitions[state] 에서 자동으로 뽑는다.
 //     effect 가 아직 없는 Phase 2 에서 타이머·API 결과·판단 노드 이벤트를 대신 눌러 주는 용도다.
 //     effect 가 생겨도 디버깅용으로 남겨 둔다.
+//   - mock 마이크 입력 (LISTENING, mock 모드에서만): 말 대신 글을 넣는다. 화면 시안에 입력창이 없어서 화면에서 옮겨 왔다
+//     (계획서 4-2절). 글이 바뀔 때마다 recorder.onInput 을 불러 예전처럼 무발화·무음 타이머가 돈다
 // 워크플로우 코드가 아니므로 스타일은 이 파일 안 inline 으로만 둔다.
 
 import { useState } from 'react'
@@ -14,6 +16,39 @@ import { DEV_EVENTS, EVENTS } from '../state/events.js'
 import { transitions } from '../state/transitions.js'
 import { config } from '../config.js'
 import { SCENARIOS, getScenario, setScenario } from '../api/mock/scenario.js'
+import { STATES } from '../state/states.js'
+import { USE_MOCK } from '../api/index.js'
+import { recorder } from '../devices/recorder.js'
+
+const toSeconds = (ms) => (ms / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })
+
+// LISTENING 에 들어갈 때마다 새로 그려져서(빈 글로 시작) 지난 입력이 남지 않는다.
+// '다 말했어요'(화면 버튼)는 recorder.getText() 로 이 글을 읽어 SPEECH_END 에 싣는다
+function MockSpeechInput() {
+  const [text, setText] = useState('')
+  const onChange = (e) => {
+    setText(e.target.value)
+    recorder.onInput(e.target.value) // 장치에 "지금 말하는 중" 을 알린다 (무발화 타이머 해제, 무음 타이머 리셋)
+  }
+  return (
+    <div style={{ marginTop: 6 }}>
+      <strong>mock 마이크</strong> 말 대신 글로 입력
+      <input
+        type="text"
+        value={text}
+        onChange={onChange}
+        // 화면이 열리면 바로 타이핑할 수 있게 커서를 둔다
+        autoFocus
+        placeholder="예: 서울역 / 병원 / 웅얼 / 하와이 / 에러"
+        aria-label="mock 마이크: 말 대신 글로 입력"
+        style={{ display: 'block', width: '100%', marginTop: 2, font: 'inherit' }}
+      />
+      <div>
+        입력 없이 {toSeconds(config.noSpeechMs)}초, 또는 입력을 멈추고 {toSeconds(config.silenceMs)}초 지나면 넘어감
+      </div>
+    </div>
+  )
+}
 
 // 시나리오별 한 줄 설명. 어느 Phase 에서 효과가 나는지도 적어 둔다.
 const SCENARIO_LABELS = {
@@ -108,6 +143,8 @@ export default function DevPanel() {
           .map(([k, v]) => `${k}=${v}`)
           .join(' ')}
       </div>
+
+      {USE_MOCK && state.state === STATES.LISTENING && <MockSpeechInput />}
 
       <div style={{ marginTop: 6 }}>
         <strong>scenario</strong> {scenario}

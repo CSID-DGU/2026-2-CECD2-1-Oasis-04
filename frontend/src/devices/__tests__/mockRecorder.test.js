@@ -175,4 +175,14 @@ describe('mockRecorder (무발화·무음 타이머)', () => {
     }).not.toThrow()
     expect(vi.getTimerCount()).toBe(0)
   })
+
+  it('getText 는 지금 세션에서 받은 글을 돌려주고, 세션이 없으면 빈 글이다 (다 말했어요 버튼용)', () => {
+    expect(recorder.getText()).toBe('')
+    recorder.start({ onSpeechEnd: vi.fn() })
+    expect(recorder.getText()).toBe('')
+    recorder.onInput('서울역')
+    expect(recorder.getText()).toBe('서울역')
+    recorder.stop()
+    expect(recorder.getText()).toBe('')
+  })
 })

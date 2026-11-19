@@ -1,0 +1,30 @@
+/* LISTENING 왼쪽 칸. 기준: design/mockups/confirmed/listening-final.html 의 .listen .listen-core .listen-hint
+ * 표시(640) + 8 + "듣고 있어요"(72 굵게) + 8 + 안내 두 줄(30). 표시의 가운데 축에 글을 맞추고 칸의 세로 가운데에 둔다 */
+.listening {
+  --stack-gap: 8px;
+  --core-line-height: 1.2;
+  --core-letter-spacing: -0.02em;
+
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: max-content; /* 듣는 중 표시(VoiceMeter)의 너비를 따른다. 글은 그보다 짧다 */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  text-align: center;
+}
+
+.listening-core {
+  margin: var(--stack-gap) 0 0;
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: var(--core-line-height);
+  letter-spacing: var(--core-letter-spacing);
+}
+
+.flow .listening-hint {
+  margin: var(--stack-gap) 0 0;
+  font-size: var(--font-sub);
+}

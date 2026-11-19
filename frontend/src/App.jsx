@@ -1,10 +1,12 @@
 // 앱의 뼈대. 세 가지만 한다.
 //   1. KioskProvider 로 감싸서 모든 화면이 { state, dispatch } 를 쓸 수 있게 한다
+//      LocationProvider 로 한 번 더 감싸서 지금 계신 곳(위치 조회 결과)을 모든 화면이 읽게 한다 (state/LocationContext.jsx)
 //   2. useKioskEffects() 를 한 번 호출해 상태 진입 시 API 호출·타이머가 돌게 한다
 //   3. 현재 상태에 맞는 화면 하나를 SCREEN_BY_STATE 에서 골라 보여 준다 (라우터 역할. 키오스크는 URL 이 없다)
 // useKiosk() 는 Provider 안에서만 쓸 수 있으므로, 2·3 은 Provider 안쪽의 작은 컴포넌트로 한 단계 내린다.
 
 import { KioskProvider, useKiosk } from './state/KioskContext.jsx'
+import { LocationProvider } from './state/LocationContext.jsx'
 import { useKioskEffects } from './effects/useKioskEffects.js'
 import { SCREEN_BY_STATE } from './screens/index.js'
 import DevPanelToggle from './components/DevPanelToggle.jsx'
@@ -29,14 +31,16 @@ function CurrentScreen() {
 export default function App() {
   return (
     <KioskProvider>
-      <KioskEffects />
-      {/* 화면은 1920×1080 무대 안에 그린다. 무대가 창 크기에 맞춰 통째로 줄어든다 (components/Stage.jsx) */}
-      <Stage>
-        <CurrentScreen />
-      </Stage>
-      {/* 개발 서버에서는 기본 표시, 빌드에서는 숨김. Ctrl+Shift+D 로 토글 (components/DevPanelToggle.jsx).
-          무대 밖에 두어서 창 크기와 상관없이 같은 크기로 보인다 */}
-      <DevPanelToggle />
+      <LocationProvider>
+        <KioskEffects />
+        {/* 화면은 1920×1080 무대 안에 그린다. 무대가 창 크기에 맞춰 통째로 줄어든다 (components/Stage.jsx) */}
+        <Stage>
+          <CurrentScreen />
+        </Stage>
+        {/* 개발 서버에서는 기본 표시, 빌드에서는 숨김. Ctrl+Shift+D 로 토글 (components/DevPanelToggle.jsx).
+            무대 밖에 두어서 창 크기와 상관없이 같은 크기로 보인다 */}
+        <DevPanelToggle />
+      </LocationProvider>
     </KioskProvider>
   )
 }

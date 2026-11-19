@@ -218,8 +218,9 @@ export function routingHandler(state, dispatch, api) {
 
 | 담당 | 책임 |
 |---|---|
-| `ListeningScreen` (화면) | 입력창(mock 음성), "다 말했어요", "취소", "처음으로" 버튼을 그린다. 입력이 바뀔 때마다 `recorder.onInput(text)`로 알린다. 버튼: 다 말했어요 → `SPEECH_END({ text })`, 취소 → `LISTEN_CANCEL`, 처음으로 → `GO_HOME` |
-| `recorder` (장치) | 타이머 두 개를 관리한다. **무발화 타이머**: `start()` 직후 `config.noSpeechMs`(10초) 동안 `onInput`이 한 번도 오지 않으면 `onSpeechEnd({ text: '' })`. **무음 타이머**: 첫 `onInput` 이후부터 동작하며, `onInput`마다 리셋되고 `config.silenceMs`(2.5초) 동안 입력이 없으면 `onSpeechEnd({ text })`. 첫 입력이 오면 무발화 타이머는 해제한다. `stop()`에서 둘 다 clear |
+| `ListeningScreen` (화면) | 듣는 중 표시와 "다 말했어요", "취소", "처음으로" 버튼을 그린다. 버튼: 다 말했어요 → `SPEECH_END({ text: recorder.getText() })`, 취소 → `LISTEN_CANCEL`, 처음으로 → `GO_HOME` |
+| `DevPanel` (mock 입력, 개발 도구) | mock 모드의 LISTENING 에서만 글 입력창을 보인다. 입력이 바뀔 때마다 `recorder.onInput(text)`로 알린다 (2026-11-19, 옮기기 계획 2단계에서 화면에서 옮겨 옴. 확정 시안에 입력창이 없다) |
+| `recorder` (장치) | 지금까지 받은 글을 `getText()` 로 알려 준다(real 은 늘 빈 글). 타이머 두 개를 관리한다. **무발화 타이머**: `start()` 직후 `config.noSpeechMs`(10초) 동안 `onInput`이 한 번도 오지 않으면 `onSpeechEnd({ text: '' })`. **무음 타이머**: 첫 `onInput` 이후부터 동작하며, `onInput`마다 리셋되고 `config.silenceMs`(2.5초) 동안 입력이 없으면 `onSpeechEnd({ text })`. 첫 입력이 오면 무발화 타이머는 해제한다. `stop()`에서 둘 다 clear |
 | `LISTENING` 핸들러 (effect) | `recorder.start({ onSpeechEnd: ({ text }) => dispatch(SPEECH_END, { text }) })` 를 호출하고, cleanup에서 `recorder.stop()` |
 
 빈 텍스트로 넘어간 `SPEECH_END`는 `RESOLVING`에서 `resolve('')` → `NOT_UNDERSTOOD` → `FAIL_COUNT_CHECK`로 이어져 기존 실패 흐름을 그대로 탄다 (회의 확정). `LISTEN_CANCEL`·`GO_HOME`은 둘 다 `IDLE`로 가고 failCount를 0으로 만든다. 버튼이 둘인 이유는 '취소'는 "말하기만 그만둔다"는 뜻이고 '처음으로'는 모든 조작 화면에 공통으로 두는 버튼이기 때문이다.
@@ -234,7 +235,7 @@ export function routingHandler(state, dispatch, api) {
 | `CHECKING` | `CheckingScreen.jsx` | "서버 연결 중, 잠시 후 다시 시도" + 남은 초 | 없음 (타이머) |
 | `IDLE` | `IdleScreen.jsx` | 안내 문구, 큰 마이크 버튼, 손으로 고르기 버튼 | `MIC_BUTTON_PRESSED`, `MANUAL_SELECT_PRESSED` |
 | `IDLE_REDUCED` | `IdleReducedScreen.jsx` | 안내 문구, 손으로 고르기 버튼만 (마이크 숨김). 60초마다 자동 재점검 | `MANUAL_SELECT_PRESSED` (`RECHECK_TIMER`는 effect) |
-| `LISTENING` | `ListeningScreen.jsx` | "듣고 있어요" + mock 입력창 + "다 말했어요" / "취소" / "처음으로" | `SPEECH_END` (버튼은 화면이 직접, 타이머는 recorder 경유), `LISTEN_CANCEL`, `GO_HOME` |
+| `LISTENING` | `ListeningScreen.jsx` | 듣는 중 표시 + "듣고 있어요" + "다 말했어요" / "취소" / "처음으로" (mock 입력창은 DevPanel) | `SPEECH_END` (버튼은 화면이 직접, 타이머는 recorder 경유), `LISTEN_CANCEL`, `GO_HOME` |
 | `RESOLVING` | `ResolvingScreen.jsx` | "말씀 알아듣는 중..." 스피너 | 없음 |
 | `CONFIRMING` | `ConfirmingScreen.jsx` | "OO 맞나요?" 또는 후보 목록, 예 / 모두 아니에요 / 다른 곳 말하기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `DESTINATION_CONFIRMED`(poi), `CONFIRM_NONE_OF_THEM`, `CONFIRM_SAY_OTHER_PLACE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `FAIL_COUNT_CHECK` | `FailCountCheckScreen.jsx` | 스피너 (즉시 지나감) | 없음 |

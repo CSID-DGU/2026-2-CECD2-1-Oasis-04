@@ -257,6 +257,12 @@ function discardPending() {
 // 실제 마이크에서는 화면 입력이 없다. mockRecorder 와 인터페이스를 맞추기 위한 빈 함수
 export function onInput() {}
 
+// 실제 마이크에서는 글이 없다. '다 말했어요' 는 빈 글로 SPEECH_END 를 보내고, 말소리는 takeRecording() 으로 넘어간다
+// (예전 화면도 실제 모드에서는 입력창이 없어 빈 글을 보냈다)
+export function getText() {
+  return ''
+}
+
 // LISTENING 을 떠날 때(cleanup) 호출. 여러 번 불려도 안전하다 (idempotent).
 // 타이머로 이미 끝난 뒤라면 세션이 없으므로 아무 일도 하지 않는다.
 export function stop() {

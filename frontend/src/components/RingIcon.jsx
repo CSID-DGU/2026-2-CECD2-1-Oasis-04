@@ -4,7 +4,7 @@
 // 색은 본문색, 크기는 쓰는 쪽(고리 부품)이 정한다. 그림만으로 뜻을 전하지 않으므로 화면 읽기 프로그램에는 숨긴다.
 //
 // props
-//   name       flag | bubble | logo | walk | pin | clock
+//   name       flag | bubble | logo | walk | pin | clock | mic
 //   className  크기·자리
 
 import { MATERIAL_ICONS, RING_DRAWINGS, RING_FROM_MATERIAL as FROM_MATERIAL } from './iconSource.js'

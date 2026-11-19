@@ -30,8 +30,8 @@ function parseAll(files) {
 export const MATERIAL_ICONS = parseAll(MATERIAL)
 export const RING_DRAWINGS = parseAll(RING)
 
-/** 고리 안 그림 중 손 그림이 아닌 것: 이름 → Material 파일 이름 (시계, 디자인 문서 12-3절) */
-export const RING_FROM_MATERIAL = Object.freeze({ clock: 'schedule' })
+/** 고리 안 그림 중 손 그림이 아닌 것: 이름 → Material 파일 이름 (시계 12-3절, LISTENING 의 마이크 10-1절) */
+export const RING_FROM_MATERIAL = Object.freeze({ clock: 'schedule', mic: 'mic' })
 
 /** Icon 이 그릴 수 있는 이름 */
 export const ICON_NAMES = Object.freeze(Object.keys(MATERIAL_ICONS))

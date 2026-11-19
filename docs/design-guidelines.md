@@ -34,7 +34,7 @@
 | 실물 기기 | 32인치 가로형으로 가정 | 임시 | 기기가 아직 없다. 실물 기기가 세로로 정해지면 배치(6절)만 다시 잡는다. 토큰·하한선·시선 순서는 그대로 쓴다 |
 | 실제 크기 | 1px ≈ 0.37mm → 30px ≈ 11mm, 36px ≈ 13mm, 48px ≈ 18mm, 112px ≈ 41mm | 임시 | 32인치 16:9 패널에 1920×1080 을 꽉 채운다고 가정한 계산값 (방향이 바뀌어도 1px 크기는 같다) |
 
-무대는 가로로 맞췄다. 화면 배치는 아직 세로로 쌓는 예전 구조다 (`frontend/src/components/Stage.jsx`. 6절의 좌우 두 칸과 8절의 첫 화면·띠는 아직 `frontend/` 에 옮기지 않았다). `design/audit.md` 와 시안 v1~v4 는 세로 기준 기록이다.
+무대는 가로로 맞췄다. 화면 배치는 아직 세로로 쌓는 예전 구조다 (`frontend/src/components/Stage.jsx`. 6절의 좌우 두 칸과 8절의 첫 화면·띠는 아직 `frontend/` 에 옮기지 않았다. 예외: 2026-11-19 부터 LISTENING 은 얇은 띠 + 좌우 두 칸 새 틀 `components/FlowFrame.jsx`). `design/audit.md` 와 시안 v1~v4 는 세로 기준 기록이다.
 
 밝기·햇빛 반사·설치 높이·보는 거리는 기기와 설치 장소가 정해지지 않아 **미확인**이다. 이 문서의 크기는 그 값 없이 정했다.
 
@@ -574,7 +574,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 10. LISTENING과 기다림 화면 (확정 2026-11-17)
 
-확정 시안은 `design/mockups/confirmed/listening-final.html`, `wait-final.html`(`wait.css`)이다. `frontend/` 에는 아직 반영하지 않았다.
+확정 시안은 `design/mockups/confirmed/listening-final.html`, `wait-final.html`(`wait.css`)이다. LISTENING 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 2단계. 음량 막대는 가짜 음량, 실제 음량은 12단계). 기다림 화면은 아직 반영하지 않았다.
 
 ### 10-1. LISTENING
 
