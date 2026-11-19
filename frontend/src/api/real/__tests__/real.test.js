@@ -185,6 +185,9 @@ describe('real API', () => {
         walkM: 130,
       })
       expect(result.routes[0].steps[0]).toMatchObject({ mode: 'WALK', distanceM: 40, easyText: '종로3가역까지 40미터 걸어가세요.' })
+      // 디자인 문서 9-2절 모양도 함께 (8단계). 노선 ID·출구는 서버가 주지 않아 비운다
+      expect(result.routes[0]).toMatchObject({ exit: null, start: null })
+      expect(result.routes[0].legs).toEqual([{ mode: 'WALK', minutes: 1, to: { name: '선릉역', kind: 'STATION' } }])
     })
     it('경로 조회 뒤에는 휴대폰으로 보낼 카카오맵 주소를 돌려준다', async () => {
       mockFetch(ok(ROUTE_DATA))

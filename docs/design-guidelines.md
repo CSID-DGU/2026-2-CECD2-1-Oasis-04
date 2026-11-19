@@ -520,7 +520,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 9. 경로 안내 (ROUTE_GUIDE, 확정 2026-11-17)
 
-확정 시안은 `design/mockups/confirmed/route-guide-final.html`, 시험 데이터는 같은 폴더의 `route-cases.js`(10가지)다. `frontend/` 에는 아직 반영하지 않았다.
+확정 시안은 `design/mockups/confirmed/route-guide-final.html`, 시험 데이터는 같은 폴더의 `route-cases.js`(10가지)다. `frontend/` 에는 데이터 모양만 옮겼다 (2026-11-20, 옮기기 계획 8단계: `view/routeView.js`, mock `api/mock/data/routeCases.js`, real 변환 `api/real/routeLegs.js`). 화면은 아직 옮기지 않았다.
 
 ### 9-1. 경로 규칙
 

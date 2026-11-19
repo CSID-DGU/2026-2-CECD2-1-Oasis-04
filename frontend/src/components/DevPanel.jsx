@@ -24,6 +24,7 @@ import { recorder } from '../devices/recorder.js'
 import { kioskError } from '../state/errorCodes.js'
 import { POIS, MYEONGDONG } from '../api/mock/data/pois.js'
 import { PLACES, PLACE_LABELS, BAND_CASES, getMockPlaceKey, setMockPlaceKey } from '../api/mock/data/places.js'
+import { ROUTE_A, ROUTE_BUS } from '../api/mock/data/routeCases.js'
 import { useLocation, useLocationRefresh } from '../state/LocationContext.jsx'
 
 // 위치를 받지 못해 서버 설정의 고정 위치를 쓰게 된 이유 (예전 CurrentLocation 의 문구 그대로)
@@ -116,10 +117,11 @@ const FAKE_CANDIDATES = [
   { id: 'poi-hospital-a', name: '동국대병원', category: '병원' },
   { id: 'poi-hospital-b', name: '서울병원', category: '병원' },
 ]
+// summary 는 지금 ROUTE_GUIDE 가 보이는 글자라 그대로 둔다. legs·start·exit 는 디자인 문서 9-2절 모양 (8단계, 9단계부터 화면이 쓴다)
 const FAKE_ROUTES = [
-  { id: 'route-1', summary: '지하철 3호선 → 4호선, 25분' },
-  { id: 'route-2', summary: '버스 100번, 32분' },
-  { id: 'route-3', summary: '지하철 3호선 → 버스 200번, 35분' },
+  { ...ROUTE_A, id: 'route-1', summary: '지하철 3호선 → 4호선, 25분', durationMin: undefined },
+  { ...ROUTE_BUS[0], id: 'route-2', summary: '버스 100번, 32분', durationMin: undefined },
+  { ...ROUTE_BUS[2], id: 'route-3', summary: '지하철 3호선 → 버스 200번, 35분', durationMin: undefined },
 ]
 const DEV_PAYLOADS = {
   [EVENTS.HEALTH_OK]: { health: { server: true, mic: true, stt: true } },

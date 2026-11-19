@@ -8,12 +8,16 @@
 //   실패 UPSTREAM_ERROR  → ApiError(UPSTREAM, 서버의 쉬운 문장)
 //   그 밖의 실패          → ApiError(UNKNOWN, 서버의 쉬운 문장 또는 null)   (오류 코드는 docs/frontend-plan.md 2-3절)
 //
+// 경로마다 디자인 문서 9-2절 모양(legs[], start, exit)도 함께 만든다 (8단계, 바꾸는 규칙과 대체 동작은 routeLegs.js).
+// 9단계부터 ROUTE_GUIDE 는 이것을 view/routeView.js 로 바꿔 그린다. exit 는 서버가 필드로 주지 않아 늘 null (#3)
+//
 // 화면이 지금 쓰는 것은 summary·durationMin·transfers 뿐이지만, 단계별 쉬운 문장(steps[].easyText)과
 // 요금·도보 거리도 함께 실어 둔다. 경로 상세 화면을 만들 때 바로 쓸 수 있다.
 // 서버가 준 카카오맵 길찾기 주소(landing_url)는 '휴대폰으로 보내기'(qr.js)가 쓰도록 기억해 둔다.
 
 import { apiFetch, KIOSK_ID } from './http.js'
 import { ApiError } from '../apiError.js'
+import { legsFromSteps, startFromSteps, destinationPlace } from './routeLegs.js'
 
 // 서버 오류 코드 → 앱 오류 코드 (ROUTE_NOT_FOUND 는 빈 경로로 돌려주므로 여기 없다)
 const ROUTE_ERROR_CODES = { ROUTE_TOO_CLOSE: 'TOO_CLOSE', UPSTREAM_ERROR: 'UPSTREAM' }
@@ -52,6 +56,7 @@ export async function route(poiId) {
 
   const d = body.data ?? {}
   lastLandingUrl = d.landing_url ?? null
+  const destination = destinationPlace(d.destination)
   const routes = (d.routes ?? []).map((r) => ({
     id: `${poiId}#${r.rank}`,
     rank: r.rank,
@@ -62,6 +67,9 @@ export async function route(poiId) {
     fare: r.fare ?? null,
     headline: r.headline ?? '',
     steps: (r.steps ?? []).map(toStep),
+    exit: null,
+    start: startFromSteps(r.steps),
+    legs: legsFromSteps(r.steps, { destination }),
   }))
   return { routes, summaryText: d.summary_text ?? '', destination: d.destination ?? null }
 }
