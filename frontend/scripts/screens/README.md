@@ -6,6 +6,7 @@
 | 파일 | 하는 일 |
 |---|---|
 | `shoot-screens.js` | 실제 앱 14화면을 1920×1080 으로 찍고, 화면마다 하한선 숫자를 돌려준다. 흐림(12px) 그림도 고른 화면만 찍는다 |
+| `shoot-pick.js` | CONFIRMING·MANUAL_SELECT 의 9가지 경우를 앱과 확정 시안에서 나란히 찍는다 (5단계에서 생김). 비교는 `compare-shots.js` 의 `a`·`b` 를 `mock-step5`·`current-step5` 로 |
 | `compare-shots.js` | 그림 폴더 두 개를 같은 이름끼리 픽셀로 비교한다 (다른 픽셀 수와 다른 곳의 상자) |
 | `serve-repo.mjs` | 저장소 전체를 `http://127.0.0.1:8800/` 으로 보여 주는 작은 서버. 비교와 확정 시안 찍기에 쓴다 |
 

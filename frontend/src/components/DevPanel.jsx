@@ -20,6 +20,7 @@ import { STATES } from '../state/states.js'
 import { USE_MOCK } from '../api/index.js'
 import { recorder } from '../devices/recorder.js'
 import { kioskError } from '../state/errorCodes.js'
+import { POIS, MYEONGDONG } from '../api/mock/data/pois.js'
 
 const toSeconds = (ms) => (ms / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })
 
@@ -59,6 +60,7 @@ const SCENARIO_LABELS = {
   [SCENARIOS.micDown]: 'micDown — 마이크 불가 → IDLE_REDUCED',
   [SCENARIOS.routeError]: 'routeError — 경로 조회 오류 → UNAVAILABLE',
   [SCENARIOS.poisError]: 'poisError — 목적지 목록 오류 (화면 문구만, 전이 없음)',
+  [SCENARIOS.longNames]: 'longNames — 목적지 목록을 긴 이름 12개로 (줄 바꿈 시험)',
   [SCENARIOS.qrError]: 'qrError — QR 생성 오류 (화면 문구만, 전이 없음)',
 }
 
@@ -98,6 +100,20 @@ const FAKE_ERRORS = {
   nopoi: kioskError('NO_POI', '목적지가 정해지지 않았어요'),
   long: kioskError('UNKNOWN', '말씀이 조금 길었어요. 짧게 한 번 더 말씀해 주세요.'),
 }
+// RESOLVE_NEED_CONFIRM 에 실을 후보 묶음. 패널의 '후보 묶음' 으로 고른다 (CONFIRMING 의 경우를 보려고, 시안 confirming-final.html).
+// ''(기본)이면 위 FAKE_CANDIDATES. 이벤트는 그대로이고 payload 만 다르다
+const hospitals = POIS.filter((p) => p.category === '병원')
+const FAKE_CANDIDATE_SETS = {
+  hospital: hospitals,
+  myeongdong: [...MYEONGDONG],
+  one: hospitals.slice(0, 1),
+  long: [
+    { id: 'poi-long-a', name: '서울특별시 동부병원 응급의료센터 별관', category: '종합병원' },
+    { id: 'poi-long-b', name: '동국대학교 일산불교병원', category: '대학병원' },
+    hospitals[2],
+  ],
+}
+
 const ERROR_EVENTS = new Set([EVENTS.ROUTE_FAILED, EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR])
 
 const panelStyle = {
@@ -122,9 +138,13 @@ export default function DevPanel() {
   // (모듈 변수가 바뀌어도 React 는 모르므로, 표시 갱신용으로만 state 를 하나 둔다)
   const [scenario, setScenarioView] = useState(getScenario)
   const [devError, setDevError] = useState('') // FAKE_ERRORS 의 키. '' 이면 이벤트별 기본값
+  const [devCandidates, setDevCandidates] = useState('') // FAKE_CANDIDATE_SETS 의 키
 
   const payloadOf = (event) => {
     if (devError && ERROR_EVENTS.has(event)) return { error: FAKE_ERRORS[devError] }
+    if (devCandidates && event === EVENTS.RESOLVE_NEED_CONFIRM) {
+      return { resolve: { status: 'OK', needConfirm: true, candidates: FAKE_CANDIDATE_SETS[devCandidates] } }
+    }
     return DEV_PAYLOADS[event] ?? {}
   }
 
@@ -188,6 +208,17 @@ export default function DevPanel() {
           {Object.entries(FAKE_ERRORS).map(([key, err]) => (
             <option key={key} value={key}>
               오류 이유: {key} ({err.code})
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ marginTop: 2 }}>
+        <select value={devCandidates} onChange={(e) => setDevCandidates(e.target.value)} aria-label="후보 묶음">
+          <option value="">후보 묶음: 기본 (2개)</option>
+          {Object.entries(FAKE_CANDIDATE_SETS).map(([key, list]) => (
+            <option key={key} value={key}>
+              후보 묶음: {key} ({list.length}개)
             </option>
           ))}
         </select>

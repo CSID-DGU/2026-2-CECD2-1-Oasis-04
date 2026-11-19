@@ -4,11 +4,12 @@
 //   '에러' 포함               → Error('SERVER_ERROR')
 //   '병원' 포함               → { status: 'OK', needConfirm: true, candidates: 병원 3개 }
 //   목적지 이름과 정확히 일치 → { status: 'OK', needConfirm: false, poi }
-//   그 외                     → { status: 'NOT_UNDERSTOOD' }  (모르는 말은 못 알아들은 것으로)
+//   '명동' 포함               → { status: 'OK', needConfirm: true, candidates: 명동역·명동성당·명동입구 } (시연 흐름 1번, 계획서 5-2절)
+//   그 외                    → { status: 'NOT_UNDERSTOOD' }  (모르는 말은 못 알아들은 것으로)
 // 우선순위는 위에서 아래 순서다 ('병원 에러' 처럼 겹치면 먼저 걸리는 규칙이 이긴다).
 
 import { mockDelay } from './mockDelay.js'
-import { POIS } from './data/pois.js'
+import { POIS, MYEONGDONG } from './data/pois.js'
 
 export async function resolve(text) {
   const query = (text ?? '').trim()
@@ -25,6 +26,7 @@ export async function resolve(text) {
 
   const poi = POIS.find((p) => p.name === query)
   if (poi) return { status: 'OK', needConfirm: false, poi }
+  if (query.includes('명동')) return { status: 'OK', needConfirm: true, candidates: [...MYEONGDONG] }
 
   return { status: 'NOT_UNDERSTOOD' }
 }

@@ -50,6 +50,11 @@ export function LocationProvider({ children }) {
   return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>
 }
 
+// 정해 둔 값을 그대로 나눠 주는 Provider. 조회하지 않는다. 화면 테스트가 쓴다 (screens/__tests__/providers.jsx, 계획서 6-2절)
+export function StaticLocationProvider({ value = { location: null, status: 'ready' }, children }) {
+  return <LocationContext.Provider value={value}>{children}</LocationContext.Provider>
+}
+
 // eslint-disable-next-line react-refresh/only-export-components -- Provider 와 훅을 한 파일에 둔다 (KioskContext 와 같은 구조)
 export function useLocation() {
   const ctx = useContext(LocationContext)

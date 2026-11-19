@@ -611,7 +611,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 11. CONFIRMING과 MANUAL_SELECT (확정 2026-11-18)
 
-확정 시안은 `design/mockups/confirmed/confirming-final.html`, `manual-select-final.html` 이고, 두 화면이 함께 쓰는 고르는 카드와 남은 시간 알림은 같은 폴더의 `pick.css`, `timeout-notice.js` 다. 찍기는 `pick-shoot.sh`. `frontend/` 에는 아직 반영하지 않았다.
+확정 시안은 `design/mockups/confirmed/confirming-final.html`, `manual-select-final.html` 이고, 두 화면이 함께 쓰는 고르는 카드와 남은 시간 알림은 같은 폴더의 `pick.css`, `timeout-notice.js` 다. 찍기는 `pick-shoot.sh`. `frontend/` 에는 계획서 5단계에서 옮겼다 (2026-11-19, `components/PickList.jsx`·`PickCard.jsx`·`SmallRing.jsx`). 남은 시간 알림은 6단계에서 옮긴다.
 
 ### 11-1. 고르는 카드
 

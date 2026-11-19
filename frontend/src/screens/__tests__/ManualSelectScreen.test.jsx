@@ -10,6 +10,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { act } from 'react'
 import { createRoot } from 'react-dom/client'
 import { EVENTS } from '../../state/events.js'
+import { withProviders } from './providers.jsx'
 
 // 테스트마다 바꿔 끼우는 가짜 Context 값
 let kiosk = { state: { health: null }, dispatch: vi.fn() }
@@ -21,6 +22,9 @@ const { default: ManualSelectScreen } = await import('../ManualSelectScreen.jsx'
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 
+// 버튼 안 글자. 아이콘(svg)은 글자가 없으므로 버튼의 글자만 남는다 (앞뒤 공백 제거)
+const labelOf = (button) => button.textContent.trim()
+
 let container
 let root
 
@@ -28,9 +32,9 @@ let root
 async function renderWith(health) {
   kiosk = { state: { health }, dispatch: vi.fn() }
   await act(async () => {
-    root.render(<ManualSelectScreen />)
+    root.render(withProviders(<ManualSelectScreen />))
   })
-  return [...container.querySelectorAll('button')].find((b) => b.textContent === '말로 하기')
+  return [...container.querySelectorAll('button')].find((b) => labelOf(b) === '말로 하기')
 }
 
 describe("ManualSelectScreen '말로 하기' 버튼", () => {
@@ -61,7 +65,7 @@ describe("ManualSelectScreen '말로 하기' 버튼", () => {
 
   it("숨겨도 '처음으로' 버튼은 남아 있다", async () => {
     await renderWith({ server: true, mic: false, stt: false })
-    const labels = [...container.querySelectorAll('button')].map((b) => b.textContent)
+    const labels = [...container.querySelectorAll('button')].map(labelOf)
     expect(labels).toContain('처음으로')
     expect(labels).not.toContain('말로 하기')
   })
