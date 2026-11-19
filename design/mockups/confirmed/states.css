@@ -1,0 +1,180 @@
+/* states.css — REASKING, UNAVAILABLE, QR_HANDOFF, MANUAL_SELECT(불러오는 중·오류)가 함께 쓰는 것. 확정 (2026-11-19). 규칙은 docs/design-guidelines.md 12절.
+ * ../shared/flow.css, pick.css 다음에 불러온다.
+ *   큰 고리 묶음(.stack)   REASKING, UNAVAILABLE. LISTENING 자리의 고리 + 그 아래 글 한 덩어리
+ *   작은 고리(.ring-small)  MANUAL_SELECT 불러오는 중. 고리 부품의 절반 크기 + 도는 호
+ *   핵심 줄·들은 말·오류 색  위 화면들의 글자 모양 */
+
+/* ---------- 글자 ---------- */
+
+/* 핵심 줄: 72px 굵게 (--font-display, 문서 3-3절 '화면의 핵심 한 줄') */
+.screen .core-line {
+  margin: 0;
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  word-break: keep-all;
+}
+
+/* 이유의 나머지 문장 (UNAVAILABLE): 36px 본문색 */
+.screen .core-more {
+  margin: 16px 0 0;
+  font-size: var(--font-body);
+  line-height: 1.4;
+  word-break: keep-all;
+}
+
+/* 들은 말: CONFIRMING 과 같은 모양 (36px, 따옴표 안만 굵게) */
+.screen .heard {
+  margin: 16px 0 0;
+  font-size: var(--font-body);
+  line-height: 1.4;
+}
+
+.heard b {
+  font-weight: 700;
+}
+
+/* 오류 색 글씨 (흰 바탕 9.11:1, 문서 3-2절) */
+.screen .is-error {
+  color: var(--color-error);
+}
+
+/* ---------- 큰 고리 묶음: REASKING, UNAVAILABLE ----------
+ * LISTENING 확정안과 같은 자리·같은 크기의 고리: 왼쪽 칸 가운데 축 x 460(칸 안 0~640), 고리 가운데 화면 y 495 (본문 위에서 399).
+ * 고리 토큰은 LISTENING 과 같다 (--halo-r 152, --ring-r 118, --ring-icon 152). 막대·움직임 없음.
+ * 고리 아래에 글을 한 덩어리로, 고리의 가운데 축에 맞춰 가운데 정렬 (LISTENING 의 "듣고 있어요"와 같다) */
+:root {
+  --stack-width: 640px; /* LISTENING 의 --meter-size. 왼쪽 칸 x 140 ~ 780, 가운데 460 */
+  --ring-box: 340px; /* wait.css 의 --wait-box 와 같다 */
+  --ring-center-y: 399px; /* wait.css 와 같다. 화면으로는 96 + 399 = 495px */
+  --font-say: 52px; /* IDLE 예시 문구 (idle-final.css 와 같은 값, 문서 8-2절) */
+}
+
+.stack {
+  position: absolute;
+  left: 0;
+  width: var(--stack-width);
+  top: calc(var(--ring-center-y) - var(--ring-box) / 2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ring-big {
+  flex-shrink: 0;
+  display: block;
+  width: var(--ring-box);
+  height: var(--ring-box);
+  margin-bottom: -8px; /* 상자 아래의 빈 자리(15px)를 조금 줄인다 */
+}
+
+/* REASKING: 옅은 고리. 안쪽 고리도 바깥 고리와 같은 진하기(35%)로 낮춘다. 마이크는 본문색 그대로 */
+.ring-big.is-soft .ring-core {
+  stroke-opacity: 0.35;
+}
+
+/* UNAVAILABLE: 주 색이 아니라 본문색 고리. 바깥 35%, 안쪽 100% (LISTENING 과 같은 두 겹) */
+.ring-big.is-text .ring-halo,
+.ring-big.is-text .ring-core {
+  stroke: var(--color-text);
+}
+
+/* 선으로 그린 가운데 그림: wait.css 의 .ring-icon.is-line 과 같다 (152 칸에서 선 굵기 9.5) */
+.ring-icon.is-line {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: 9.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.screen .stack-title {
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+.stack .core-line {
+  margin-top: 4px;
+  text-wrap: balance;
+}
+
+.stack .heard,
+.stack .core-more {
+  margin-top: 8px;
+}
+
+/* IDLE 확정안의 예시 문구와 같은 모양: "이렇게 말해 보세요" 30px + 따옴표 글자 52px (테두리·바탕 없음) */
+.screen .say-label {
+  margin: 24px 0 8px;
+  font-size: var(--font-sub);
+  line-height: 1.4;
+}
+
+.says {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-say);
+  line-height: 1.35;
+  white-space: nowrap;
+}
+
+/* ---------- 작은 고리: MANUAL_SELECT 불러오는 중 ----------
+ * LISTENING·기다림 화면 고리 부품(flow.css 의 .ring-*)을 반지름만 절반으로 (2026-11-19 팀장).
+ * 바깥 지름 152px. 고리 선 굵기(6px)는 그대로. 바깥 고리 위를 주 색 호가 --motion-wait 에 한 바퀴 돈다 */
+:root {
+  --halo-r-small: calc(var(--halo-r) / 2);
+  --ring-r-small: calc(var(--ring-r) / 2);
+  --ring-small-box: 172px; /* 바깥 고리(지름 152) + 도는 호 굵기(10) + 여유 */
+}
+
+.ring-small {
+  display: block;
+  width: var(--ring-small-box);
+  height: var(--ring-small-box);
+  overflow: visible;
+}
+
+.ring-small .ring-halo {
+  r: var(--halo-r-small);
+}
+
+.ring-small .ring-core {
+  r: var(--ring-r-small);
+}
+
+.ring-small .ring-arc {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 10px; /* wait.css 의 --arc-width 와 같다 */
+  stroke-linecap: round;
+  stroke-dasharray: 22 78;
+  r: var(--halo-r-small);
+  transform: rotate(-90deg);
+}
+
+@keyframes ring-small-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ring-small .ring-arc.is-spinning {
+    animation: ring-small-spin var(--motion-wait) linear infinite;
+  }
+}
+
+[hidden] {
+  display: none !important;
+}

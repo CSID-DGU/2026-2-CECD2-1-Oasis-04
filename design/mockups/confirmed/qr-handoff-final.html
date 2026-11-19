@@ -1,0 +1,288 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <title>QR_HANDOFF 확정 시안 (지하철역: 종로3가)</title>
+    <link rel="stylesheet" href="../shared/base.css" />
+    <link rel="stylesheet" href="../shared/flow.css" />
+    <link rel="stylesheet" href="pick.css" />
+    <link rel="stylesheet" href="states.css" />
+    <script src="../shared/brand.js"></script>
+    <style>
+      /* QR_HANDOFF 확정본 (2026-11-19, 규칙은 docs/design-guidelines.md 12절). 눈이 가는 순서: 1 QR → 2 단계 안내 → 3 보내는 경로 요약 → 4 처음으로.
+       * 문구·버튼: 제목 "휴대폰으로 보내 드릴게요", 오른쪽 처음으로(GO_HOME) 하나는 frontend/src/screens/QrHandoffScreen.jsx 그대로.
+       *   주 버튼 없음 (문서 2절의 의도한 예외)
+       *   안내 문구는 새 문구 단계 세 줄로 바꿨다 (2026-11-19 팀장 승인): "① 휴대폰 카메라를 켜요 / ② QR에 비춰요 / ③ 길 안내가 열려요".
+       *   실제 화면의 "휴대폰 카메라로 QR을 찍으면 길 안내를 볼 수 있어요"와 다르다. 확정되면 코드 문구도 바꿔야 한다
+       *   실제 화면의 "(지금은 QR 대신 주소 글자로 보여 드려요)"는 뺐다 (1차 결정)
+       * 왼쪽 칸: 제목(48px 굵게) 아래, 왼쪽 끝에 QR, 그 오른쪽에 단계 안내.
+       *   QR: 그림 480px + 사방 흰 여백 40px = 흰 상자 560px. 2px 보조색 테두리, 모서리 24px (경로 카드와 같은 테두리).
+       *   QR 그림은 예시다(찍어도 열리지 않는다). 모양만 QR 처럼 그렸다 (29칸, 세 모서리 위치 표시)
+       *   단계 안내: 그림 없이 단계만 48px 굵게 (2026-11-19 팀장, (나)안 확정. 휴대폰 그림을 둔 (가)안은 지웠다).
+       *     QR 상자와의 사이는 좌우 칸 사이와 같은 64px. 쓸 수 있는 폭이 440px 라 첫 단계는 "휴대폰 / 카메라를 켜요" 두 줄
+       *     번호는 글꼴의 ①②③ 대신 ROUTE_GUIDE 노선 번호 원과 같은 모양 (52px, 테두리 6px, 숫자 30px). 색은 본문색 테두리 + 검정 숫자
+       * 오른쪽 칸: 보내는 경로의 요약 판 + 처음으로. ROUTE_GUIDE 의 경로가 1개일 때(R3)와 같은 요약 판 (묶음 바탕, 테두리 없음, 버튼 아님)과
+       *   같은 묶음 배치(칸 아래쪽에 붙임). 소요 시간, 노선 표시, 도착 시각. 이름표 같은 새 문구는 없다 (2026-11-19 팀장)
+       *   경로는 ROUTE_GUIDE 지하철역 묶음의 1순위(A, 약 12분, 3 → 4)
+       *
+       * 주소: ?left=15 남은 시간 알림 (timeout-notice.js) */
+      :root {
+        --qr-size: 480px;
+        --qr-quiet: 40px;
+        --qr-box: calc(var(--qr-size) + var(--qr-quiet) * 2);
+        --card-height: 168px;
+        --mark-height: 52px;
+      }
+      .screen .qr-title {
+        position: absolute;
+        top: 32px;
+        left: 0;
+        margin: 0;
+        font-size: var(--font-title);
+        font-weight: 700;
+        line-height: 1.4;
+      }
+      /* QR 줄: 제목 아래 남은 높이의 세로 가운데 */
+      .qr-row {
+        position: absolute;
+        top: calc(32px + var(--font-title) * 1.4);
+        bottom: var(--pad);
+        left: 0;
+        right: 0;
+        display: flex;
+        align-items: center;
+        gap: var(--col-gap);
+      }
+      .qr-box {
+        flex-shrink: 0;
+        box-sizing: border-box;
+        width: calc(var(--qr-box) + 4px);
+        height: calc(var(--qr-box) + 4px);
+        padding: var(--qr-quiet);
+        background: var(--color-bg);
+        border: 2px solid var(--color-text-sub);
+        border-radius: 24px;
+      }
+      .qr-box svg {
+        display: block;
+        width: var(--qr-size);
+        height: var(--qr-size);
+        shape-rendering: crispEdges;
+      }
+      .qr-side {
+        min-width: 0;
+      }
+      /* 단계 세 줄: 실제 차례가 있는 내용이라 번호를 쓴다. 번호 원은 글자 앞에 매달아(내어쓰기) 줄이 바뀌어도 글자 왼쪽 끝이 맞는다 */
+      .steps {
+        display: flex;
+        flex-direction: column;
+        gap: 28px;
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        font-size: var(--font-title);
+        font-weight: 700;
+        line-height: 1.4;
+        word-break: keep-all;
+      }
+      .steps li {
+        display: grid;
+        grid-template-columns: var(--mark-height) 1fr;
+        column-gap: 16px;
+      }
+      /* 번호 원: route-guide-final.html 의 .line-no 와 같은 모양 (흰 바탕, 6px 테두리, 52px, 숫자 30px 보통 굵기).
+         노선색 대신 본문색 테두리. 첫 줄 글자(48px × 1.4 = 67px)의 세로 가운데에 맞춘다 */
+      .step-no {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        align-self: start;
+        box-sizing: border-box;
+        width: var(--mark-height);
+        height: var(--mark-height);
+        margin-top: calc((var(--font-title) * 1.4 - var(--mark-height)) / 2);
+        font-size: var(--font-sub);
+        font-weight: 400;
+        line-height: 1;
+        background: var(--color-bg);
+        border: var(--ring-width) solid var(--color-text);
+        border-radius: 50%;
+      }
+      /* 48px 에서는 첫 단계가 칸(440px)에 한 줄로 안 들어간다. 줄 길이를 고르게 해 "켜요"만 남지 않게 */
+      .steps li > span:last-child {
+        text-wrap: balance;
+      }
+
+      /* ---------- 오른쪽 칸: 요약 판 (route-guide-final.html 의 .card.is-only 와 같은 모양) ---------- */
+      .summary {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        align-content: center;
+        column-gap: 12px;
+        row-gap: 4px;
+        min-height: var(--card-height);
+        padding: 20px 20px 20px 32px;
+        color: var(--color-text);
+        background: var(--color-bg-group);
+        border-radius: 24px;
+      }
+      .card-time {
+        grid-column: 1;
+        grid-row: 1;
+        align-self: center;
+        font-size: var(--font-body);
+        font-weight: 700;
+        line-height: 1;
+        white-space: nowrap;
+      }
+      .card-time b {
+        margin: 0 6px;
+        font-size: var(--font-display);
+        letter-spacing: -0.02em;
+      }
+      .card-arrive {
+        grid-column: 1 / span 2;
+        grid-row: 2;
+        margin-top: 8px;
+        font-size: var(--font-body);
+        line-height: 1.2;
+        white-space: nowrap;
+      }
+      .lines {
+        grid-column: 2;
+        grid-row: 1;
+        align-self: center;
+        justify-self: end;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 8px;
+      }
+      .line-step {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        white-space: nowrap;
+      }
+      .line-step > svg {
+        flex-shrink: 0;
+        width: 28px;
+        height: 28px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 3;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .line-no {
+        flex-shrink: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: var(--mark-height);
+        height: var(--mark-height);
+        font-size: var(--font-sub);
+        line-height: 1;
+        background: var(--color-bg);
+        border: var(--ring-width) solid var(--c, var(--color-text-sub));
+        border-radius: 50%;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="screen" data-screen="QR_HANDOFF">
+      <header class="thin" data-zone="band">
+        <div class="thin-brand">
+          <svg viewBox="0 0 56 56" fill="none" stroke="currentColor" aria-hidden="true">
+            <circle cx="28" cy="28" r="20" stroke-width="9" />
+            <circle cx="28" cy="28" r="5" fill="currentColor" stroke="none" />
+          </svg>
+          <service-name></service-name>
+        </div>
+        <div class="thin-place">종로3가</div>
+        <div class="thin-now"><span data-date>11월 19일 목요일</span> <span data-clock>오후 2:30</span></div>
+        <div class="thin-alert" data-zone="alert" role="status">
+          <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="m627-287 45-45-159-160v-201h-60v225l174 181ZM480-80q-82 0-155-31.5t-127.5-86Q143-252 111.5-325T80-480q0-82 31.5-155t86-127.5Q252-817 325-848.5T480-880q82 0 155 31.5t127.5 86Q817-708 848.5-635T880-480q0 82-31.5 155t-86 127.5Q708-143 635-111.5T480-80Zm0-400Zm0 340q140 0 240-100t100-240q0-140-100-240T480-820q-140 0-240 100T140-480q0 140 100 240t240 100Z" /></svg>
+          <p><b><span data-left>15</span>초 뒤에 처음으로 돌아가요</b><span>계속하시려면 화면을 눌러 주세요</span></p>
+        </div>
+      </header>
+
+      <div class="body">
+        <main class="left">
+          <h1 class="qr-title">휴대폰으로 보내 드릴게요</h1>
+          <div class="qr-row" data-zone="content">
+            <div class="qr-box v3-core" data-zone="qr">
+              <svg data-qr viewBox="0 0 29 29" role="img" aria-label="예시 QR"></svg>
+            </div>
+            <div class="qr-side">
+              <ol class="steps" data-zone="guide">
+                <li><span class="step-no">1</span><span>휴대폰 카메라를 켜요</span></li>
+                <li><span class="step-no">2</span><span>QR에 비춰요</span></li>
+                <li><span class="step-no">3</span><span>길 안내가 열려요</span></li>
+              </ol>
+            </div>
+          </div>
+        </main>
+
+        <div class="right" data-zone="actions">
+          <div class="summary" data-zone="summary">
+            <span class="card-time">약<b data-min></b>분</span>
+            <span class="lines" data-lines></span>
+            <span class="card-arrive" data-arrive></span>
+          </div>
+          <button type="button" class="btn btn-secondary">
+            <svg viewBox="0 -960 960 960" aria-hidden="true"><path d="M220-180h150v-250h220v250h150v-390L480-765 220-570v390Zm-60 60v-480l320-240 320 240v480H530v-250H430v250H160Zm320-353Z" /></svg>
+            <span>처음으로</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <script src="route-cases.js"></script>
+    <script>
+      // 보내는 경로: ROUTE_GUIDE 지하철역 묶음의 1순위 (실제 앱도 state.routes[0] 을 보낸다)
+      const route = window.ROUTE_SUBWAY.routes[0]
+      const ARROW = '<svg viewBox="0 0 28 28" aria-hidden="true"><path d="M4 14h19M15 6l8 8-8 8" /></svg>'
+      const rides = route.legs.filter((leg) => leg.mode !== 'WALK')
+      document.querySelector('[data-min]').textContent = route.durationMin
+      document.querySelector('[data-lines]').innerHTML = rides
+        .map((leg, i) => `<span class="line-step">${i ? ARROW : ''}<span class="line-no" style="--c: var(--line-${leg.lineId})">${leg.label}</span></span>`)
+        .join('')
+      const arrive = new Date(Date.now() + route.durationMin * 60_000)
+      const h = arrive.getHours()
+      document.querySelector('[data-arrive]').textContent = `${h < 12 ? '오전' : '오후'} ${h % 12 === 0 ? 12 : h % 12}:${String(arrive.getMinutes()).padStart(2, '0')} 도착`
+
+      // 예시 QR (29×29 칸). 세 모서리 위치 표시, 타이밍 줄, 정렬 표시는 QR 규칙대로, 나머지 칸은 정해진 씨앗의 무작위 값이다. 찍어도 열리지 않는다
+      const N = 29
+      const grid = Array.from({ length: N }, () => Array(N).fill(null))
+      const finder = (r0, c0) => {
+        for (let r = -1; r <= 7; r++)
+          for (let c = -1; c <= 7; c++) {
+            const [r1, c1] = [r0 + r, c0 + c]
+            if (r1 < 0 || c1 < 0 || r1 >= N || c1 >= N) continue
+            const ring = Math.max(Math.abs(r - 3), Math.abs(c - 3))
+            grid[r1][c1] = ring === 4 ? 0 : ring === 2 ? 0 : 1
+          }
+      }
+      finder(0, 0)
+      finder(0, N - 7)
+      finder(N - 7, 0)
+      for (let i = 8; i < N - 8; i++) grid[6][i] = grid[i][6] = i % 2 === 0 ? 1 : 0
+      for (let r = -2; r <= 2; r++) for (let c = -2; c <= 2; c++) grid[22 + r][22 + c] = Math.max(Math.abs(r), Math.abs(c)) === 1 ? 0 : 1
+      grid[N - 8][8] = 1
+      let seed = 20261119
+      const rand = () => ((seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648)
+      let d = ''
+      for (let r = 0; r < N; r++)
+        for (let c = 0; c < N; c++) {
+          if (grid[r][c] === null) grid[r][c] = rand() < 0.5 ? 1 : 0
+          if (grid[r][c]) d += `M${c} ${r}h1v1h-1z`
+        }
+      document.querySelector('[data-qr]').innerHTML = `<path d="${d}" fill="currentColor" />`
+    </script>
+    <script src="timeout-notice.js"></script>
+    <script src="../shared/mock.js"></script>
+    <script src="../shared/v3.js"></script>
+  </body>
+</html>
