@@ -431,7 +431,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 8. 첫 화면과 띠 (확정, 2026-11-17)
 
-확정 시안은 `design/mockups/confirmed/` 의 `idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`, `idle-reduced-final.html`, `band-thin.html` 이다. `frontend/` 에 옮겼다 (2026-11-19, 옮기기 계획 7단계: `components/PlaceBand.jsx`, `IdleFrame.jsx`, `IdleButtons.jsx`, 규칙은 `view/placeBand.js`). 띠 이름(끝의 "역"·"정류장" 떼기)은 얇은 띠도 같은 함수(`view/placeName.js`)를 쓰고, 장소 정보가 없으면 얇은 띠 이름도 비운다.
+확정 시안은 `design/mockups/confirmed/` 의 `idle-final-subway.html`, `idle-final-bus.html`, `idle-final-default.html`, `idle-reduced-final.html`, `band-thin.html` 이다. `frontend/` 에 옮겼다 (2026-11-19, 옮기기 계획 7단계: `components/PlaceBand.jsx`, `IdleFrame.jsx`, `IdleButtons.jsx`, 규칙은 `view/placeBand.js`). 띠 이름(끝의 "역"·"정류장" 떼기)은 얇은 띠도 같은 함수(`view/placeName.js`)를 쓴다. 장소 정보(`place`)가 없어도 위치 응답에 이름(`name`)이 있으면 얇은 띠는 그 이름을 같은 규칙으로 보인다(종류를 모르면 이름 끝이 "역"·"정류장"일 때만 뗀다). 이름도 없을 때만 비운다. 큰 띠는 장소 정보가 없으면 지금처럼 "정보 없음" 모양이고, 이름만 있는 큰 띠는 만들지 않는다 (2026-11-20).
 
 ### 8-1. 화면의 구역
 
@@ -464,7 +464,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 - 선 위의 글자는 흰 표지(테두리 없음, 모서리 4px) 안에 검정으로 쓴다. 노선색 위에 글자를 직접 올리지 않는다 (3-6절)
 - 지하철역: 줄마다 왼쪽에 노선 번호 원과 앞 역, 오른쪽에 다음 역. 앞뒤 역은 노선 수와 상관없이 한쪽에 하나씩이다
 - 버스정류장: 줄마다 왼쪽에 버스 종류, 오른쪽에 번호(흰 표지에 하나씩)
-- 장소 정보가 없으면: 회색 선 세 줄과 "지금 계신 곳을 확인하고 있어요"
+- 장소 정보가 없으면: 회색 선 세 줄과 "지금 계신 곳을 확인하고 있어요" (위치 응답에 이름만 있어도 큰 띠는 이 모양이다. 얇은 띠는 이름을 보인다)
 
 ### 8-4. 띠 규칙 (데이터가 달라도 깨지지 않게)
 

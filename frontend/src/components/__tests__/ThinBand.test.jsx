@@ -47,8 +47,9 @@ describe('ThinBand 가운데 이름 (7절 규칙 2, 큰 띠와 같은 규칙)', 
     expect(nameOf({ name: '종로3가역', place: PLACES.subway })).toBe('종로3가')
     expect(nameOf({ name: '종로3가.탑골공원 정류장', place: PLACES.bus })).toBe('종로3가.탑골공원')
   })
-  it('장소 정보가 없으면 비운다 (큰 띠의 "확인하고 있어요" 와 같은 때)', () => {
-    expect(nameOf({ name: '경동시장앞 정류장', place: null })).toBe('')
+  it('장소 정보가 없어도 이름이 있으면 같은 규칙으로 보이고, 이름도 없을 때만 비운다 (2026-11-20)', () => {
+    expect(nameOf({ name: '경동시장앞 정류장', place: null })).toBe('경동시장앞')
+    expect(nameOf({ name: '', place: null })).toBe('')
     expect(nameOf(null)).toBe('')
   })
 })
