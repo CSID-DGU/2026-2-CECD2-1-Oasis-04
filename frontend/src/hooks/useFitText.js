@@ -5,6 +5,12 @@
 //   const ref = useFitText(text, { start: '--font-wait', min: '--font-wait-min', step: '--font-wait-step', max: '--wait-text-max' })
 //   <h1 ref={ref}>{text}</h1>        글씨 크기는 이 훅이 style.fontSize 로 넣는다. 고른 크기는 data-size 에 남긴다
 //
+// wrapAtMin (기본 false)
+//   true  최소 크기로도 넘치면 요소에 data-wrap 을 붙인다. 쓰는 쪽 CSS 가 data-wrap 일 때 줄 바꿈을 허락한다
+//         (기다림 큰 글씨: 72px 에서 고르게 최대 3줄, 10-2절 긴 글 규칙. 줄 바꿈 모양은 view/textWrap.js)
+//   false 최소 크기에서 멈추고 한 줄로 둔다 (7단계 IDLE 띠 이름: 7절 규칙 1 "이름은 항상 한 줄")
+//   재는 동안에는 data-wrap 을 떼서 한 줄 너비로 잰다. 그래서 쓰는 쪽 CSS 는 기본이 white-space: nowrap 이어야 한다
+//
 // 글꼴을 다 읽기 전에 재면 틀리므로 document.fonts.ready 뒤에 한 번 더 잰다 (계획서 6-2절)
 
 import { useLayoutEffect, useRef } from 'react'
@@ -16,7 +22,7 @@ function readPx(el, name) {
 
 export function useFitText(text, tokens) {
   const ref = useRef(null)
-  const { start, min, step, max } = tokens
+  const { start, min, step, max, wrapAtMin = false } = tokens
 
   useLayoutEffect(() => {
     const el = ref.current
@@ -25,25 +31,23 @@ export function useFitText(text, tokens) {
     const fit = () => {
       if (cancelled) return
       el.style.fontSize = ''
+      delete el.dataset.wrap
       const limit = readPx(el, max)
-      const size = fitSize({
-        start: readPx(el, start),
-        min: readPx(el, min),
-        step: readPx(el, step),
-        fits: (s) => {
-          el.style.fontSize = `${s}px`
-          return el.scrollWidth <= limit
-        },
-      })
-      el.style.fontSize = `${size}px`
+      const fits = (s) => {
+        el.style.fontSize = `${s}px`
+        return el.scrollWidth <= limit
+      }
+      const size = fitSize({ start: readPx(el, start), min: readPx(el, min), step: readPx(el, step), fits })
+      const overflow = !fits(size)
       el.dataset.size = String(size)
+      if (wrapAtMin && overflow) el.dataset.wrap = 'true'
     }
     fit()
     document.fonts?.ready.then(fit)
     return () => {
       cancelled = true
     }
-  }, [text, start, min, step, max])
+  }, [text, start, min, step, max, wrapAtMin])
 
   return ref
 }

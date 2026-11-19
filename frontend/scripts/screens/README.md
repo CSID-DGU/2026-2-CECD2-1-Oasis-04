@@ -28,6 +28,9 @@ Claude Code 에게 "`frontend/scripts/screens/shoot-screens.js` 를 browser_run_
 - 시계를 2026-11-19 오후 2:30 에 멈추고 찍는다. 띠의 시각과 움직이는 부분(음량 막대 등)이 그림마다 같아서 픽셀 비교를 할 수 있다
 - DevPanel 의 이벤트 단추를 눌러 상태를 지나가므로, DevPanel 단추 글자 모양("EVENT → NEXT")을 바꾸면 이 스크립트도 고친다
 - 돌려주는 숫자: `minFont`(가장 작은 글씨), `small`(30px 미만 글씨 수), `btns`·`lowBtn`(버튼 수·112px 미만 버튼 수), `primary`(주 버튼 수), `bad`(허용 조합 밖의 글씨|배경), `scroll`(스크롤이 생긴 요소 수)
+- `OPTIONS.stopArcs`(기본 true): 도는 호를 12시 자리에 멈추고 찍는다. 가짜 시계는 CSS 움직임을 멈추지 않으므로, 시안은 `?freeze=0` 으로 찍어 비교한다
+- `OPTIONS.reasons`: UNAVAILABLE 을 이유별로 더 찍는다(`14-UNAVAILABLE-noroute.png` 등). DevPanel 의 '오류 이유' 를 골라 `ROUTE_FAILED` 로 들어간다. 시안은 `unavailable-final.html?r=<이유>`
+- `OPTIONS.extras`(기본 true): 들은 말이 빈 RESOLVING·REASKING(`06-RESOLVING-empty`, `09-REASKING-empty`)도 찍는다. 시안은 `?heard=`
 - `OPTIONS.blur` 에 화면 번호를 넣으면 `-blur.png` 도 찍는다 (시선 순서 검사, 디자인 문서 3-9절). `OPTIONS.only` 로 저장할 화면만 고를 수 있다
 
 ## 바뀐 곳이 없는지 비교

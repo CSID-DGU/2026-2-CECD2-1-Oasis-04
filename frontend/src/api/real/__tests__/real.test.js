@@ -146,6 +146,8 @@ describe('real API', () => {
     it('그 밖의 실패는 throw 한다', async () => {
       mockFetch(fail('INTERNAL_ERROR', '잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.'), 500)
       await expect(resolve('서울역')).rejects.toThrow('잠시 문제가 생겼어요')
+      mockFetch(fail('INTERNAL_ERROR', '잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.'), 500)
+      await expect(resolve('서울역')).rejects.toMatchObject({ code: 'UNKNOWN' })
     })
   })
 
@@ -197,10 +199,14 @@ describe('real API', () => {
     it('너무 가까우면 서버의 쉬운 문장으로 throw 한다', async () => {
       mockFetch(fail('ROUTE_TOO_CLOSE', '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.'), 422)
       await expect(route('SUB_0130_1호선')).rejects.toThrow('약 300미터예요')
+      mockFetch(fail('ROUTE_TOO_CLOSE', '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.'), 422)
+      await expect(route('SUB_0130_1호선')).rejects.toMatchObject({ code: 'TOO_CLOSE' })
     })
     it('지도 서버 오류도 쉬운 문장으로 throw 한다', async () => {
       mockFetch(fail('UPSTREAM_ERROR', '지금은 길 안내를 받아올 수 없어요. 잠시 후 다시 해 주세요.'), 502)
       await expect(route('SUB_0220_2호선')).rejects.toThrow('지금은 길 안내를 받아올 수 없어요')
+      mockFetch(fail('UPSTREAM_ERROR', '지금은 길 안내를 받아올 수 없어요. 잠시 후 다시 해 주세요.'), 502)
+      await expect(route('SUB_0220_2호선')).rejects.toMatchObject({ code: 'UPSTREAM' })
     })
   })
 

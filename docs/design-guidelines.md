@@ -574,7 +574,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 10. LISTENING과 기다림 화면 (확정 2026-11-17)
 
-확정 시안은 `design/mockups/confirmed/listening-final.html`, `wait-final.html`(`wait.css`)이다. LISTENING 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 2단계. 음량 막대는 가짜 음량, 실제 음량은 12단계). 기다림 화면 5개도 옮겼다(2026-11-19, 옮기기 계획 3단계. `components/WaitFrame.jsx`, 글씨 줄이기는 `hooks/useFitText.js`). 72px 까지 줄여도 넘치는 글은 시안처럼 자르지 않는다(`docs/team-requests.md` #14).
+확정 시안은 `design/mockups/confirmed/listening-final.html`, `wait-final.html`(`wait.css`)이다. LISTENING 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 2단계. 음량 막대는 가짜 음량, 실제 음량은 12단계). 기다림 화면 5개도 옮겼다(2026-11-19, 옮기기 계획 3단계. `components/WaitFrame.jsx`, 글씨 줄이기는 `hooks/useFitText.js`). 72px 까지 줄여도 넘치는 글은 아래 10-2절 규칙으로 줄을 바꾼다.
 
 ### 10-1. LISTENING
 
@@ -587,6 +587,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 - 얇은 띠 아래, 화면 가운데에 세로로 고리 → 작은 머리말(있을 때만, 30px) → 큰 글씨(112px 굵게, 넘치면 8px씩 72px까지) → 안내 한 줄(48px)을 놓는다. 버튼 칸은 두지 않는다
 - 고리는 LISTENING과 같은 토큰(`--halo-r`, `--ring-r`, `--ring-icon`)으로 그린다. 고리 가운데 높이도 LISTENING과 같다(화면 위에서 495px)
 - 바깥 고리 위를 주 색 호 하나가 `--motion-wait`(1.6s)에 한 바퀴 돈다. 움직임 줄이기 설정에서는 멈춘다
+- **72px 로도 넘치는 긴 글** (확정 2026-11-19, 팀장): 72px 에서 줄을 바꿔 최대 3줄까지 보인다. 줄 길이는 고르게 나눈다(6절 카드 이름 줄 바꿈 규칙과 같다: 띄어쓰기가 있으면 띄어쓰기에서만, 한 단어면 글자 사이에서, 둘 다 `text-wrap: balance`). 말줄임표로 자르지 않는다. 3줄을 넘는 글은 오지 않는다고 보고 따로 줄이지 않는다(넘치면 4줄째도 보인다. 실제 길이는 `docs/team-requests.md` #14). 구현은 `hooks/useFitText.js` 의 `wrapAtMin`. 같은 규칙을 REASKING 의 "잘 못 알아들었어요"·들은 말, UNAVAILABLE 의 이유 문장에도 쓴다(12-2·12-3절)
 
 ### 10-3. 화면별 가운데 그림과 글씨 (문구는 실제 화면 그대로)
 
@@ -670,7 +671,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 12. REASKING, UNAVAILABLE, QR_HANDOFF, MANUAL_SELECT 불러오는 중·오류 (확정 2026-11-19)
 
-확정 시안은 `design/mockups/confirmed/` 의 `reasking-final.html`, `unavailable-final.html`, `qr-handoff-final.html`, `manual-select-final.html?state=loading | error` 이고, 공통 스타일은 `states.css`, 찍기는 `states-shoot.sh` 다. `frontend/` 에는 아직 반영하지 않았다.
+확정 시안은 `design/mockups/confirmed/` 의 `reasking-final.html`, `unavailable-final.html`, `qr-handoff-final.html`, `manual-select-final.html?state=loading | error` 이고, 공통 스타일은 `states.css`, 찍기는 `states-shoot.sh` 다. REASKING·UNAVAILABLE 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 4단계. `components/RingStack.jsx`, 이유는 `view/unavailableReason.js`). QR_HANDOFF·MANUAL_SELECT 는 아직이다.
 
 ### 12-1. REASKING·UNAVAILABLE 공통 틀
 
@@ -688,12 +689,13 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 - 탓하는 느낌이 없게 오류 색·빨강·느낌표를 쓰지 않는다
 - 예시는 한 줄이다. 고리 자리가 정해져 있어 세 줄이면 칸 아래로 121px 넘친다
 - 들은 말이 비면(10초 무발화) 그 줄을 숨긴다 (실제 화면과 같다)
+- 들은 말이 3줄이 되면(36px, 폭 640 에서 약 35자 이상) "이렇게 말해 보세요"와 예시를 숨긴다. 고리 자리가 정해져 있어 예시가 화면 아래(1080px)를 넘기 때문이다(40자에서 예시 아래 끝 y 1101). 들은 말은 10-2절 긴 글 규칙대로 3줄까지 다 보인다 (확정 2026-11-19, 팀장)
 - 오른쪽: 다시 말하기(주) / 손으로 고르기 / 처음으로
 
 ### 12-3. UNAVAILABLE
 
 - 고리는 주 색이 아니라 본문색이다. 바깥 35%, 안쪽 100%. 움직임 없음
-- 제목 "안내해 드릴 수 없어요"(36px) → 이유 첫 문장(72px 굵게, 오류 색, 두 줄까지) → 나머지 문장(36px 본문색). 글자는 바꾸지 않고 첫 ". " 뒤에서 나눈다. 오류 색은 첫 문장에만
+- 제목 "안내해 드릴 수 없어요"(36px) → 이유 첫 문장(72px 굵게, 오류 색, 줄 바꿈은 10-2절 긴 글 규칙: 고르게 최대 3줄) → 나머지 문장(36px 본문색). 글자는 바꾸지 않고 첫 ". " 뒤에서 나눈다. 오류 색은 첫 문장에만
 - 오른쪽: 손으로 고르기(주) / 처음으로
 - 고리 가운데 그림은 이유마다 다르다. 그림은 152칸에 선 굵기 9.5로 그린다 (IDLE·LISTENING 아이콘, 기다림 화면 그림과 같은 굵기. 깃발은 기다림 화면의 것 그대로)
 - 시계는 손 그림이 아니라 Material `schedule` 을 152px 로 쓴다. 남은 시간 알림(11-4절)의 시계와 같은 모양이라, 알림이 UNAVAILABLE 에 함께 나와도 시계가 두 모양이 되지 않는다. 선 굵기는 손 그림과 같다(3-7절) (2026-11-19)

@@ -10,6 +10,8 @@
 // StrictMode 규칙: cancelled 플래그 + 모든 await 뒤 확인. 타이머는 없다.
 
 import { EVENTS } from '../../state/events.js'
+import { ERROR_CODES, kioskError } from '../../state/errorCodes.js'
+import { toKioskError } from '../../api/apiError.js'
 
 /** 경로가 하나도 없을 때 UNAVAILABLE 화면에 보여 줄 문구 */
 const NO_ROUTE_MESSAGE = '가는 길을 찾을 수 없어요'
@@ -25,7 +27,7 @@ export function routingHandler(state, dispatch, { api }) {
     // StrictMode 의 1차 실행 타이머는 곧바로 이어지는 cleanup 의 clearTimeout 으로 지워져 이벤트가 정확히 한 번만 나간다.
     console.warn('[routing] selectedPoi 없이 ROUTING 진입')
     const timer = setTimeout(() => {
-      dispatch({ type: EVENTS.ROUTE_FAILED, error: NO_POI_MESSAGE })
+      dispatch({ type: EVENTS.ROUTE_FAILED, error: kioskError(ERROR_CODES.NO_POI, NO_POI_MESSAGE) })
     }, 0)
     return () => {
       clearTimeout(timer)
@@ -40,12 +42,12 @@ export function routingHandler(state, dispatch, { api }) {
       if (Array.isArray(routes) && routes.length > 0) {
         dispatch({ type: EVENTS.ROUTE_FOUND, routes })
       } else {
-        dispatch({ type: EVENTS.ROUTE_FAILED, error: NO_ROUTE_MESSAGE })
+        dispatch({ type: EVENTS.ROUTE_FAILED, error: kioskError(ERROR_CODES.NO_ROUTE, NO_ROUTE_MESSAGE) })
       }
     } catch (e) {
       if (cancelled) return
       console.warn('[routing] route 실패:', e?.message)
-      dispatch({ type: EVENTS.ROUTE_FAILED, error: e?.message ?? '알 수 없는 오류' })
+      dispatch({ type: EVENTS.ROUTE_FAILED, error: toKioskError(e) })
     }
   })()
 

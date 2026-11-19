@@ -84,3 +84,14 @@
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
+
+/* REASKING: 옅은 고리. 안쪽 고리도 바깥 고리와 같은 진하기(35%)로 낮춘다. 가운데 그림은 본문색 그대로 (12-2절, 시안 states.css .is-soft) */
+.ring.is-soft .ring-core {
+  stroke-opacity: var(--halo-opacity);
+}
+
+/* UNAVAILABLE: 주 색이 아니라 본문색 고리. 바깥 35%, 안쪽 100% (12-3절, 시안 states.css .is-text) */
+.ring.is-text .ring-halo,
+.ring.is-text .ring-core {
+  stroke: var(--color-text);
+}

@@ -43,7 +43,12 @@
   font-weight: 700;
   line-height: var(--core-line-height);
   letter-spacing: var(--core-letter-spacing);
-  white-space: nowrap; /* 줄을 바꾸지도, 말줄임표로 자르지도 않는다 (7절 규칙 1과 같은 생각, 시안 그대로) */
+  white-space: nowrap; /* 재는 동안과 72px 로 들어갈 때는 한 줄 */
+}
+
+/* 72px 로도 넘치면(useFitText 가 data-wrap 을 붙인다) 줄을 바꾼다. 고른 줄 길이는 global.css 의 .wrap-even (10-2절 긴 글 규칙) */
+.wait-core[data-wrap] {
+  white-space: normal;
 }
 
 .wait-core.is-first {

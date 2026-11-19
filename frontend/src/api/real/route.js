@@ -4,14 +4,19 @@
 // 서버 응답 → 화면 모양 (mock/route.js 와 같은 { routes: [...] }, 1순위가 첫 번째)
 //   성공                 → { routes: [{ id, rank, summary, durationMin, transfers, ... }] }
 //   실패 ROUTE_NOT_FOUND → { routes: [] }          (ROUTING 핸들러가 '가는 길을 찾을 수 없어요' 로 처리)
-//   실패 ROUTE_TOO_CLOSE → Error(서버의 쉬운 문장)   (예: '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.')
-//   그 밖의 실패          → Error(서버의 쉬운 문장 또는 ROUTE_ERROR)
+//   실패 ROUTE_TOO_CLOSE → ApiError(TOO_CLOSE, 서버의 쉬운 문장)   (예: '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.')
+//   실패 UPSTREAM_ERROR  → ApiError(UPSTREAM, 서버의 쉬운 문장)
+//   그 밖의 실패          → ApiError(UNKNOWN, 서버의 쉬운 문장 또는 null)   (오류 코드는 docs/frontend-plan.md 2-3절)
 //
 // 화면이 지금 쓰는 것은 summary·durationMin·transfers 뿐이지만, 단계별 쉬운 문장(steps[].easyText)과
 // 요금·도보 거리도 함께 실어 둔다. 경로 상세 화면을 만들 때 바로 쓸 수 있다.
 // 서버가 준 카카오맵 길찾기 주소(landing_url)는 '휴대폰으로 보내기'(qr.js)가 쓰도록 기억해 둔다.
 
-import { apiFetch, errorMessageOf, KIOSK_ID } from './http.js'
+import { apiFetch, KIOSK_ID } from './http.js'
+import { ApiError } from '../apiError.js'
+
+// 서버 오류 코드 → 앱 오류 코드 (ROUTE_NOT_FOUND 는 빈 경로로 돌려주므로 여기 없다)
+const ROUTE_ERROR_CODES = { ROUTE_TOO_CLOSE: 'TOO_CLOSE', UPSTREAM_ERROR: 'UPSTREAM' }
 
 let lastLandingUrl = null
 
@@ -42,7 +47,7 @@ export async function route(poiId) {
 
   if (!body.success) {
     if (body.error?.code === 'ROUTE_NOT_FOUND') return { routes: [] }
-    throw new Error(errorMessageOf(body, 'ROUTE_ERROR'))
+    throw new ApiError(ROUTE_ERROR_CODES[body.error?.code] ?? 'UNKNOWN', body.error?.easy_message || null)
   }
 
   const d = body.data ?? {}

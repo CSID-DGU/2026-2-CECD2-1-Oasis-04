@@ -1,0 +1,15 @@
+/* HeardLine — 기준: design/mockups/confirmed/states.css .heard (CONFIRMING 과 같다) */
+.heard-line {
+  --heard-gap: 16px;
+  --heard-line-height: 1.4;
+}
+
+.flow .heard-line {
+  margin-top: var(--heard-gap);
+  font-size: var(--font-body);
+  line-height: var(--heard-line-height);
+}
+
+.heard-line b {
+  font-weight: 700;
+}

@@ -19,6 +19,7 @@ import { SCENARIOS, getScenario, setScenario } from '../api/mock/scenario.js'
 import { STATES } from '../state/states.js'
 import { USE_MOCK } from '../api/index.js'
 import { recorder } from '../devices/recorder.js'
+import { kioskError } from '../state/errorCodes.js'
 
 const toSeconds = (ms) => (ms / 1000).toLocaleString('ko-KR', { maximumFractionDigits: 1 })
 
@@ -79,12 +80,25 @@ const DEV_PAYLOADS = {
   [EVENTS.SPEECH_END]: { text: '서울역' },
   [EVENTS.RESOLVE_NEED_CONFIRM]: { resolve: { status: 'OK', needConfirm: true, candidates: FAKE_CANDIDATES } },
   [EVENTS.RESOLVE_CONFIRMED]: { resolve: { status: 'OK', needConfirm: false, poi: FAKE_POI } },
-  [EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR]: { error: '범위 밖 (DevPanel)' },
+  [EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR]: { error: kioskError('OUT_OF_SCOPE', '이 키오스크에서 안내할 수 없는 곳이에요') },
   [EVENTS.DESTINATION_CONFIRMED]: { poi: FAKE_POI },
   [EVENTS.POI_SELECTED]: { poi: FAKE_POI },
   [EVENTS.ROUTE_FOUND]: { routes: FAKE_ROUTES },
-  [EVENTS.ROUTE_FAILED]: { error: '경로 없음 (DevPanel)' },
+  [EVENTS.ROUTE_FAILED]: { error: kioskError('NO_ROUTE', '가는 길을 찾을 수 없어요') },
 }
+
+// 오류로 가는 이벤트(ROUTE_FAILED, RESOLVE_OUT_OF_SCOPE_OR_ERROR)에 실을 가짜 error. 패널의 '오류 이유' 로 고른다.
+// ''(기본)이면 위 DEV_PAYLOADS 의 값. 문구는 서버·핸들러가 실제로 주는 문장 (디자인 문서 12-3절 표, 시안 unavailable-final.html REASONS)
+const FAKE_ERRORS = {
+  noroute: kioskError('NO_ROUTE', '가는 길을 찾을 수 없어요'),
+  close: kioskError('TOO_CLOSE', '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.'),
+  scope: kioskError('OUT_OF_SCOPE', '이 키오스크에서 안내할 수 없는 곳이에요'),
+  upstream: kioskError('UPSTREAM', '지금은 길 안내를 받아올 수 없어요. 잠시 후 다시 해 주세요.'),
+  generic: kioskError('UNKNOWN', 'SERVER_TIMEOUT'),
+  nopoi: kioskError('NO_POI', '목적지가 정해지지 않았어요'),
+  long: kioskError('UNKNOWN', '말씀이 조금 길었어요. 짧게 한 번 더 말씀해 주세요.'),
+}
+const ERROR_EVENTS = new Set([EVENTS.ROUTE_FAILED, EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR])
 
 const panelStyle = {
   position: 'fixed',
@@ -107,6 +121,12 @@ export default function DevPanel() {
   // 현재 시나리오를 화면에 보여 주기 위한 복사본. 진짜 값은 scenario.js 모듈 변수에 있다.
   // (모듈 변수가 바뀌어도 React 는 모르므로, 표시 갱신용으로만 state 를 하나 둔다)
   const [scenario, setScenarioView] = useState(getScenario)
+  const [devError, setDevError] = useState('') // FAKE_ERRORS 의 키. '' 이면 이벤트별 기본값
+
+  const payloadOf = (event) => {
+    if (devError && ERROR_EVENTS.has(event)) return { error: FAKE_ERRORS[devError] }
+    return DEV_PAYLOADS[event] ?? {}
+  }
 
   const onScenarioChange = (e) => {
     setScenario(e.target.value) // mock API·recorder 가 읽는 진짜 값
@@ -135,7 +155,7 @@ export default function DevPanel() {
         <strong>resolve.status</strong> {state.resolve?.status ?? 'null'}
       </div>
       <div>
-        <strong>error</strong> {state.error ?? 'null'}
+        <strong>error</strong> {state.error ? JSON.stringify(state.error) : 'null'}
       </div>
       <div>
         <strong>config(ms)</strong>{' '}
@@ -162,6 +182,17 @@ export default function DevPanel() {
         </button>
       </div>
 
+      <div style={{ marginTop: 2 }}>
+        <select value={devError} onChange={(e) => setDevError(e.target.value)} aria-label='오류 이유'>
+          <option value=''>오류 이유: 이벤트 기본값</option>
+          {Object.entries(FAKE_ERRORS).map(([key, err]) => (
+            <option key={key} value={key}>
+              오류 이유: {key} ({err.code})
+            </option>
+          ))}
+        </select>
+      </div>
+
       <div style={{ marginTop: 6 }}>
         <strong>가능한 이벤트</strong> ({Object.keys(available).length})
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
@@ -170,7 +201,7 @@ export default function DevPanel() {
               key={event}
               type="button"
               title={`${state.state} --(${event})--> ${next}`}
-              onClick={() => dispatch({ type: event, ...(DEV_PAYLOADS[event] ?? {}) })}
+              onClick={() => dispatch({ type: event, ...payloadOf(event) })}
             >
               {event} → {next}
             </button>

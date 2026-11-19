@@ -18,7 +18,7 @@ export const initialState = Object.freeze({
   selectedPoi: null, // 확정된 목적지 { id, name, category }
   routes: [], // /route 응답 경로 최대 3개
   qr: null, // QR 데이터(URL 등). 생성 주체(프론트/서버)가 미정이라 아직 쓰는 이벤트가 없다
-  error: null, // 마지막 오류 메시지 (UNAVAILABLE 화면 표시용)
+  error: null, // 마지막 오류 { code, message } (UNAVAILABLE 화면 표시용, state/errorCodes.js)
   lastEvent: null, // 개발자 패널 표시용
 })
 

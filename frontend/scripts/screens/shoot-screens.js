@@ -7,6 +7,11 @@
 //   measure  true 면 화면마다 하한선 숫자를 함께 돌려준다
 //   blur     흐림(12px) 그림도 찍을 화면 번호. 예: ['05']. 시선 순서 검사용 (3-9절)
 //   only     찍을 화면 번호만. 비우면 14개 모두. 화면을 지나가는 순서는 같고 저장만 고른다
+//   stopArcs true 면 도는 호(.ring-arc)를 처음 자리(12시)에 멈춘다. 가짜 시계는 CSS 움직임을 멈추지 않아서
+//            그대로 찍으면 호의 자리가 그림마다 다르다. 시안은 ?freeze=0 으로 찍으면 같은 자리다 (3단계에서 생김)
+//   reasons  UNAVAILABLE 을 이유별로 더 찍는다: 14-UNAVAILABLE-<이유>.png. 이유 이름은 DevPanel 의 '오류 이유' 목록
+//            (noroute, close, scope, upstream, generic, nopoi, long). 비우면 찍지 않는다
+//   extras   true 면 들은 말이 빈 REASKING(09-REASKING-empty)과 RESOLVING(06-RESOLVING-empty)도 찍는다 (4단계에서 생김)
 //
 // 하는 일: 가짜 시계를 2026-11-19 오후 2:30 에 멈추고(띠의 시각·움직임이 그림마다 같게), DevPanel 을 숨긴 뒤
 // DevPanel 의 이벤트 단추("EVENT → NEXT")를 눌러 14상태를 차례로 지나며 무대(.stage)만 찍는다.
@@ -17,6 +22,9 @@ async (page) => {
     measure: true,
     blur: ['05'],
     only: [],
+    stopArcs: true,
+    reasons: ['noroute', 'close', 'scope', 'upstream', 'generic'],
+    extras: true,
   }
 
   await page.setViewportSize({ width: 1920, height: 1080 })
@@ -26,6 +34,7 @@ async (page) => {
   await page.goto(OPTIONS.url)
   await page.waitForSelector('.stage')
   await page.addStyleTag({ content: 'aside[aria-label="개발자 패널"]{display:none !important}' })
+  if (OPTIONS.stopArcs) await page.addStyleTag({ content: '.ring-arc{animation:none !important}' })
   await page.evaluate(() => document.fonts.ready)
 
   // DevPanel 이벤트 단추 누르기. 단추 글자는 "EVENT → NEXT" 모양이다 (components/DevPanel.jsx)
@@ -114,5 +123,27 @@ async (page) => {
   await ev('ROUTE_FOUND'); await shot('12-ROUTE_GUIDE')
   await ev('SEND_TO_PHONE_PRESSED'); await shot('13-QR_HANDOFF', 1000)
   await ev('GO_HOME'); await ev('MANUAL_SELECT_PRESSED'); await ev('POI_SELECTED'); await ev('ROUTE_FAILED'); await shot('14-UNAVAILABLE')
+  // 이유별 UNAVAILABLE: DevPanel 의 '오류 이유' 를 고르고 ROUTE_FAILED 로 다시 들어온다
+  const pickReason = (value) =>
+    page.evaluate((v) => {
+      const sel = document.querySelector('aside select[aria-label="오류 이유"]')
+      const set = Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set
+      set.call(sel, v)
+      sel.dispatchEvent(new Event('change', { bubbles: true }))
+    }, value)
+  for (const reason of OPTIONS.reasons) {
+    await ev('GO_HOME'); await pickReason(reason); await ev('MANUAL_SELECT_PRESSED'); await ev('POI_SELECTED'); await ev('ROUTE_FAILED')
+    await shot(`14-UNAVAILABLE-${reason}`)
+  }
+  if (OPTIONS.reasons.length) await pickReason('')
+
+  // 들은 말이 빈 경우: DevPanel 입력 없이 화면의 '다 말했어요' 를 누르면 빈 글로 SPEECH_END 가 나간다
+  if (OPTIONS.extras) {
+    await ev('GO_HOME'); await ev('MIC_BUTTON_PRESSED')
+    await page.locator('.stage').getByRole('button', { name: '다 말했어요' }).click(); await page.waitForTimeout(100)
+    await shot('06-RESOLVING-empty')
+    await ev('RESOLVE_NOT_UNDERSTOOD'); await ev('FAIL_COUNT_1'); await shot('09-REASKING-empty')
+  }
+
   return results.map((r) => `${r.name} (${r.state})${r.measure ? ' ' + JSON.stringify(r.measure) : ''}`).join('\n')
 }

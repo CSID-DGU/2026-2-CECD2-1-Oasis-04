@@ -402,3 +402,13 @@ body {
   font-weight: 700;
   word-break: break-all;
 }
+
+/* 긴 글의 고른 줄 바꿈 (디자인 문서 6절 카드 이름, 10-2절 긴 글 규칙). 클래스는 view/textWrap.js 의 evenWrapClass 가 고른다.
+ * 띄어쓰기가 있으면 띄어쓰기에서만(is-keep-all), 한 단어면 글자 사이에서. 둘 다 줄 길이를 고르게. 말줄임표는 쓰지 않는다 */
+.wrap-even {
+  text-wrap: balance;
+}
+
+.wrap-even.is-keep-all {
+  word-break: keep-all;
+}

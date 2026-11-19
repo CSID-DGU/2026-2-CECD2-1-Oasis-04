@@ -2,7 +2,7 @@
 // LISTENING 의 듣는 중 표시, 기다림 화면 5개, REASKING, UNAVAILABLE 이 같은 모양을 쓴다.
 //
 // props
-//   tone      'primary'(주 색. LISTENING·기다림) — 'soft'(REASKING), 'text'(UNAVAILABLE)는 4단계에서 더한다
+//   tone      'primary'(주 색. LISTENING·기다림), 'soft'(REASKING: 안쪽 고리도 35%), 'text'(UNAVAILABLE: 본문색 고리)
 //   icon      가운데 그림 (RingIcon 이름: mic, flag, bubble, logo, walk, pin, clock)
 //   children  그림 대신 가운데에 둘 것 (CHECKING 의 남은 초)
 //   arc       'none'(LISTENING)

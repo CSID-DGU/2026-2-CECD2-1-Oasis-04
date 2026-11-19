@@ -112,11 +112,15 @@ export const transitions = {
   selectedPoi: null,        // 확정된 목적지
   routes: [],               // /route 응답 경로 최대 3개
   qr: null,                 // QR 데이터(URL 등)
-  error: null,              // 마지막 오류 메시지 (UNAVAILABLE 화면 표시용)
+  error: null,              // 마지막 오류 { code, message } (UNAVAILABLE 화면 표시용. 아래 "오류 모양")
   lastEvent: null,          // 개발자 패널 표시용
 }
 ```
 
+- **오류 모양** (2026-11-19, 옮기기 계획 4-1절·4단계): `error` 는 `{ code, message }` 다. `RESOLVE_OUT_OF_SCOPE_OR_ERROR`·`ROUTE_FAILED` 의 payload `error` 도 같은 모양이다 (이벤트 이름·전이는 그대로)
+  - `code` 여섯 개: `NO_ROUTE`(경로 없음), `TOO_CLOSE`(가까움), `OUT_OF_SCOPE`(범위 밖), `UPSTREAM`(길 안내를 받아오지 못함), `NO_POI`(목적지 없이 ROUTING), `UNKNOWN`(그 밖 모두. 디자인 문서 12-3절의 드문 이유와 네트워크 오류)
+  - `message`: 서버의 쉬운 문장이 있으면 그것, 없으면 `null`. 화면 문구는 `view/unavailableReason.js` 가 코드와 message 로 고른다 (NO_ROUTE·OUT_OF_SCOPE·NO_POI 는 앱 문구, message 가 오류 코드 모양이거나 비면 코드별 기본 문구)
+  - 서버 코드 → `code`: `ROUTE_NOT_FOUND` → 빈 경로(핸들러가 `NO_ROUTE`), `ROUTE_TOO_CLOSE` → `TOO_CLOSE`, `UPSTREAM_ERROR` → `UPSTREAM`, resolve `OUT_OF_SCOPE` → `OUT_OF_SCOPE`, 그 밖 → `UNKNOWN`. real API 는 `api/apiError.js` 의 `ApiError(code, message)` 를 throw 한다
 - reducer가 하는 일은 세 가지뿐: (1) `transitions[state][event]`로 다음 상태 결정 (2) 이벤트별 payload를 위 필드에 저장 (3) `failCount` 증감
   - `RESOLVE_NOT_UNDERSTOOD`, `CONFIRM_NONE_OF_THEM` → `failCount + 1` (누적)
   - `SWITCH_TO_VOICE` → `failCount = 0` (표 비고)
@@ -202,10 +206,10 @@ export function routingHandler(state, dispatch, api) {
     try {
       const { routes } = await api.route(state.selectedPoi.id);
       if (cancelled) return;
-      dispatch(routes.length ? { type: 'ROUTE_FOUND', routes } : { type: 'ROUTE_FAILED', error: '경로 없음' });
+      dispatch(routes.length ? { type: 'ROUTE_FOUND', routes } : { type: 'ROUTE_FAILED', error: { code: 'NO_ROUTE', message: null } });
     } catch (e) {
       if (cancelled) return;
-      dispatch({ type: 'ROUTE_FAILED', error: e.message });
+      dispatch({ type: 'ROUTE_FAILED', error: toError(e) }); // { code, message }
     }
   })();
   return () => { cancelled = true; };
@@ -241,7 +245,7 @@ export function routingHandler(state, dispatch, api) {
 | `FAIL_COUNT_CHECK` | `FailCountCheckScreen.jsx` | 스피너 (즉시 지나감) | 없음 |
 | `ROUTING` | `RoutingScreen.jsx` | "가는 길 찾는 중..." 스피너 | 없음 |
 | `REASKING` | `ReaskingScreen.jsx` | "잘 못 알아들었어요, 다시 말씀해 주세요" + 다시 말하기 / 손으로 고르기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `RETRY_SPEECH`, `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + error 메시지 + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + 오류 코드별 그림·문구(디자인 문서 12-3절) + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. `state.health`의 `mic` 또는 `stt`가 `false`면 '말로 하기'를 숨긴다 (전이 변경 없음). 무입력 60초 복귀 | `POI_SELECTED`(poi), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 경로 카드(최대 3개, 화면 안에서 고른다. 처음엔 1순위) + 선택된 경로의 타임라인, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 자리(텍스트/URL) 표시 + 처음으로. 무입력 60초 복귀 | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
