@@ -1,0 +1,42 @@
+/* LineMark — 노선 표시. 기준: route-guide-final.html .line-no, .bus-no, .line-tag (디자인 문서 3-6절)
+ * 높이 52(--mark-height), 글씨 30 보통 굵기, 흰 바탕 + 검정 글씨 */
+.line-mark {
+  --bus-pad: 14px; /* 버스 번호·평평한 표지의 좌우 안쪽 여백 */
+  --bus-radius: 12px;
+  --tag-bar: 10px; /* 번호 없는 노선의 왼쪽 막대 */
+  --tag-radius: 4px;
+
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: var(--mark-height);
+  font-size: var(--font-sub);
+  font-weight: 400;
+  line-height: 1;
+  white-space: nowrap;
+  background: var(--color-bg);
+  border: var(--ring-width) solid var(--c, var(--color-text-sub));
+}
+
+/* 지하철: 원 */
+.line-mark.is-circle {
+  width: var(--mark-height);
+  border-radius: 50%;
+}
+
+/* 버스: 둥근 네모 안에 번호만 */
+.line-mark.is-bus {
+  min-width: var(--mark-height);
+  padding: 0 var(--bus-pad);
+  border-radius: var(--bus-radius);
+}
+
+/* 번호 없는 노선 (R6): IDLE 띠의 평평한 표지와 같은 모양. 막대는 회색(--line-none) */
+.line-mark.is-tag {
+  justify-content: flex-start;
+  padding: 0 var(--bus-pad);
+  border: var(--border-thin) solid var(--color-text-sub);
+  border-left: var(--tag-bar) solid var(--line-none);
+  border-radius: var(--tag-radius);
+}

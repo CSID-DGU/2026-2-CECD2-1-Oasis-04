@@ -68,7 +68,9 @@ frontend/
       mockRecorder.js       텍스트 입력을 음성 대신 받고 무발화·무음 타이머를 흉내
       realRecorder.js       MediaRecorder 자리 (stub)
     screens/              상태 하나 = 화면 하나 (14개). titles.js 에 화면 제목 14개
-    components/           공통 부품. ScreenFrame(제목+본문+버튼 틀), DevPanel(개발자 패널)
+    components/           공통 부품. FlowFrame(얇은 띠 + 좌우 두 칸, 새 틀), ScreenFrame(예전 세로 틀, 옮기는 중), 버튼·고리, DevPanel(개발자 패널)
+    hooks/                화면 여러 곳이 쓰는 훅 (useNow: 지금 시각)
+  scripts/screens/        14화면 찍기·픽셀 비교 스크립트 (사용법은 그 폴더의 README.md)
     styles/global.css     고령자 UI 스타일 (글씨 30px 이상, 버튼 112px, 고대비)
 ```
 
@@ -88,7 +90,7 @@ frontend/
 
 ## 4. mock 키워드
 
-마이크 대신 **텍스트 입력창**이 뜹니다 (`LISTENING` 화면). 아래 글자를 넣고 '다 말했어요'를 누르거나 잠시 기다리면 해당 흐름을 탑니다.
+마이크 대신 **DevPanel 의 'mock 마이크' 입력창**에 글을 넣습니다 (`LISTENING` 일 때만 보임. 화면 시안에 입력창이 없어서 2단계에서 화면에서 DevPanel 로 옮겼다). 아래 글자를 넣고 화면의 '다 말했어요'를 누르거나 잠시 기다리면 해당 흐름을 탑니다.
 
 | 입력 | 결과 | 도착 화면 |
 |---|---|---|
@@ -164,7 +166,7 @@ frontend/
 - **시작 점검에서 서버 불가와 마이크·STT 불가가 동시에 날 때** 우선순위 (지금은 서버 불가 우선)
 - **CHECKING → STARTUP_CHECK** 점선의 의미 (지금은 30초 자동 재시도로 해석)
 - **`/resolve` 응답 형식**, **`/stt` 입력 형식** (파일 업로드 vs 스트리밍) (mock은 `{ status, needConfirm, poi, candidates }`, `{ text }`로 가정)
-- **마이크 mock 방식**은 임시로 텍스트 입력창을 씁니다. 실제 `MediaRecorder`는 `realRecorder.js` 자리만 있습니다.
+- **마이크 mock 방식**은 임시로 DevPanel 의 텍스트 입력창을 씁니다. 실제 `MediaRecorder`는 `realRecorder.js` 자리만 있습니다.
 
 ## 9. 테스트
 

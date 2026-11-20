@@ -146,6 +146,8 @@ describe('real API', () => {
     it('그 밖의 실패는 throw 한다', async () => {
       mockFetch(fail('INTERNAL_ERROR', '잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.'), 500)
       await expect(resolve('서울역')).rejects.toThrow('잠시 문제가 생겼어요')
+      mockFetch(fail('INTERNAL_ERROR', '잠시 문제가 생겼어요. 처음 화면으로 돌아갈게요.'), 500)
+      await expect(resolve('서울역')).rejects.toMatchObject({ code: 'UNKNOWN' })
     })
   })
 
@@ -199,29 +201,31 @@ describe('real API', () => {
       const result = await route('SUB_0220_2호선')
       expect(fetchFn.mock.calls[0][0]).toBe('/routes/transit?start_latitude=37.5704&start_longitude=126.9918&end_latitude=37.504&end_longitude=127.048')
       expect(result.routes).toHaveLength(1)
-      expect(result.routes[0]).toMatchObject({
-        id: 'SUB_0220_2호선#1',
-        rank: 1,
-        summary: '지하철 3호선 → 지하철 2호선',
-        durationMin: 31,
-        transfers: 1,
-        walkM: 40,
-        headline: '전철만 이용해요. 약 31분 걸려요. 1번 갈아타요.',
+      // 디자인 문서 9-2절 모양만. 노선 ID·출구는 서버가 주지 않아 비운다
+      expect(result).toEqual({
+        routes: [
+          {
+            id: 'SUB_0220_2호선#1',
+            durationMin: 31,
+            exit: null,
+            start: null,
+            legs: [
+              { mode: 'WALK', minutes: 1, to: { name: '종로3가역', kind: 'STATION' } },
+              { mode: 'SUBWAY', lineId: null, label: '3', stops: 2, to: { name: '교대역', kind: 'STATION' } },
+              { mode: 'SUBWAY', lineId: null, label: '2', stops: 3, to: { name: '선릉역', kind: 'STATION' } },
+            ],
+          },
+        ],
       })
-      expect(result.routes[0].steps[0]).toMatchObject({ order: 1, mode: 'WALKING', distanceM: 40, easyText: '종로3가역까지 약 40미터 걸으세요.' })
-      expect(result.routes[0].steps[1]).toMatchObject({ mode: 'SUBWAY', line: '수도권 3호선', board: '종로3가', alight: '교대', stops: 2 })
-      expect(result.routes[0].steps[0]).toMatchObject({ line: null, board: null, alight: null, stops: null })
-      expect(result.summaryText).toBe('선릉역까지 가는 길을 1가지 찾았어요.')
-      expect(result.destination).toEqual({ poi_id: 'SUB_0220_2호선', name: '선릉역', x: 127.048, y: 37.504 })
     })
-    it('버스는 늘 다니는 번호를 골라 번을 붙이고, 경로가 많아도 서버가 준 순서대로 앞의 3개만 쓴다', async () => {
+    it('버스는 늘 다니는 번호를 고르고, 경로가 많아도 서버가 준 순서대로 앞의 3개만 쓴다', async () => {
       await prepare()
       mockFetch([BUS_ROUTE, SUBWAY_ROUTE, BUS_ROUTE, SUBWAY_ROUTE, BUS_ROUTE])
       const { routes } = await route('SUB_0220_2호선')
-      expect(routes.map((r) => [r.rank, r.summary, r.durationMin, r.transfers])).toEqual([
-        [1, '버스 273번', 40, 0],
-        [2, '지하철 3호선 → 지하철 2호선', 31, 1],
-        [3, '버스 273번', 40, 0],
+      expect(routes.map((r) => [r.id, r.durationMin, r.legs[0].mode, r.legs[0].number ?? r.legs[0].label])).toEqual([
+        ['SUB_0220_2호선#1', 40, 'BUS', '273'],
+        ['SUB_0220_2호선#2', 31, 'WALK', undefined],
+        ['SUB_0220_2호선#3', 40, 'BUS', '273'],
       ])
     })
     it('경로 조회 뒤에는 같은 출발·도착지의 카카오맵 주소를 휴대폰으로 보낼 수 있다', async () => {
@@ -241,10 +245,10 @@ describe('real API', () => {
     it('아주 가까운 곳은 서버를 부르지 않고 걸어가라고 안내한다', async () => {
       await prepare({ ...KIOSK, name: '선릉역 근처', x: 127.048, y: 37.5067 }) // 선릉역에서 북쪽으로 약 300미터
       const fetchFn = mockFetch([SUBWAY_ROUTE])
-      await expect(route('SUB_0220_2호선')).rejects.toThrow('가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.')
+      await expect(route('SUB_0220_2호선')).rejects.toMatchObject({ code: 'TOO_CLOSE', message: '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.' })
       expect(fetchFn).not.toHaveBeenCalled()
     })
-    it('경로 서버가 실패하면(카카오맵 오류·키 미설정 등) ROUTE_ERROR 로 throw 한다', async () => {
+    it('경로 서버가 실패하면(카카오맵 오류·키 미설정 등) UPSTREAM 으로 throw 한다', async () => {
       await prepare()
       // 서버 내부 오류(500)의 본문은 JSON 이 아니다
       vi.stubGlobal(
@@ -256,17 +260,17 @@ describe('real API', () => {
           },
         })),
       )
-      await expect(route('SUB_0220_2호선')).rejects.toThrow('ROUTE_ERROR')
+      await expect(route('SUB_0220_2호선')).rejects.toMatchObject({ code: 'UPSTREAM' })
     })
-    it('좌표가 잘못됐다는 응답(422 + detail)도 ROUTE_ERROR', async () => {
+    it('좌표가 잘못됐다는 응답(422 + detail)도 UNKNOWN', async () => {
       await prepare()
       mockFetch({ detail: [{ loc: ['query', 'end_latitude'], msg: 'Input should be less than or equal to 90' }] }, 422)
-      await expect(route('SUB_0220_2호선')).rejects.toThrow('ROUTE_ERROR')
+      await expect(route('SUB_0220_2호선')).rejects.toMatchObject({ code: 'UNKNOWN' })
     })
-    it('후보로 받은 적 없는 목적지는 서버를 부르지 않고 ROUTE_ERROR', async () => {
+    it('후보로 받은 적 없는 목적지는 서버를 부르지 않고 UNKNOWN', async () => {
       await prepare()
       const fetchFn = mockFetch([SUBWAY_ROUTE])
-      await expect(route('NEVER_SEEN')).rejects.toThrow('ROUTE_ERROR')
+      await expect(route('NEVER_SEEN')).rejects.toMatchObject({ code: 'UNKNOWN' })
       expect(fetchFn).not.toHaveBeenCalled()
     })
     it('현재 위치를 아직 모르면 먼저 위치를 물은 뒤 경로를 조회한다', async () => {
@@ -281,11 +285,11 @@ describe('real API', () => {
       expect(fetchFn.mock.calls.map((c) => c[0])).toEqual(['/api/v1/location', expect.stringContaining('/routes/transit?start_latitude=37.5704')])
       expect(result.routes).toHaveLength(1)
     })
-    it('현재 위치를 끝내 알 수 없으면 ROUTE_ERROR', async () => {
+    it('현재 위치를 끝내 알 수 없으면 UNKNOWN', async () => {
       toPoi(SUBWAY)
       vi.stubGlobal('navigator', {})
       mockFetch(fail('KIOSK_NOT_FOUND', '기기 설정에 문제가 있어요.'), 404)
-      await expect(route('SUB_0220_2호선')).rejects.toThrow('ROUTE_ERROR')
+      await expect(route('SUB_0220_2호선')).rejects.toMatchObject({ code: 'UNKNOWN' })
     })
   })
 
@@ -328,11 +332,19 @@ describe('real API: getLocation (현재 위치)', () => {
       snapped: true,
       accuracyM: 18,
       reason: null,
+      place: null, // 서버가 장소 정보를 주기 전에는 null → 띠는 "정보 없음" (team-requests.md #1)
     })
     const [url, init] = fetchFn.mock.calls[0]
     expect(url).toBe('/api/v1/location') // 좌표는 주소에 싣지 않는다
     expect(init.method).toBe('POST')
     expect(sentBody(fetchFn)).toEqual({ kiosk_id: 'KIOSK_JONGNO_01', x: 127.0383, y: 37.5786, accuracy: 18 })
+  })
+
+  it('서버가 장소 정보(place)를 주면 그대로 싣는다', async () => {
+    stubGeolocation((onOk) => onOk(HERE))
+    const place = { type: 'BUS_STOP', name: '경동시장앞 정류장', buses: [{ kind: 'TRUNK', numbers: ['120'] }] }
+    mockFetch(ok({ source: 'GPS', name: '경동시장앞 정류장', snapped: true, accuracy_m: 18, place }))
+    expect((await getLocation()).place).toEqual(place)
   })
 
   it('위치 사용을 거절하면 좌표 없이 알리고, 고정 위치와 그 이유를 돌려준다', async () => {

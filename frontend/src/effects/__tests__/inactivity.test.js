@@ -10,6 +10,7 @@ import { inactivityHandler } from '../handlers/inactivity.js'
 import { STATES, INACTIVITY_STATES } from '../../state/states.js'
 import { EVENTS } from '../../state/events.js'
 import { at } from './helpers.js'
+import { getInactivityDeadline } from '../inactivityClock.js'
 
 const INACTIVITY_MS = 8000
 const config = { inactivityMs: INACTIVITY_MS }
@@ -185,5 +186,30 @@ describe('inactivityHandler (무입력 복귀 타이머)', () => {
       cleanup()
     }
     expect(vi.getTimerCount()).toBe(0)
+  })
+
+  it('남은 시간 알림용 마감 시각을 적고, 입력이 오면 새로 적고, 끝나면 비운다 (디자인 문서 11-4절)', () => {
+    vi.setSystemTime(new Date('2026-11-19T14:30:00'))
+    const t0 = Date.now()
+    const dispatch = vi.fn()
+    expect(getInactivityDeadline()).toBeNull()
+    const cleanup = inactivityHandler(state, dispatch, { config })
+    expect(getInactivityDeadline()).toBe(t0 + INACTIVITY_MS)
+
+    vi.advanceTimersByTime(3000)
+    touch()
+    expect(getInactivityDeadline()).toBe(t0 + 3000 + INACTIVITY_MS)
+
+    vi.advanceTimersByTime(INACTIVITY_MS)
+    expect(dispatch).toHaveBeenCalledTimes(1)
+    expect(getInactivityDeadline()).toBeNull()
+    cleanup()
+  })
+
+  it('상태를 떠나면(cleanup) 마감 시각을 비운다', () => {
+    const cleanup = inactivityHandler(state, vi.fn(), { config })
+    expect(getInactivityDeadline()).not.toBeNull()
+    cleanup()
+    expect(getInactivityDeadline()).toBeNull()
   })
 })

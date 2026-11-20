@@ -1,0 +1,137 @@
+/* RouteCard · RouteSummary — 경로 카드와 요약 판. 기준: route-guide-final.html .cards, .card, .card.is-only (9-1절 R3·R5, 3-2절)
+ * 카드 600×168, 모서리 24, 테두리 2px #444. 고른 카드는 옅은 파랑 바탕 + 주 색 테두리(안쪽 4px 더) + 체크 */
+.route-cards {
+  --cards-after: 8px; /* 카드 묶음 아래 (버튼과의 간격은 칸의 --btn-gap) */
+
+  display: flex;
+  flex-direction: column;
+  gap: var(--list-gap);
+  margin: 0 0 var(--cards-after);
+  padding: 0;
+  list-style: none;
+}
+
+.route-card {
+  --card-pad-left: 16px;
+  --card-pad-right: 20px;
+  --card-col-gap: 12px;
+  --card-row-gap: 4px;
+  --picked-ring: 4px; /* 고른 카드의 안쪽 테두리 */
+  --time-gap: 6px; /* "약" · 숫자 · "분" 사이 */
+  --only-pad: 20px; /* 요약 판 위아래 */
+  --only-arrive-gap: 8px;
+  --lines-row-gap: 8px; /* 노선 줄을 접었을 때 줄 사이 */
+
+  display: grid;
+  grid-template-columns: var(--check-size) auto minmax(0, 1fr);
+  align-content: center;
+  column-gap: var(--card-col-gap);
+  row-gap: var(--card-row-gap);
+  width: 100%;
+  height: var(--card-height);
+  padding: 0 var(--card-pad-right) 0 var(--card-pad-left);
+  font: inherit;
+  color: var(--color-text);
+  text-align: left;
+  background: var(--color-bg);
+  border: var(--border-thin) solid var(--color-text-sub);
+  border-radius: var(--radius-card);
+  cursor: pointer;
+  touch-action: manipulation; /* 두 번 탭 확대 방지 */
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--motion-press);
+}
+
+.route-card:active {
+  background: var(--color-secondary-pressed);
+}
+
+.route-card[aria-pressed='true'] {
+  background: var(--color-bg-highlight);
+  border-color: var(--color-primary);
+  box-shadow: inset 0 0 0 var(--picked-ring) var(--color-primary);
+}
+
+.route-card:focus-visible {
+  outline: var(--focus-width) solid var(--color-text);
+  outline-offset: var(--focus-offset);
+}
+
+.route-card-check {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+  align-self: center;
+  width: var(--check-size);
+  height: var(--check-size);
+  visibility: hidden;
+}
+
+.route-card[aria-pressed='true'] .route-card-check {
+  visibility: visible;
+}
+
+.route-card-time {
+  grid-column: 2;
+  grid-row: 1;
+  align-self: center;
+  font-size: var(--font-body);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.route-card-time b {
+  margin: 0 var(--time-gap);
+  font-size: var(--font-display);
+  font-weight: 700; /* <b> 의 기본값(bolder) 대신. 글꼴 파일은 400·700 뿐 (문서 3-3절) */
+  letter-spacing: -0.02em;
+}
+
+/* 도착 시각은 소요 시간 칸의 너비를 정하지 않는다 (너비 0, 글자는 오른쪽으로 넘쳐 보인다, R5) */
+.route-card-arrive {
+  grid-column: 2;
+  grid-row: 2;
+  width: 0;
+  font-size: var(--font-body);
+  line-height: 1.2;
+  white-space: nowrap;
+}
+
+/* 노선 줄: 두 줄까지 접는다 (R5) */
+.route-card .route-lines {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  align-self: center;
+  justify-self: end;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  row-gap: var(--lines-row-gap);
+}
+
+/* 요약 판 (R3): 버튼이 아니다. 묶음 바탕, 테두리 없음, 높이는 내용을 따른다 */
+.route-card.is-only {
+  height: auto;
+  min-height: var(--card-height);
+  padding-top: var(--only-pad);
+  padding-bottom: var(--only-pad);
+  cursor: default;
+  background: var(--color-bg-group);
+  border-color: transparent;
+}
+
+/* 요약 판: 노선 줄은 첫 줄에서만 접히고, 도착 시각은 그 아래 한 줄 전체를 쓴다 */
+.route-card.is-only .route-lines {
+  grid-row: 1;
+}
+
+.route-card.is-only .route-card-arrive {
+  grid-column: 2 / span 2;
+  width: auto;
+  margin-top: var(--only-arrive-gap);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route-card {
+    transition: none;
+  }
+}

@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { routingHandler } from '../handlers/routing.js'
 import { STATES } from '../../state/states.js'
 import { EVENTS } from '../../state/events.js'
+import { ApiError } from '../../api/apiError.js'
 import { at, flush, deferred, fakeApi, dispatchedTypes } from './helpers.js'
 
 const POI = { id: 'poi-seoul-station', name: '서울역', category: '지하철역' }
@@ -41,13 +42,12 @@ describe('routingHandler', () => {
     expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.ROUTE_FOUND, routes: ROUTES })
   })
 
-  it('경로가 빈 배열이면 ROUTE_FAILED 를 사용자용 문장(error)과 함께 dispatch 한다', async () => {
+  it('경로가 빈 배열이면 ROUTE_FAILED 를 오류 코드 NO_ROUTE 와 앱 문구(error)와 함께 dispatch 한다', async () => {
     const { dispatch } = await run({ route: async () => ({ routes: [] }) })
     expect(dispatch).toHaveBeenCalledTimes(1)
     const action = dispatch.mock.calls[0][0]
     expect(action.type).toBe(EVENTS.ROUTE_FAILED)
-    expect(action.error).toBeTypeOf('string')
-    expect(action.error.length).toBeGreaterThan(0)
+    expect(action.error).toEqual({ code: 'NO_ROUTE', message: '가는 길을 찾을 수 없어요' })
   })
 
   it('routes 필드가 배열이 아니면(형식 불일치) ROUTE_FAILED 로 처리한다', async () => {
@@ -55,14 +55,14 @@ describe('routingHandler', () => {
     expect(dispatchedTypes(dispatch)).toEqual([EVENTS.ROUTE_FAILED])
   })
 
-  it('route() 가 throw 하면 ROUTE_FAILED 를 오류 메시지와 함께 dispatch 한다', async () => {
+  it('route() 가 Error 를 throw 하면 ROUTE_FAILED 를 UNKNOWN 오류와 함께 dispatch 한다', async () => {
     const { dispatch } = await run({
       route: async () => {
         throw new Error('ROUTE_ERROR')
       },
     })
     expect(dispatch).toHaveBeenCalledTimes(1)
-    expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.ROUTE_FAILED, error: 'ROUTE_ERROR' })
+    expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.ROUTE_FAILED, error: { code: 'UNKNOWN', message: 'ROUTE_ERROR' } })
   })
 
   it('selectedPoi 가 없으면 api.route 를 한 번도 부르지 않고 ROUTE_FAILED 를 dispatch 한다', async () => {
@@ -112,5 +112,16 @@ describe('routingHandler', () => {
     await flush()
 
     expect(dispatch).not.toHaveBeenCalled()
+  })
+})
+
+describe('routingHandler 오류 코드 (4단계)', () => {
+  it('ApiError 의 코드와 서버 문장을 그대로 싣는다', async () => {
+    const dispatch = vi.fn()
+    const message = '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.'
+    const api = { route: vi.fn(async () => { throw new ApiError('TOO_CLOSE', message) }) }
+    routingHandler({ selectedPoi: { id: 'p1' } }, dispatch, { api })
+    await vi.waitFor(() => expect(dispatch).toHaveBeenCalled())
+    expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.ROUTE_FAILED, error: { code: 'TOO_CLOSE', message } })
   })
 })

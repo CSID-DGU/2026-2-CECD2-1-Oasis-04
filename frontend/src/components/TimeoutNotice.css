@@ -1,0 +1,46 @@
+/* TimeoutNotice — 남은 시간 알림 판. 기준: design/mockups/confirmed/pick.css .thin-alert, 디자인 문서 11-4절
+ * 높이 80px(띠 96px 안에서 위아래 8px), 모서리 16px, 시계 아이콘 44px, 글씨 30px, 흰 글씨 + --color-band (18.88:1) */
+.timeout-notice {
+  --alert-height: 80px;
+  --alert-gap: 16px;
+  --alert-pad-left: 20px;
+  --alert-pad-right: 28px;
+  --alert-line: 1.2;
+
+  justify-self: end;
+  display: flex;
+  align-items: center;
+  gap: var(--alert-gap);
+  height: var(--alert-height);
+  padding: 0 var(--alert-pad-right) 0 var(--alert-pad-left);
+  color: var(--color-on-primary);
+  background: var(--color-band);
+  border-radius: var(--radius);
+}
+
+.timeout-notice-icon {
+  flex-shrink: 0;
+  width: var(--btn-icon);
+  height: var(--btn-icon);
+}
+
+.timeout-notice p {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  font-size: var(--font-sub);
+  line-height: var(--alert-line);
+  white-space: nowrap;
+}
+
+.timeout-notice b {
+  font-weight: 700;
+}
+
+/* 남은 초: 숫자 폭을 고정해 15 → 9 로 바뀔 때 글자가 옆으로 밀리지 않게 */
+.timeout-notice-left {
+  display: inline-block;
+  min-width: 2ch;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

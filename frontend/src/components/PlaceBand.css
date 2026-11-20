@@ -1,0 +1,160 @@
+/* PlaceBand — 첫 화면의 큰 띠 (역명판). 기준: design/mockups/confirmed/idle-final.css 의 .v8-band .v8-plate .v8-name .v8-tag
+ * .v8-nums .v8-circle .v9-group .v9-linetag .v9-end, 디자인 문서 7절·8-3절
+ * 띠 높이(--place-band-height)와 이름 크기(--place-name-size)는 첫 화면 틀(IdleFrame)도 쓰므로 global.css :root 토큰이다
+ * 위쪽 줄은 얇은 띠(ThinBand.css)의 클래스를 그대로 쓴다 (로고·시각이 같은 자리, 8-3절) */
+.place-band {
+  --place-name-min: 72px; /* 이름을 줄일 때의 최소 크기 (7절) */
+  --place-name-step: 8px; /* 한 번에 줄이는 크기 */
+  --name-line-height: 1.12;
+  --plate-min-width: 400px;
+  --plate-pad-x: 56px;
+  --line-width: 14px; /* 노선 선 굵기 (8-3절) */
+  --tag-height: 44px; /* 선 위의 흰 표지 */
+  --tag-pad-x: 14px;
+  --tag-radius: 4px;
+  --badge: 52px; /* 노선 번호 원 */
+  --badge-ring: 6px;
+  --linetag-bar: 10px; /* 번호 없는 노선 표지의 왼쪽 색 막대 (규칙 C) */
+  --group-gap: 20px;
+  --nums-gap: 14px;
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--place-band-height);
+  overflow: hidden;
+  background: var(--color-bg-group);
+  color: var(--color-text);
+}
+
+.place-band-lines {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: none;
+}
+
+/* 위쪽 줄: .thin-band 의 자리·모양을 그대로 쓰고 바탕만 띠 바탕에 맡긴다 */
+.place-band .place-band-top {
+  background: transparent;
+}
+
+.place-band-note {
+  font-size: var(--font-sub);
+  white-space: nowrap;
+}
+
+/* 가운데 이름 상자: 흰 바탕, 둥근 모서리. 선이 그 뒤로 지나간다. 높이는 이름 길이와 상관없이 고정 (7절 규칙 5) */
+.place-band-plate {
+  position: absolute;
+  top: var(--band-thin-height);
+  left: 50%;
+  min-width: var(--plate-min-width);
+  height: var(--place-plate-height);
+  padding: 0 var(--plate-pad-x);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg);
+  border-radius: var(--radius-plate);
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
+/* 이름: 한 줄 (7절 규칙 1). 글씨 크기는 useFitText 가 넣는다 */
+.place-band-name {
+  font-size: var(--place-name-size);
+  font-weight: 700;
+  line-height: var(--name-line-height);
+  white-space: nowrap;
+}
+
+.place-band-waiting {
+  font-size: var(--font-title);
+  line-height: var(--name-line-height);
+}
+
+/* 선 위의 흰 표지: 테두리 없음, 모서리 4px. 노선색 위에 글자를 직접 올리지 않는다 (8-3절) */
+.place-band-tag {
+  position: absolute;
+  height: var(--tag-height);
+  padding: 0 var(--tag-pad-x);
+  font-size: var(--font-sub);
+  line-height: var(--tag-height);
+  background: var(--color-bg);
+  border-radius: var(--tag-radius);
+  transform: translateY(-50%);
+  white-space: nowrap;
+}
+
+.place-band-right {
+  right: var(--screen-padding);
+}
+
+/* 줄 왼쪽 묶음: 노선 표시 + 앞 역 (또는 버스 종류) */
+.place-band-group {
+  position: absolute;
+  left: var(--screen-padding);
+  display: flex;
+  align-items: center;
+  gap: var(--group-gap);
+  transform: translateY(-50%);
+}
+
+.place-band-group .place-band-tag,
+.place-band-nums .place-band-tag {
+  position: static;
+  transform: none;
+}
+
+/* 노선 번호 원: 흰 바탕 + 옅은 노선색 고리 + 검정 글씨 */
+.place-band-circle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--badge);
+  height: var(--badge);
+  font-size: var(--font-sub);
+  line-height: 1;
+  background: var(--color-bg);
+  border: var(--badge-ring) solid var(--c);
+  border-radius: 50%;
+}
+
+/* 번호 없는 노선(공항철도 등): 평평한 표지 + 왼쪽 색 막대 (규칙 C) */
+.place-band-linetag {
+  border-left: var(--linetag-bar) solid var(--c);
+}
+
+/* 버스 번호 줄: 오른쪽에서부터 */
+.place-band-nums {
+  position: absolute;
+  right: var(--screen-padding);
+  display: flex;
+  gap: var(--nums-gap);
+  transform: translateY(-50%);
+}
+
+.place-band-nums .place-band-tag.is-num {
+  font-size: var(--font-body);
+}
+
+/* 번호 후보의 너비를 재는 자리. 자리는 차지하지 않고 보이지 않는다 */
+.place-band-measure {
+  position: absolute;
+  top: 0;
+  left: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.place-band-measure .place-band-nums {
+  right: auto;
+  left: 0;
+  width: max-content;
+  transform: none;
+}

@@ -1,0 +1,29 @@
+/* SayExamples — 기준: design/mockups/confirmed/states.css .say-label .says (IDLE 예시와 같은 모양, 테두리·바탕 없음) */
+.say-label {
+  --say-label-gap-top: 24px;
+  --say-label-gap-bottom: 8px;
+  --say-line-height: 1.4;
+}
+
+.says {
+  --says-gap: 6px;
+  --says-line-height: 1.35;
+}
+
+.flow .say-label {
+  margin: var(--say-label-gap-top) 0 var(--say-label-gap-bottom);
+  font-size: var(--font-sub);
+  line-height: var(--say-line-height);
+}
+
+.says {
+  display: flex;
+  flex-direction: column;
+  gap: var(--says-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-say);
+  line-height: var(--says-line-height);
+  white-space: nowrap;
+}

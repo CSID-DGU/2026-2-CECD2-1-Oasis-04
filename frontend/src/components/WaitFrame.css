@@ -1,0 +1,62 @@
+/* WaitFrame — 기다림 화면 5개 공통. 기준: design/mockups/confirmed/wait.css, 디자인 문서 10-2절
+ * 고리 칸 340 (바깥 고리 지름 304 + 호 굵기 + 여유). 고리 가운데 = 본문 위에서 --ring-center-y (화면 495px, LISTENING 과 같음) */
+.wait-frame {
+  --wait-box: 340px;
+  --wait-text-max: 1640px; /* 큰 글씨가 쓸 수 있는 너비: 화면 양쪽 140px 을 뺀 값 */
+  --label-gap: 24px; /* 고리 → 머리말 */
+  --core-gap: 40px; /* 머리말이 없을 때 고리 → 큰 글씨 */
+  --sub-gap: 8px; /* 큰 글씨 → 안내 */
+  --core-line-height: 1.2;
+  --core-letter-spacing: -0.02em;
+}
+
+.wait {
+  position: absolute;
+  top: calc(var(--ring-center-y) - var(--wait-box) / 2);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.wait-ring {
+  flex-shrink: 0;
+  width: var(--wait-box);
+  height: var(--wait-box);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flow .wait-label {
+  margin-top: var(--label-gap);
+  font-size: var(--font-sub);
+  line-height: var(--core-line-height);
+}
+
+.wait-core {
+  max-width: var(--wait-text-max);
+  margin: 0;
+  font-size: var(--font-wait);
+  font-weight: 700;
+  line-height: var(--core-line-height);
+  letter-spacing: var(--core-letter-spacing);
+  white-space: nowrap; /* 재는 동안과 72px 로 들어갈 때는 한 줄 */
+}
+
+/* 72px 로도 넘치면(useFitText 가 data-wrap 을 붙인다) 줄을 바꾼다. 고른 줄 길이는 global.css 의 .wrap-even (10-2절 긴 글 규칙) */
+.wait-core[data-wrap] {
+  white-space: normal;
+}
+
+.wait-core.is-first {
+  margin-top: var(--core-gap);
+}
+
+.flow .wait-sub {
+  margin-top: var(--sub-gap);
+  font-size: var(--font-title);
+  white-space: nowrap;
+}

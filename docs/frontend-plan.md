@@ -112,11 +112,15 @@ export const transitions = {
   selectedPoi: null,        // 확정된 목적지
   routes: [],               // /route 응답 경로 최대 3개
   qr: null,                 // QR 데이터(URL 등)
-  error: null,              // 마지막 오류 메시지 (UNAVAILABLE 화면 표시용)
+  error: null,              // 마지막 오류 { code, message } (UNAVAILABLE 화면 표시용. 아래 "오류 모양")
   lastEvent: null,          // 개발자 패널 표시용
 }
 ```
 
+- **오류 모양** (2026-11-19, 옮기기 계획 4-1절·4단계): `error` 는 `{ code, message }` 다. `RESOLVE_OUT_OF_SCOPE_OR_ERROR`·`ROUTE_FAILED` 의 payload `error` 도 같은 모양이다 (이벤트 이름·전이는 그대로)
+  - `code` 여섯 개: `NO_ROUTE`(경로 없음), `TOO_CLOSE`(가까움), `OUT_OF_SCOPE`(범위 밖), `UPSTREAM`(길 안내를 받아오지 못함), `NO_POI`(목적지 없이 ROUTING), `UNKNOWN`(그 밖 모두. 디자인 문서 12-3절의 드문 이유와 네트워크 오류)
+  - `message`: 서버의 쉬운 문장이 있으면 그것, 없으면 `null`. 화면 문구는 `view/unavailableReason.js` 가 코드와 message 로 고른다 (NO_ROUTE·OUT_OF_SCOPE·NO_POI 는 앱 문구, message 가 오류 코드 모양이거나 비면 코드별 기본 문구)
+  - 서버 코드 → `code`: `ROUTE_NOT_FOUND` → 빈 경로(핸들러가 `NO_ROUTE`), `ROUTE_TOO_CLOSE` → `TOO_CLOSE`, `UPSTREAM_ERROR` → `UPSTREAM`, resolve `OUT_OF_SCOPE` → `OUT_OF_SCOPE`, 그 밖 → `UNKNOWN`. real API 는 `api/apiError.js` 의 `ApiError(code, message)` 를 throw 한다
 - reducer가 하는 일은 세 가지뿐: (1) `transitions[state][event]`로 다음 상태 결정 (2) 이벤트별 payload를 위 필드에 저장 (3) `failCount` 증감
   - `RESOLVE_NOT_UNDERSTOOD`, `CONFIRM_NONE_OF_THEM` → `failCount + 1` (누적)
   - `SWITCH_TO_VOICE` → `failCount = 0` (표 비고)
@@ -154,7 +158,7 @@ useEffect(() => {
 | `RESOLVING` | `api.stt(audio)` → `api.resolve(text)` | `RESOLVE_NEED_CONFIRM` / `RESOLVE_CONFIRMED` / `RESOLVE_NOT_UNDERSTOOD` / `RESOLVE_OUT_OF_SCOPE_OR_ERROR` | `stt()` 또는 `resolve()` throw → `RESOLVE_OUT_OF_SCOPE_OR_ERROR` |
 | `FAIL_COUNT_CHECK` | `failCount` 확인 (동기) | `FAIL_COUNT_1` (failCount === 1) / `FAIL_COUNT_2` (>= 2) | 없음 (동기) |
 | `ROUTING` | `api.route(selectedPoi.id)` | `ROUTE_FOUND` / `ROUTE_FAILED` | `route()` throw → `ROUTE_FAILED`; `selectedPoi` 없음 → API 호출 없이 `ROUTE_FAILED` |
-| `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF` | 공통 `inactivity` 핸들러. `config.inactivityMs`(60초) 타이머. `document`의 `pointerdown`/`keydown` 이 오면 타이머 리셋 | `INACTIVITY_TIMEOUT` | 없음 (타이머만) |
+| `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF` | 공통 `inactivity` 핸들러. `config.inactivityMs`(60초) 타이머. `document`의 `pointerdown`/`keydown` 이 오면 타이머 리셋. 타이머를 걸 때 마감 시각을 `effects/inactivityClock.js` 에 적고 지울 때 비운다(화면의 남은 시간 알림이 `hooks/useInactivityCountdown.js` 로 읽는다. 디자인 문서 11-4절, 2026-11-19) | `INACTIVITY_TIMEOUT` | 없음 (타이머만. 마감 시각은 reducer 밖 저장소) |
 | `IDLE` | 없음 (사용자 버튼이 이벤트를 낸다) | - | - |
 
 - 판단 노드(`STARTUP_CHECK`, `FAIL_COUNT_CHECK`)는 화면 없이 `Spinner`를 잠깐 보여준다
@@ -171,6 +175,8 @@ Spring의 `@ConfigurationProperties`처럼 env를 한 곳에서 읽어 기본값
 | `noSpeechMs` | `VITE_NO_SPEECH_MS` | 10000 | 4000 | `LISTENING` (recorder) |
 | `silenceMs` | `VITE_SILENCE_MS` | 2500 | 2500 | `LISTENING` (recorder) |
 | `inactivityMs` | `VITE_INACTIVITY_MS` | 60000 | 8000 | 무입력 복귀 6개 상태 |
+
+개발 모드에서만 주소 값으로 덮어쓸 수 있다: `http://localhost:5173/?inactivityMs=60000` (모든 키 같음, 운영 빌드에서는 무시). 개발 설정 8초는 남은 시간 알림(15초 이하)이 들어가자마자 보이므로, 알림 없는 화면을 볼 때 쓴다 (2026-11-19)
 
 ```js
 // src/config.js
@@ -202,10 +208,10 @@ export function routingHandler(state, dispatch, api) {
     try {
       const { routes } = await api.route(state.selectedPoi.id);
       if (cancelled) return;
-      dispatch(routes.length ? { type: 'ROUTE_FOUND', routes } : { type: 'ROUTE_FAILED', error: '경로 없음' });
+      dispatch(routes.length ? { type: 'ROUTE_FOUND', routes } : { type: 'ROUTE_FAILED', error: { code: 'NO_ROUTE', message: null } });
     } catch (e) {
       if (cancelled) return;
-      dispatch({ type: 'ROUTE_FAILED', error: e.message });
+      dispatch({ type: 'ROUTE_FAILED', error: toError(e) }); // { code, message }
     }
   })();
   return () => { cancelled = true; };
@@ -218,8 +224,9 @@ export function routingHandler(state, dispatch, api) {
 
 | 담당 | 책임 |
 |---|---|
-| `ListeningScreen` (화면) | 입력창(mock 음성), "다 말했어요", "취소", "처음으로" 버튼을 그린다. 입력이 바뀔 때마다 `recorder.onInput(text)`로 알린다. 버튼: 다 말했어요 → `SPEECH_END({ text })`, 취소 → `LISTEN_CANCEL`, 처음으로 → `GO_HOME` |
-| `recorder` (장치) | 타이머 두 개를 관리한다. **무발화 타이머**: `start()` 직후 `config.noSpeechMs`(10초) 동안 `onInput`이 한 번도 오지 않으면 `onSpeechEnd({ text: '' })`. **무음 타이머**: 첫 `onInput` 이후부터 동작하며, `onInput`마다 리셋되고 `config.silenceMs`(2.5초) 동안 입력이 없으면 `onSpeechEnd({ text })`. 첫 입력이 오면 무발화 타이머는 해제한다. `stop()`에서 둘 다 clear |
+| `ListeningScreen` (화면) | 듣는 중 표시와 "다 말했어요", "취소", "처음으로" 버튼을 그린다. 버튼: 다 말했어요 → `SPEECH_END({ text: recorder.getText() })`, 취소 → `LISTEN_CANCEL`, 처음으로 → `GO_HOME` |
+| `DevPanel` (mock 입력, 개발 도구) | mock 모드의 LISTENING 에서만 글 입력창을 보인다. 입력이 바뀔 때마다 `recorder.onInput(text)`로 알린다 (2026-11-19, 옮기기 계획 2단계에서 화면에서 옮겨 옴. 확정 시안에 입력창이 없다) |
+| `recorder` (장치) | 지금까지 받은 글을 `getText()` 로 알려 준다(real 은 늘 빈 글). 타이머 두 개를 관리한다. **무발화 타이머**: `start()` 직후 `config.noSpeechMs`(10초) 동안 `onInput`이 한 번도 오지 않으면 `onSpeechEnd({ text: '' })`. **무음 타이머**: 첫 `onInput` 이후부터 동작하며, `onInput`마다 리셋되고 `config.silenceMs`(2.5초) 동안 입력이 없으면 `onSpeechEnd({ text })`. 첫 입력이 오면 무발화 타이머는 해제한다. `stop()`에서 둘 다 clear |
 | `LISTENING` 핸들러 (effect) | `recorder.start({ onSpeechEnd: ({ text }) => dispatch(SPEECH_END, { text }) })` 를 호출하고, cleanup에서 `recorder.stop()` |
 
 빈 텍스트로 넘어간 `SPEECH_END`는 `RESOLVING`에서 `resolve('')` → `NOT_UNDERSTOOD` → `FAIL_COUNT_CHECK`로 이어져 기존 실패 흐름을 그대로 탄다 (회의 확정). `LISTEN_CANCEL`·`GO_HOME`은 둘 다 `IDLE`로 가고 failCount를 0으로 만든다. 버튼이 둘인 이유는 '취소'는 "말하기만 그만둔다"는 뜻이고 '처음으로'는 모든 조작 화면에 공통으로 두는 버튼이기 때문이다.
@@ -232,18 +239,18 @@ export function routingHandler(state, dispatch, api) {
 |---|---|---|---|
 | `STARTUP_CHECK` | `StartupCheckScreen.jsx` | "점검 중..." 스피너 | 없음 (effect가 처리) |
 | `CHECKING` | `CheckingScreen.jsx` | "서버 연결 중, 잠시 후 다시 시도" + 남은 초 | 없음 (타이머) |
-| `IDLE` | `IdleScreen.jsx` | 안내 문구, 큰 마이크 버튼, 손으로 고르기 버튼 | `MIC_BUTTON_PRESSED`, `MANUAL_SELECT_PRESSED` |
-| `IDLE_REDUCED` | `IdleReducedScreen.jsx` | 안내 문구, 손으로 고르기 버튼만 (마이크 숨김). 60초마다 자동 재점검 | `MANUAL_SELECT_PRESSED` (`RECHECK_TIMER`는 effect) |
-| `LISTENING` | `ListeningScreen.jsx` | "듣고 있어요" + mock 입력창 + "다 말했어요" / "취소" / "처음으로" | `SPEECH_END` (버튼은 화면이 직접, 타이머는 recorder 경유), `LISTEN_CANCEL`, `GO_HOME` |
+| `IDLE` | `IdleScreen.jsx` | 큰 띠(지금 계신 곳) + 질문·예시 세 줄 + 큰 '말하기' + 손으로 고르기 (`IdleFrame`, 디자인 문서 8절) | `MIC_BUTTON_PRESSED`, `MANUAL_SELECT_PRESSED` |
+| `IDLE_REDUCED` | `IdleReducedScreen.jsx` | 큰 띠 + 질문·안내 문장 + 큰 '손으로 고르기' 하나 (마이크 숨김). 60초마다 자동 재점검 | `MANUAL_SELECT_PRESSED` (`RECHECK_TIMER`는 effect) |
+| `LISTENING` | `ListeningScreen.jsx` | 듣는 중 표시 + "듣고 있어요" + "다 말했어요" / "취소" / "처음으로" (mock 입력창은 DevPanel) | `SPEECH_END` (버튼은 화면이 직접, 타이머는 recorder 경유), `LISTEN_CANCEL`, `GO_HOME` |
 | `RESOLVING` | `ResolvingScreen.jsx` | "말씀 알아듣는 중..." 스피너 | 없음 |
 | `CONFIRMING` | `ConfirmingScreen.jsx` | "OO 맞나요?" 또는 후보 목록, 예 / 모두 아니에요 / 다른 곳 말하기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `DESTINATION_CONFIRMED`(poi), `CONFIRM_NONE_OF_THEM`, `CONFIRM_SAY_OTHER_PLACE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `FAIL_COUNT_CHECK` | `FailCountCheckScreen.jsx` | 스피너 (즉시 지나감) | 없음 |
 | `ROUTING` | `RoutingScreen.jsx` | "가는 길 찾는 중..." 스피너 | 없음 |
 | `REASKING` | `ReaskingScreen.jsx` | "잘 못 알아들었어요, 다시 말씀해 주세요" + 다시 말하기 / 손으로 고르기 / 처음으로. 자동 녹음 없음. 무입력 60초 복귀 | `RETRY_SPEECH`, `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + error 메시지 + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + 오류 코드별 그림·문구(디자인 문서 12-3절) + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. `state.health`의 `mic` 또는 `stt`가 `false`면 '말로 하기'를 숨긴다 (전이 변경 없음). 무입력 60초 복귀 | `POI_SELECTED`(poi), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 1순위 크게 + 2·3순위 작게, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 자리(텍스트/URL) 표시 + 처음으로. 무입력 60초 복귀 | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 경로 카드(최대 3개, 화면 안에서 고른다. 처음엔 1순위) + 선택된 경로의 타임라인, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 그림(`QrBox`, 주소로 브라우저에서 만듦) + 단계 세 줄 + 보내는 경로 요약 판 + 처음으로. 만드는 중·오류는 QR 자리에 글자. 무입력 60초 복귀 (2026-11-20, 옮기기 계획 10단계) | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 
 - '처음으로' 버튼은 `ScreenFrame`의 `showHome` prop으로 넣는다. 사용자가 조작하는 7개 화면(`LISTENING`, `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF`)만 `showHome`을 켠다. 스피너 화면 5개와 `IDLE`, `IDLE_REDUCED`는 끈다
 - 공통 부품: `ScreenFrame` (제목 + 본문 + 버튼 영역 + 선택적 '처음으로'), `BigButton`. 디자인은 글씨 크기·여백만
@@ -261,6 +268,7 @@ export function routingHandler(state, dispatch, api) {
 | `route(poiId)` | 문자열 | `{ routes: [1순위, 2순위, 3순위] }` | `poiId === 'poi-no-route'` → `{ routes: [] }`; 시나리오 `routeError` → `Error('ROUTE_ERROR')` |
 | `getPois()` | 없음 | `[{ id, name, category }]` 10개 내외 | 시나리오 `poisError` → `Error` (화면에 "목록을 불러올 수 없어요" 표시, 전이 없음) |
 | `createQr(routeId)` | 문자열 | `{ url: 'https://example/r/...' }` | 시나리오 `qrError` → `Error` (QR 화면에 오류 문구, 전이 없음) |
+| `getLocation()` | 없음 | `{ name, text, source, snapped, accuracyM, reason, place }`. `place` 는 디자인 문서 8-5절 형식 (DevPanel '장소': 지하철역 기본 / 버스정류장 / 정보 없음 `null` / 띠 시험 데이터, `api/mock/data/places.js`) | 없음. 전이 없는 표시용 조회 (`state/LocationContext.jsx` 가 처음 화면에 들어갈 때 부른다) |
 
 장치 mock (`src/devices/mockRecorder.js`):
 
@@ -347,13 +355,13 @@ export const api = import.meta.env.VITE_USE_MOCK === 'true' ? mock : real;
 | # | 항목 | 출처 | 상태 | 처리 |
 |---|---|---|---|---|
 | 1 | `MANUAL_SELECT` 목적지 목록: 서버 vs 내장 | 표 미정 5건 | 미정 | `api.getPois()`로 mock 호출. 내장으로 결정되면 상수로 교체 |
-| 2 | QR 생성: 프론트 vs 서버 | 표 미정 | 미정 | `api.createQr()` mock이 URL 반환, 화면엔 텍스트로 표시. QR 이미지 라이브러리 도입 보류 |
+| 2 | QR 생성: 프론트 vs 서버 | 표 미정 | 미정 (대체 동작 구현) | `api.createQr()` 가 주소를 돌려주고, 프론트가 npm `qrcode-generator`(MIT, 오프라인)로 QR 그림을 그린다(`view/qrMatrix.js`, 2026-11-20). 서버가 그림을 주기로 하면 `QrBox` 만 바꾼다. `docs/team-requests.md` #10 |
 | 3 | `CONFIRMING`의 "자동 녹음" 처리 | 표 미정 + 확인 필요 10 | **확정** | 자동 녹음 없음. 버튼(예 / 모두 아니에요 / 다른 곳 말하기 / 처음으로)으로만 진행. `CONFIRMING → RESOLVING` 전이 없음 |
 | 4 | `REASKING`의 "자동 녹음" | 확인 필요 10 | **확정** | 자동 녹음 없음. 버튼(`RETRY_SPEECH` / `MANUAL_SELECT_PRESSED` / `GO_HOME`)으로만 |
 | 5 | `LISTENING` 탈출 조건 | 확인 필요 6 | **확정** | 진입 후 10초 무발화면 빈 텍스트로 `SPEECH_END` → 기존 NOT_UNDERSTOOD 흐름. 입력 시작 후엔 발화 후 2.5초 무음. '취소'(`LISTEN_CANCEL`) → IDLE. 시간값은 설정 |
 | 6 | 실패 횟수 초기화 시점과 누적 여부 | 확인 필요 7 | **확정** | 누적. 1회 → REASKING, 2회 이상 → MANUAL_SELECT. `IDLE` 진입(`INACTIVITY_TIMEOUT`, `GO_HOME`, `LISTEN_CANCEL`) 시 0. `SWITCH_TO_VOICE` 초기화 유지 |
 | 7 | 끝 상태·조작 화면에서 `IDLE` 복귀 | 확인 필요 8 | **확정** | `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF` 6곳에서 무입력 60초 → `INACTIVITY_TIMEOUT` (사용자가 자리를 떠나도 키오스크가 멈추지 않도록). 조작 화면 7곳에 '처음으로' → `GO_HOME`. `LISTENING`은 10초 무발화와 '취소'가 대신함. `DEV_RESET`은 개발 도구로 유지 |
-| 8 | `ROUTE_GUIDE`에서 2·3순위 경로 선택, 휴대폰으로 보내지 않고 종료 | 확인 필요 9 | 미정 | 2·3순위는 표시만, 선택 불가. 종료는 '처음으로'·무입력 복귀로 대체 |
+| 8 | `ROUTE_GUIDE`에서 2·3순위 경로 선택, 휴대폰으로 보내지 않고 종료 | 확인 필요 9 | **확정** (2026-11-19) | 경로 카드로 고른다. 화면 안 동작이라 상태·전이는 그대로다. 종료는 '처음으로'·무입력 복귀로 대체 |
 | 9 | 시작 점검에서 "서버 불가"와 "마이크·STT 불가" 동시 발생 시 우선순위 | 확인 필요 4 | 미정 | 서버 불가 우선 (서버 없으면 아무것도 못 하므로) |
 | 10 | `IDLE_REDUCED` 복구 경로 | 확인 필요 5 | **확정** | 60초마다 `RECHECK_TIMER` → `STARTUP_CHECK`에서 다시 점검. 정상이면 `IDLE`. 시간값은 설정 |
 | 11 | `CHECKING → STARTUP_CHECK` 점선의 의미 | 확인 필요 1 | 미정 | 30초 자동 재시도 타이머로 해석 |
@@ -372,10 +380,35 @@ mock이 가정하고 있는 요청·응답 형식이다. 백엔드 확정 후 �
 | `GET /health` | 없음 | `{ server: bool, stt: bool }` | STT 가용 여부를 `/health`가 알려주는지, 별도 엔드포인트인지 |
 | `POST /stt` | 녹음 파일 (`FormData`, Blob) | `{ text: string }` | 파일 포맷(webm/wav), 스트리밍 여부, 빈 음성일 때 응답 |
 | `POST /resolve` | `{ text: string }` | `{ status: 'OK' \| 'NOT_UNDERSTOOD' \| 'OUT_OF_SCOPE', needConfirm: bool, poi?: Poi, candidates?: Poi[] }` | "못 알아들음"과 "범위 밖"을 구분하는 필드, 후보 최대 개수, `Poi` 구조(`id`, `name`, `category`) |
-| `POST /route` 또는 `GET /route?poi_id=` | `{ poiId: string }` | `{ routes: Route[] }` (최대 3개, 1순위가 첫 번째) | `Route` 구조(소요 시간, 환승, 요약 문구), 경로 없음을 빈 배열로 주는지 오류로 주는지 |
+| `POST /route` 또는 `GET /route?poi_id=` | `{ poiId: string }` | `{ routes: Route[] }` (최대 3개, 1순위가 첫 번째). `Route` = 디자인 문서 9-2절 형식 `{ id, durationMin, exit, start, legs[] }` (아래 '경로 모양', 8단계. 예전 필드 `rank`·`summary`·`transfers` 는 9단계에서 지움) | 노선 ID·출구·마지막 걷기·버스 종류 값(`team-requests.md` #2~#6). 경로 없음은 빈 배열 |
 | `GET /pois` (가정) | 없음 | `Poi[]` | 손으로 고르기 목록을 서버에서 주는지, 키오스크에 내장하는지 (6절 1번) |
+| `POST /location` | `{ kiosk_id, x?, y?, accuracy? }` | `{ name, easy_text, source, snapped, accuracy_m, fallback_reason, place? }` → 앱 `{ name, text, source, snapped, accuracyM, reason, place }` | `place`(디자인 문서 8-5절)를 서버가 주는지 (`team-requests.md` #1). 주기 전에는 `place: null` → 큰 띠는 "정보 없음", 얇은 띠는 위치 응답의 `name` 을 이름 규칙으로 보이고 이름도 없을 때만 비움 (7단계, 2026-11-20 보완) |
 | `POST /qr` (가정) | `{ routeId: string }` | `{ url: string }` | QR을 서버가 만드는지, 프론트가 URL로 직접 그리는지 (6절 2번) |
 | 공통 | - | - | 오류 응답 형식(HTTP 상태 코드 + `{ message }`), 타임아웃 기준, 연결 끊김을 프론트가 어떻게 감지할지 |
+
+
+### 경로 모양 (8단계, 2026-11-20)
+
+mock 과 real 이 모두 이 모양으로 준다. 화면은 이것을 `view/routeView.js` 의 `toRouteGuide(routes, { here })` 로 바꿔 그린다 (9단계부터).
+
+```
+Route = {
+  id, durationMin,
+  exit: '6' | null,                 // 마지막 차에서 내린 역의 출구. real 은 늘 null (#3)
+  start: { name, kind } | null,     // 출발 장소. null 이면 화면이 지금 계신 곳(here)으로 채운다
+  legs: [
+    { mode: 'SUBWAY', lineId: 'seoul-3' | null, label: '3' | '공항철도', stops: 2, to: { name: '충무로역', kind: 'STATION' } },
+    { mode: 'BUS', kind: 'TRUNK' | ... | null, number: '472', stops: 6, to: { name: '명동입구', kind: 'STOP' } },
+    { mode: 'WALK', minutes: 3, to?: { name, kind: 'STATION' | 'STOP' | 'PLACE' } },   // to 없음 = 같은 역 안
+  ],
+}
+```
+
+- mock: `api/mock/data/routes.js`(지하철역 묶음 A·B·C), 경우별 시험 데이터는 `api/mock/data/routeCases.js`(시안 `route-cases.js` 10가지, 버스정류장 묶음, 긴 경로). mock 은 지나는 이름 `via[]` 를 두고 정거장 수는 그 개수다
+- real: `api/real/routeLegs.js` 가 서버 `steps[]` 를 `legs[]` 로 바꾼다. 서버 모양 두 가지(지금 `/api/v1/route`, `feature/backend-route` 의 `/routes/transit`)를 모두 받는다. 대체 동작은 그 파일 머리 주석과 `team-requests.md` #2~#6
+- `toRouteGuide` 가 미리 정하는 것: R1(환승 2회 이하 최대 3개, 없으면 가장 적은 하나 = `fallback`), R3(`single`), 환승 횟수(타는 구간 수 - 1), 노선 표지 모양(원·평평한 표지·버스 네모)과 색 토큰 이름, "N번째 역에서 내려요", 걷기만(`walkOnly`), 마지막 걷기(`lastWalk`)·장소 목적지(`endsAtPlace`), 출구 유무(`hasExit`), 단계별 타임라인 항목(`timeline.full`/`merged`/`folded`), 도착 시각(`arriveAt`, `clockText`)
+- 화면 부품이 정하는 것: 글자 너비가 있어야 하는 판단(카드 노선 줄 접기 R5 는 `RouteLines` 의 CSS 줄 바꿈, 타임라인 ①~④ 중 어느 단계를 쓸지 R2 와 두 줄 이름 36px 은 `Timeline` 이 그려 보고 재서 `view/routeFit.js` 로 고른다, 9단계)
+- 화면이 쓰는 지금 계신 곳(경로에 `start` 가 없을 때): `LocationContext` 의 위치를 `view/placeName.js` 의 `bandPlaceName` 으로 (띠와 같은 이름, 9단계)
 
 ## 검증 방법
 

@@ -1,0 +1,65 @@
+/* IdleFrame — 첫 화면 본문. 기준: design/mockups/confirmed/idle-final.css .v8-left .v8-actions .v8-question .v8-says .v9-notice,
+ * 디자인 문서 8-2절. 버튼 묶음(주 500 + 턱 12 + 간격 24 + 보조 160 = 696)을 띠 아래 본문의 세로 가운데에 둔다 */
+.idle {
+  --question-gap: 36px; /* 질문 아래 */
+  --say-label-gap: 12px;
+  --question-line-height: 1.2;
+  --question-spacing: -0.02em;
+  --says-line-height: 1.35;
+  --actions-height: calc(var(--idle-primary-height) + var(--idle-depth) + var(--btn-gap) + var(--idle-secondary-height));
+  --actions-top: calc(var(--place-band-height) + (100% - var(--place-band-height) - var(--actions-height)) / 2);
+
+  position: relative;
+  width: 100%;
+  height: 100%;
+  color: var(--color-text);
+  background: var(--color-bg);
+}
+
+/* IDLE_REDUCED 는 버튼 하나(500 + 턱 12) */
+.idle.is-reduced {
+  --actions-height: calc(var(--idle-primary-height) + var(--idle-depth));
+}
+
+.idle p {
+  margin: 0;
+}
+
+.idle-right {
+  position: absolute;
+  top: var(--actions-top);
+  right: var(--screen-padding);
+  width: var(--idle-col-right);
+}
+
+.idle-left {
+  position: absolute;
+  top: var(--actions-top);
+  left: var(--content-left);
+  height: var(--actions-height);
+  display: flex;
+  align-items: center;
+}
+
+/* 질문: 96px 굵게 (화면의 핵심 한 줄) */
+.idle-question {
+  margin: 0 0 var(--question-gap);
+  font-size: var(--font-question);
+  font-weight: 700;
+  line-height: var(--question-line-height);
+  letter-spacing: var(--question-spacing);
+  white-space: nowrap;
+}
+
+/* 예시: SayExamples 의 모양(52px, 테두리·바탕 없음) 그대로. 위아래 간격만 첫 화면 값 */
+.idle .say-label {
+  margin: 0 0 var(--say-label-gap);
+  font-size: var(--font-sub);
+  line-height: var(--line-height);
+}
+
+/* IDLE_REDUCED 의 안내 문장 (예시 자리) */
+.idle-notice {
+  font-size: var(--font-say);
+  line-height: var(--says-line-height);
+}

@@ -1,0 +1,26 @@
+/* RingIcon — 고리 가운데 그림. 기준: design/mockups/confirmed/wait.css .ring-icon.is-line, 디자인 문서 3-7절 */
+.ring-icon {
+  /* 손 그림의 선 굵기: 152 칸에서 9.5 (Material Symbols 의 선 폭 960 칸에서 60 과 같은 비율). SVG 단위라 px 가 없다 */
+  --ring-line-width: 9.5;
+
+  display: block;
+  width: var(--ring-icon);
+  height: var(--ring-icon);
+}
+
+.ring-icon.is-fill-icon {
+  fill: var(--color-text);
+}
+
+.ring-icon.is-line {
+  fill: none;
+  stroke: var(--color-text);
+  stroke-width: var(--ring-line-width);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.ring-icon.is-line .is-fill {
+  fill: var(--color-text);
+  stroke: none;
+}

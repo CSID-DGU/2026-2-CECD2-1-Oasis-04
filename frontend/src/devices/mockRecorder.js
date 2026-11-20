@@ -88,6 +88,12 @@ export function onInput(text) {
   }, config.silenceMs)
 }
 
+// 지금까지 받은 글. ListeningScreen 의 '다 말했어요' 가 SPEECH_END({ text }) 에 싣는다.
+// 입력창이 화면에서 DevPanel 로 옮겨 가서(계획서 4-2절) 화면은 글을 직접 들고 있지 않다. 세션이 없으면 ''
+export function getText() {
+  return speechEndCallback === null ? '' : currentText
+}
+
 // LISTENING 을 떠날 때(cleanup) 호출. 타이머 둘 다 해제하고 콜백도 비운다.
 // 여러 번 불려도 안전하다 (idempotent).
 export function stop() {

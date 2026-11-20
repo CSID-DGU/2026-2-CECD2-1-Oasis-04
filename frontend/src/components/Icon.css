@@ -1,0 +1,13 @@
+/* Icon — 아이콘 하나. 크기는 쓰는 쪽이 정하고, 없으면 글자 크기를 따른다 */
+.icon {
+  display: inline-block;
+  flex-shrink: 0;
+  width: 1em;
+  height: 1em;
+  vertical-align: middle;
+}
+
+/* Material 아이콘은 채운 모양이라 글자색으로 채운다. 파일에 fill 이 적힌 것(로고)은 파일 그대로 */
+.icon:not([fill]) {
+  fill: currentColor;
+}

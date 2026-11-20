@@ -8,13 +8,14 @@
 //   intent 가 길찾기가 아님              → { status: 'NOT_UNDERSTOOD' }
 //       (서버는 '네/아니요/그만/다시' 도 구분해 주지만, 지금 워크플로우에는 듣는 중에 그 말을 받는 전이가 없다.
 //        목적지를 묻는 화면에서 목적지가 아닌 말을 한 것이므로 못 알아들은 것으로 본다. intent 는 결과에 실어 둔다)
-//   그 밖의 실패                          → Error(서버의 쉬운 문장)
+//   그 밖의 실패                          → ApiError(UNKNOWN, 서버의 쉬운 문장 또는 null)
 //   빈 문장                               → 서버를 부르지 않고 { status: 'NOT_UNDERSTOOD' }
 //
 // 결과에 transcript(서버가 해석한 문장)를 함께 실어 둔다. 실제 마이크에서는 reducer 의 transcript 가 비어 있어서
 // 확인 화면이 "들은 말" 을 보여 주려면 이 값이 필요하다.
 
-import { apiFetch, errorMessageOf, KIOSK_ID } from './http.js'
+import { apiFetch, KIOSK_ID } from './http.js'
+import { ApiError } from '../apiError.js'
 import { toPoi } from './poi.js'
 
 // 되묻기 이어가기: 서버가 "종로 몇 가로 가세요?" 처럼 물으면(ask.type === 'NUMBER') 그 ask 를 기억해 두었다가
@@ -40,7 +41,7 @@ export async function resolve(text) {
     const code = body.error?.code
     if (code === 'NO_CANDIDATE') return { status: 'NOT_UNDERSTOOD', transcript: query }
     if (code === 'OUT_OF_SCOPE') return { status: 'OUT_OF_SCOPE', transcript: query }
-    throw new Error(errorMessageOf(body, 'SERVER_ERROR'))
+    throw new ApiError('UNKNOWN', body.error?.easy_message || null)
   }
 
   const d = body.data ?? {}

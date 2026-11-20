@@ -1,0 +1,43 @@
+/* QrBox — QR 상자. 기준: qr-handoff-final.html .qr-box, 디자인 문서 12-5절 */
+.qr-box {
+  --qr-size: 480px; /* QR 그림 */
+  --qr-quiet: 40px; /* 사방 흰 여백 (QR 의 조용한 여백) */
+
+  flex-shrink: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: calc(var(--qr-size) + var(--qr-quiet) * 2 + var(--border-thin) * 2);
+  height: calc(var(--qr-size) + var(--qr-quiet) * 2 + var(--border-thin) * 2);
+  padding: var(--qr-quiet);
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: var(--border-thin) solid var(--color-text-sub);
+  border-radius: var(--radius-card);
+}
+
+.qr-box-code {
+  display: block;
+  width: var(--qr-size);
+  height: var(--qr-size);
+  shape-rendering: crispEdges;
+}
+
+/* 만드는 중·오류: 시안에 모양이 없어 글자만 (옮기기 계획 6-1절 #9). MANUAL_SELECT 12-4절과 같은 글씨 */
+.qr-box p {
+  margin: 0;
+  text-align: center;
+  line-height: var(--line-height);
+  word-break: keep-all;
+}
+
+.qr-box-wait {
+  font-size: var(--font-body);
+}
+
+.qr-box-error {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--color-error);
+}

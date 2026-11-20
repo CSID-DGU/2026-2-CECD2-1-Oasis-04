@@ -1,0 +1,27 @@
+/* RouteLines — 노선 줄. 기준: route-guide-final.html .lines, .line-step, .walk-mark (R5) */
+.route-lines {
+  --step-gap: 8px; /* 노선 표시·화살표 사이, 접힌 줄 사이 */
+  --arrow-size: 28px;
+
+  display: flex;
+  align-items: center;
+  gap: var(--step-gap);
+}
+
+.route-lines-step {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--step-gap);
+  white-space: nowrap;
+}
+
+.route-lines-arrow {
+  width: var(--arrow-size);
+  height: var(--arrow-size);
+}
+
+/* 걸어서만 가는 경로 (R4) */
+.route-lines-walk {
+  font-size: var(--font-sub);
+  white-space: nowrap;
+}
