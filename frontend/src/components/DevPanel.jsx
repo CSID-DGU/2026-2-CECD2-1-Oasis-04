@@ -287,6 +287,11 @@ export default function DevPanel() {
 
       <LocationInfo />
 
+      {/* STT 서버 연동 여부와 설정 페이지로 가는 길 (settings/SettingsPage.jsx) */}
+      <div style={{ marginTop: 6 }}>
+        <strong>STT 서버 연동</strong> {USE_MOCK ? '꺼짐 (연습용 데이터)' : '켜짐'} · <a href="#settings">설정</a>
+      </div>
+
       {USE_MOCK && state.state === STATES.LISTENING && <MockSpeechInput />}
       {USE_MOCK && <MockLevelSelect />}
 

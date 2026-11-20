@@ -1,0 +1,181 @@
+/* 설정 페이지와 연동 알림. 키오스크 무대 밖의 보통 웹 페이지라 글자 크기는 따로 잡고, 색만 global.css 의 토큰을 쓴다. */
+
+.settings-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 64px;
+  font-family: var(--font-family);
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--color-text);
+  word-break: keep-all;
+}
+
+.settings-page h1 {
+  margin: 0 0 20px;
+  font-size: 32px;
+}
+
+.settings-tabs {
+  display: flex;
+  gap: 8px;
+  border-bottom: var(--border-thin) solid var(--color-text-sub);
+}
+
+.settings-tab {
+  padding: 10px 20px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text-sub);
+  background: none;
+  border: 0;
+  border-bottom: 4px solid transparent;
+  cursor: pointer;
+}
+
+.settings-tab[aria-selected='true'] {
+  color: var(--color-primary);
+  border-bottom-color: var(--color-primary);
+}
+
+.settings-section h2 {
+  margin: 28px 0 8px;
+  font-size: 24px;
+}
+
+.settings-note {
+  margin: 0 0 16px;
+  color: var(--color-text-sub);
+}
+
+.settings-status {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 6px 20px;
+  margin: 0 0 20px;
+  padding: 16px 20px;
+  background: var(--color-bg-group);
+  border-radius: var(--radius);
+}
+
+.settings-status dt {
+  font-weight: 700;
+}
+
+.settings-status dd {
+  margin: 0;
+}
+
+.settings-status dd.is-off {
+  color: var(--color-error);
+}
+
+.settings-choices {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+
+.settings-choices legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.settings-choice {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 14px 18px;
+  border: var(--border-thin) solid var(--color-text-sub);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.settings-choice:has(input:checked) {
+  background: var(--color-bg-highlight);
+  border-color: var(--color-primary);
+}
+
+.settings-choice input {
+  width: 22px;
+  height: 22px;
+  margin-top: 4px;
+  accent-color: var(--color-primary);
+}
+
+.settings-choice span {
+  display: grid;
+}
+
+.settings-choice small {
+  font-size: 16px;
+  color: var(--color-text-sub);
+}
+
+.settings-choices:disabled .settings-choice {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.settings-result {
+  margin: 0 0 20px;
+}
+
+.settings-error {
+  margin: 0 0 20px;
+  color: var(--color-error);
+}
+
+.settings-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.settings-button {
+  padding: 12px 22px;
+  font: inherit;
+  font-weight: 700;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: var(--border-thin) solid var(--color-text-sub);
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.settings-button.is-primary {
+  color: var(--color-on-primary);
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
+
+.settings-button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+
+.settings-button:focus-visible,
+.settings-tab:focus-visible,
+.integration-notice:focus-visible {
+  outline: var(--focus-width) solid var(--color-primary);
+  outline-offset: var(--focus-offset);
+}
+
+/* 실제 모드로 띄웠는데 연동이 꺼져 있을 때 화면 구석에 보이는 알림 (IntegrationNotice.jsx). 누르면 설정 페이지로 간다 */
+.integration-notice {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 10;
+  padding: 8px 14px;
+  font-family: var(--font-family);
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--color-on-primary);
+  text-decoration: none;
+  background: var(--color-band);
+  border-radius: 999px;
+}
