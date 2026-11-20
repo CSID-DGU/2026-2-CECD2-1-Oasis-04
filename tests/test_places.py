@@ -65,7 +65,7 @@ def test_pinned_place_becomes_the_origin(kb_dir):
 
     stop = pinned(kb, kb.find_places("01010")[0]["poi_id"])
     assert stop["name"] == "종로3가.탑골공원(중) 정류장" and stop["nearest"]["poi_type"] == "BUS_STOP"
-    assert place_of(kb, stop["nearest"]) == {"type": "BUS_STOP", "name": "종로3가.탑골공원(중) 정류장", "buses": []}
+    assert place_of(kb, stop["nearest"]) == {"type": "BUS_STOP", "name": "종로3가.탑골공원(중) 정류장", "prev": None, "next": None, "buses": []}
 
 
 def test_pinned_unknown_place_is_refused(kb_dir):

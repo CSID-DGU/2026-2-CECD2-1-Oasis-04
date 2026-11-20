@@ -13,6 +13,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from station_lines import lines_at  # noqa: E402
+from stop_routes import stop_at  # noqa: E402
 
 SNAP_M = 150.0            # 이 거리 안에 정류장·역이 있으면 그곳에 있는 것으로 보고 출발 좌표도 그곳으로 맞춘다
 MAX_ACCURACY_M = 1000.0   # 브라우저가 알려 준 오차 반경이 이보다 크면 믿지 않는다 (IP 주소로 추정한 위치 등)
@@ -36,9 +37,11 @@ def place_of(kb, poi):
 
       지하철역   {"type": "SUBWAY_STATION", "name": "종로3가역", "lines": [{"lineId": "seoul-1", "label": "1", "prev": "종각", "next": "종로5가"}]}
                  노선과 앞·다음 역은 지식베이스 폴더의 station_lines.json 에서 찾는다 (station_lines.py). 파일이 없으면 빈 목록
-      버스정류장 {"type": "BUS_STOP", "name": "종로3가.탑골공원 정류장", "buses": []}
-                 서는 버스 번호 자료가 지식베이스에 아직 없어서 빈 목록이다
-    poi 는 {"name", "poi_type", "x", "y"} 를 가진 것 (지식베이스의 장소, 또는 locate 가 돌려준 nearest)
+      버스정류장 {"type": "BUS_STOP", "name": "종로3가.탑골공원 정류장", "prev": "종로2가", "next": "종로4가.종묘",
+                  "buses": [{"kind": "TRUNK", "numbers": ["101", "260"]}, {"kind": "BRANCH", "numbers": ["7212"]}]}
+                 서는 버스와 앞·다음 정류장은 지식베이스 폴더의 stop_routes.json 에서 찾는다 (stop_routes.py).
+                 파일이 없거나 그 자료에 없는 정류장이면 prev·next 는 None, buses 는 빈 목록
+    poi 는 {"name", "poi_type", "x", "y"} 를 가진 것 (지식베이스의 장소, 또는 locate 가 돌려준 nearest). 정류장은 poi_id 도 본다
     """
     if not poi:
         return None
@@ -47,8 +50,21 @@ def place_of(kb, poi):
         table = getattr(kb, "station_lines", None) or {}
         return {"type": "SUBWAY_STATION", "name": label, "lines": lines_at(table, poi["name"], poi["y"], poi["x"])}
     if poi.get("poi_type") == "BUS_STOP":
-        return {"type": "BUS_STOP", "name": label, "buses": []}
+        found = _stop_routes(kb, poi) or {"prev": None, "next": None, "buses": []}
+        return {"type": "BUS_STOP", "name": label, **found}
     return None
+
+
+def _stop_routes(kb, poi):
+    """정류장 하나 → {"prev", "next", "buses"} 또는 None. 정류장 번호는 poi 에 없으면 지식베이스에서 읽는다 (nearest 에는 번호가 없다)"""
+    table = getattr(kb, "stop_routes", None) or {}
+    if not table:
+        return None
+    poi_id = poi.get("poi_id")
+    ars = poi.get("ars_id")
+    if ars is None and poi_id:
+        ars = (kb.poi(poi_id) or {}).get("ars_id")
+    return stop_at(table, poi_id, ars, poi.get("y"), poi.get("x"), by_ars=getattr(kb, "stops_by_ars", None))
 
 
 def fixed_place(kb, kiosk, near_m=PLACE_NEAR_M):

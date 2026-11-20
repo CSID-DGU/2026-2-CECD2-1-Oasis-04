@@ -12,6 +12,7 @@
   --line-edge: 6px; /* 옅은 노선색의 테두리: 안쪽 선을 이만큼 가늘게 그려 양쪽 3px 씩 보인다 (시안 idle-band.js) */
   --tag-height: 44px; /* 선 위의 흰 표지 */
   --tag-pad-x: 14px;
+  --tag-max-width: 400px; /* 앞·다음 역(정류장) 표지의 최대 너비. 12자쯤. 넘으면 줄임표 */
   --tag-radius: 4px;
   --badge: 52px; /* 노선 번호 원 */
   --badge-ring: 6px;
@@ -109,6 +110,15 @@
 .place-band-nums .place-band-tag {
   position: static;
   transform: none;
+}
+
+/* 앞·다음 역(정류장) 이름이 길면 줄임표로 자른다. 정류장 이름은 20자가 넘는 것도 있어서
+ * 그대로 두면 가운데 이름 상자가 들어갈 자리가 없어진다 (2026-11-20) */
+.place-band-group .place-band-tag,
+.place-band-right {
+  max-width: var(--tag-max-width);
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* 노선 번호 원: 흰 바탕 + 옅은 노선색 고리 + 검정 글씨 */

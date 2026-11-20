@@ -244,6 +244,9 @@ def main():
     ap.add_argument("--station-master",
                     default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server", "data", "서울시 역사마스터 정보.csv"),
                     help="서울시 역사마스터 정보 CSV. 있으면 역의 노선과 앞·다음 역(station_lines.json)도 만든다 (kb/station_lines.py)")
+    ap.add_argument("--bus-routes",
+                    help="서울시버스노선별정류소정보 (XLSX/CSV). 있으면 정류장에 서는 버스와 앞·다음 정류장(stop_routes.json)도 만든다 "
+                         "(kb/stop_routes.py)")
     args = ap.parse_args()
     if not (args.bus or args.bus_seoul or args.subway or args.facility):
         sys.exit("--bus / --bus-seoul / --subway / --facility 중 하나 이상 필요")
@@ -393,12 +396,24 @@ def main():
         n_lines = len(table)
         print(f"station lines: {n_lines} stations (from {os.path.basename(master)})")
 
+    n_stop_routes = 0
+    bus_routes = os.path.expanduser(args.bus_routes or "")
+    if bus_routes:
+        from stop_routes import build as build_stop_routes
+        from stop_routes import read_routes
+        stops = build_stop_routes(read_routes(bus_routes))
+        with open(os.path.join(out_dir, "stop_routes.json"), "w", encoding="utf-8") as f:
+            json.dump(stops, f, ensure_ascii=False, indent=0)
+        n_stop_routes = len(stops)
+        print(f"stop routes: {n_stop_routes} stops (from {os.path.basename(bus_routes)})")
+
     meta = {
         "built_at": time.strftime("%Y-%m-%d %H:%M"), "pois": len(pois), "aliases": len(alias_rows), "common_words": n_common,
-        "station_lines": n_lines,
+        "station_lines": n_lines, "stop_routes": n_stop_routes,
         "by_type": {t: sum(1 for p in pois if p["poi_type"] == t) for t in ("BUS_STOP", "SUBWAY_STATION", "FACILITY")},
         "regions": regions, "embedding_model": None if args.no_embedding else args.embedding_model,
-        "sources": {"bus": args.bus, "bus_seoul": args.bus_seoul, "subway": args.subway, "facility": args.facility},
+        "sources": {"bus": args.bus, "bus_seoul": args.bus_seoul, "subway": args.subway, "facility": args.facility,
+                    "bus_routes": args.bus_routes},
     }
     with open(os.path.join(out_dir, "meta.json"), "w", encoding="utf-8") as f:
         json.dump(meta, f, ensure_ascii=False, indent=2)

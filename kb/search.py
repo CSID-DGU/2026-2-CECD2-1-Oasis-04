@@ -20,6 +20,7 @@ import threading
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from normalize import normalize_name, to_jamo, to_phonetic  # noqa: E402
+from stop_routes import index_by_ars  # noqa: E402
 
 
 def haversine_m(x1, y1, x2, y2):
@@ -87,6 +88,14 @@ class TransitKB:
         if os.path.exists(lines_path):
             with open(lines_path, encoding="utf-8") as f:
                 self.station_lines = json.load(f)
+        # 정류장에 서는 버스와 앞·다음 정류장 (stop_routes.py 가 만든다). 파일이 없으면 빈 표라서 place.buses 가 비어 간다
+        self.stop_routes = {}
+        self.stops_by_ars = {}
+        routes_path = os.path.join(self.dir, "stop_routes.json")
+        if os.path.exists(routes_path):
+            with open(routes_path, encoding="utf-8") as f:
+                self.stop_routes = json.load(f)
+            self.stops_by_ars = index_by_ars(self.stop_routes)
 
     def _model(self):
         if self.model is None:

@@ -131,6 +131,43 @@ describe('bandRows: 버스 (규칙 F·G)', () => {
   })
 })
 
+describe('bandRows: 버스정류장의 앞·다음 정류장 (2026-11-20 추가)', () => {
+  it('prev·next 가 오면 첫 줄에 앞 정류장 / 다음 정류장, 아래에 버스 줄', () => {
+    const rows = bandRows(BAND_CASES.busway)
+    expect(rows).toHaveLength(3)
+    expect(rows[0]).toEqual({ token: null, left: [{ type: 'tag', text: '종로2가' }], right: '종로4가.종묘', choices: null, endLeft: false, endRight: false })
+    expect(rows.slice(1).map((r) => r.left[0].text)).toEqual(['간선', '지선'])
+    expect(rows[1].choices[0]).toEqual({ numbers: ['101', '260', '270', '720'] })
+  })
+  it('버스 줄은 2줄까지: 종류가 3개 이상이면 첫 종류만 한 줄, 나머지는 "그 밖"', () => {
+    const rows = bandRows(BAND_CASES.buswaymany)
+    expect(rows.map((r) => r.left[0].text)).toEqual(['종로2가', '간선', '그 밖'])
+    expect(rows[2].choices.slice(1)).toEqual([{ text: '지선·광역·순환·마을·심야 버스 40개' }, { text: '버스 40개' }])
+    const three = bandRows({ ...BAND_CASES.busway, buses: PLACES.bus.buses })
+    expect(three.map((r) => r.left[0].text)).toEqual(['종로2가', '간선', '그 밖'])
+    expect(three[2].choices[0]).toEqual({ numbers: ['7212', '9301'] })
+  })
+  it('여기서 출발하거나 끝나는 정류장은 없는 쪽에 "종점"', () => {
+    expect(bandRows(BAND_CASES.buswayend)[0]).toMatchObject({ right: '종점', endRight: true, endLeft: false })
+    const start = bandRows({ ...BAND_CASES.busway, prev: null })
+    expect(start[0]).toMatchObject({ left: [{ type: 'tag', text: '종점' }], right: '종로4가.종묘', endLeft: true, endRight: false })
+  })
+  it('prev·next 가 둘 다 없으면 예전 그대로 버스 줄만 (3줄까지)', () => {
+    expect(bandRows({ ...PLACES.bus, prev: null, next: null })).toEqual(bandRows(PLACES.bus))
+    expect(bandRows({ ...PLACES.bus, prev: '', next: undefined })).toHaveLength(3)
+  })
+  it('버스가 없으면 앞·다음 정류장이 있어도 정보 없음', () => {
+    expect(bandRows({ type: 'BUS_STOP', name: 'x', prev: 'a', next: 'b', buses: [] })).toBeNull()
+  })
+  it('앞·다음 정류장 줄의 선: 종점 쪽은 이름 상자 근처에서 끝난다', () => {
+    const rows = bandRows(BAND_CASES.buswayend)
+    const segs = lineSegments({ rows, ys: [164.5, 255.5], plateRight: 1300, marksShown: true })
+    expect(segs[0]).toMatchObject({ from: 0, to: 1300 + BAND.END_GAP, cap: 'round' })
+    expect(segs[0].endTagLeft).toBe(1300 + BAND.END_GAP + BAND.END_TAG_GAP)
+    expect(segs[1]).toMatchObject({ from: 0, to: BAND.WIDTH, cap: 'butt', endTagLeft: null })
+  })
+})
+
 describe('rowYs (규칙 A)', () => {
   it('줄이 몇 개든 같은 간격으로 가운데에', () => {
     expect(rowYs(3, 210)).toEqual([119, 210, 301])

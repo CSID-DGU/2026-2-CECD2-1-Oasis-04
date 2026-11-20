@@ -97,6 +97,30 @@ export const BAND_CASES = Object.freeze({
     example: true,
     buses: MANY_BUSES.filter((g) => g.kind !== 'CIRCULAR'),
   },
+  // 아래 셋은 시안에 없다. 서버가 정류장의 앞·다음 정류장(prev·next)을 줄 때의 모양 (2026-11-20 추가)
+  // 앞·다음 정류장 + 버스 2종류: 첫 줄에 앞·다음, 아래 두 줄에 종류와 번호
+  busway: {
+    type: 'BUS_STOP',
+    name: '종로3가.탑골공원 정류장',
+    example: true,
+    prev: '종로2가',
+    next: '종로4가.종묘',
+    buses: [
+      { kind: 'TRUNK', numbers: ['101', '260', '270', '720'] },
+      { kind: 'BRANCH', numbers: ['7212'] },
+    ],
+  },
+  // 앞·다음 정류장 + 버스 6종류: 버스 줄이 2줄뿐이라 간선 다음은 모두 "그 밖"
+  buswaymany: { type: 'BUS_STOP', name: '종로3가.탑골공원 정류장', example: true, prev: '종로2가', next: '종로4가.종묘', buses: MANY_BUSES },
+  // 여기서 끝나는 정류장 + 앞 정류장 이름이 김 (줄임표로 자른다. 이름은 지어낸 것)
+  buswayend: {
+    type: 'BUS_STOP',
+    name: '난곡종점 정류장',
+    example: true,
+    prev: '서울특별시립동대문역사문화공원.국립중앙의료원앞',
+    next: null,
+    buses: [{ kind: 'BRANCH', numbers: ['5524', '5528'] }],
+  },
 })
 
 // ---------- DevPanel 에서 고른 장소 (개발 도구. scenario.js 와 같은 모듈 변수) ----------

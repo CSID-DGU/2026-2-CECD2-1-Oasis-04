@@ -1,7 +1,7 @@
 // 첫 화면 큰 띠(역명판)의 규칙 (디자인 문서 7절, 8-3·8-4절). 시안 design/mockups/confirmed/idle-band.js 를 화면 밖 순수 함수로 옮겼다.
 // 측정(글자 너비)은 하지 않는다. 그리는 쪽(components/PlaceBand.jsx)이 잰 너비를 넘기면 여기서 정한다.
 //
-//   bandRows(place)        장소 정보 → 최대 3줄 (규칙 A·B·C·E·F·G)
+//   bandRows(place)        장소 정보 → 최대 3줄 (규칙 A·B·C·E·F·G). 정류장에 앞·다음 정류장이 오면 첫 줄에 그린다
 //   lineShades(hex, t)     노선색 → 선·고리·테두리 색 (규칙 D·I, 8-4절 진하기)
 //   rowYs(count, mid)      줄의 세로 자리 (규칙 A)
 //   nameLimits(...)        이름 상자가 넓어질 수 있는 반너비 세 가지 (7절 규칙 3·4)
@@ -88,10 +88,23 @@ function subwayRows(place) {
   return rows
 }
 
+/**
+ * 버스정류장의 앞·다음 정류장 줄 (2026-11-20 추가). 장소 정보에 prev·next 가 올 때만 첫 줄로 그린다.
+ * 지하철 줄과 같은 모양(왼쪽 앞 정류장, 오른쪽 다음 정류장, 없는 쪽은 "종점")이고 선은 회색이다.
+ * 길 한쪽 정류장은 한 방향 버스만 서므로 정류장 하나에 한 줄이면 된다. 둘 다 없으면 줄을 만들지 않는다
+ */
+function stopWayRow(place) {
+  const [prev, next] = [one(place.prev), one(place.next)]
+  if (!prev && !next) return null
+  return { token: null, left: [{ type: 'tag', text: prev ?? END }], right: next ?? END, choices: null, endLeft: !prev, endRight: !next }
+}
+
 function busRows(place) {
   const rank = (kind) => (BUS_ORDER.includes(kind) ? BUS_ORDER.indexOf(kind) : BUS_ORDER.length)
   const groups = [...place.buses].sort((a, b) => rank(a.kind) - rank(b.kind)) // 같은 순위는 받은 순서 그대로
-  const main = groups.length > BAND.MAX_ROWS ? groups.slice(0, BAND.MAX_ROWS - 1) : groups
+  const way = stopWayRow(place)
+  const room = BAND.MAX_ROWS - (way ? 1 : 0) // 앞·다음 정류장 줄이 있으면 버스 줄은 2줄까지
+  const main = groups.length > room ? groups.slice(0, room - 1) : groups
   const rest = groups.slice(main.length)
   const rows = main.map((group) => ({
     token: BUS_KINDS[group.kind]?.token ?? null,
@@ -114,7 +127,7 @@ function busRows(place) {
       endRight: false,
     })
   }
-  return rows
+  return way ? [way, ...rows] : rows
 }
 
 /** 장소 정보(8-5절) → 줄 목록. 그릴 수 없으면(정보 없음) null */
