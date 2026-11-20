@@ -37,10 +37,15 @@
   min-height: 0;
 }
 
+/* 안내 줄. 서버 질문(confirmText)이 오면 그 문장이 들어간다. 긴 문장은 36px 그대로 줄을 고르게 나눠 바꾼다
+ * (디자인 문서 11-2절, 10-2절 긴 글 규칙: 띄어쓰기에서만, 말줄임표 없음) */
 .flow .confirm-lead {
   margin-bottom: var(--lead-gap);
   font-size: var(--font-body);
   line-height: var(--line-height);
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  text-wrap: balance;
 }
 
 /* 후보 1개: 큰 물음 (72 굵게, 두 줄까지) */

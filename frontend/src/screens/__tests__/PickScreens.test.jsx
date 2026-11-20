@@ -36,6 +36,18 @@ describe('CONFIRMING', () => {
     expect(count(html, /btn-primary/g)).toBe(1)
     expect(html).not.toContain('class="pick"')
   })
+  it('서버 질문(confirmText)이 있으면 안내 줄 자리에 그대로(자르지 않고) 보이고, 없으면 기본 문구', () => {
+    const long = '말씀하신 곳과 이름이 비슷한 곳이 여러 군데 있어요. 동국대병원, 서울병원, 일산불교병원 가운데 가시려는 곳을 아래 목록에서 하나만 골라 주세요'
+    const withText = render(ConfirmingScreen, { transcript: '병원', resolve: { candidates: [...MYEONGDONG], confirmText: long } })
+    expect(withText).toContain(`<p class="confirm-lead">${long}</p>`)
+    expect(withText).not.toContain('가시려는 곳을 하나 골라 주세요')
+    expect(render(ConfirmingScreen, { resolve: { candidates: [...MYEONGDONG], confirmText: null } })).toContain('가시려는 곳을 하나 골라 주세요')
+  })
+  it('후보 1개면 서버 질문은 쓰지 않는다 ("“OO” 맞나요?" 가 그 자리)', () => {
+    const html = render(ConfirmingScreen, { resolve: { candidates: [MYEONGDONG[0]], confirmText: '종로 몇 가로 가세요?' } })
+    expect(html).not.toContain('종로 몇 가로')
+    expect(html).toContain('맞나요?')
+  })
   it('들은 말이 비면 그 줄을 숨긴다', () => {
     expect(render(ConfirmingScreen, { transcript: '', resolve: { candidates: [...MYEONGDONG] } })).not.toContain('heard-line')
   })

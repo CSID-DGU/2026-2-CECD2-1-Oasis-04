@@ -160,6 +160,14 @@ const FAKE_CANDIDATE_SETS = {
   ],
 }
 
+// RESOLVE_NEED_CONFIRM 에 함께 실을 서버 질문(confirmText). 패널의 '질문 문구' 로 고른다 (디자인 문서 11-2절 긴 문구 규칙 시험).
+// ''(기본)이면 질문 없음 → 화면은 "가시려는 곳을 하나 골라 주세요". len40·len80 은 일부러 40·80자로 맞춘 길이
+const FAKE_CONFIRM_TEXTS = {
+  short: '종로 몇 가로 가세요?',
+  len40: '동국대병원, 서울병원, 일산불교병원 세 곳 중에 어디로 가시려고 하세요?',
+  len80: '말씀하신 곳과 이름이 비슷한 곳이 여러 군데 있어요. 동국대병원, 서울병원, 일산불교병원 가운데 가시려는 곳을 아래 목록에서 하나만 골라 주세요',
+}
+
 // ROUTE_FOUND 에 실을 경로 묶음. 패널의 '경로 묶음' 으로 고른다 (ROUTE_GUIDE 의 경우를 보려고, 시안 route-guide-final.html).
 // ''(기본)이면 위 FAKE_ROUTES(= ?set=subway). bus·long 은 시안의 기본·?set=long, 나머지는 ?case= (route-cases.js),
 // real-v1·real-transit 은 real 서버 응답 두 모양을 실제 변환 코드로 바꾼 것. 이벤트는 그대로이고 payload 만 다르다
@@ -198,11 +206,14 @@ export default function DevPanel() {
   const [devError, setDevError] = useState('') // FAKE_ERRORS 의 키. '' 이면 이벤트별 기본값
   const [devCandidates, setDevCandidates] = useState('') // FAKE_CANDIDATE_SETS 의 키
   const [devRoutes, setDevRoutes] = useState('') // FAKE_ROUTE_SETS 의 키
+  const [devConfirmText, setDevConfirmText] = useState('') // FAKE_CONFIRM_TEXTS 의 키
 
   const payloadOf = (event) => {
     if (devError && ERROR_EVENTS.has(event)) return { error: FAKE_ERRORS[devError] }
-    if (devCandidates && event === EVENTS.RESOLVE_NEED_CONFIRM) {
-      return { resolve: { status: 'OK', needConfirm: true, candidates: FAKE_CANDIDATE_SETS[devCandidates] } }
+    if ((devCandidates || devConfirmText) && event === EVENTS.RESOLVE_NEED_CONFIRM) {
+      const candidates = devCandidates ? FAKE_CANDIDATE_SETS[devCandidates] : FAKE_CANDIDATES
+      const confirmText = devConfirmText ? FAKE_CONFIRM_TEXTS[devConfirmText] : null
+      return { resolve: { status: 'OK', needConfirm: true, candidates, confirmText } }
     }
     if (devRoutes && event === EVENTS.ROUTE_FOUND) return { routes: FAKE_ROUTE_SETS[devRoutes] }
     return DEV_PAYLOADS[event] ?? {}
@@ -281,6 +292,17 @@ export default function DevPanel() {
           {Object.entries(FAKE_CANDIDATE_SETS).map(([key, list]) => (
             <option key={key} value={key}>
               후보 묶음: {key} ({list.length}개)
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div style={{ marginTop: 2 }}>
+        <select value={devConfirmText} onChange={(e) => setDevConfirmText(e.target.value)} aria-label="질문 문구">
+          <option value="">질문 문구: 없음</option>
+          {Object.entries(FAKE_CONFIRM_TEXTS).map(([key, text]) => (
+            <option key={key} value={key}>
+              질문 문구: {key} ({[...text].length}자)
             </option>
           ))}
         </select>
