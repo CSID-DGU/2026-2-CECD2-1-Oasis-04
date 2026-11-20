@@ -194,7 +194,7 @@ API 열은 다이어그램에 적힌 엔드포인트(`/health`, `/stt`, `/resolv
 | `MANUAL_SELECT` | `SWITCH_TO_VOICE` | `LISTENING` | - | '말로 하기', 실패 횟수 초기화 |
 | `MANUAL_SELECT` | `GO_HOME` | `IDLE` | - | '처음으로' 버튼. 실패 횟수 0으로 초기화 |
 | `MANUAL_SELECT` | `INACTIVITY_TIMEOUT` | `IDLE` | - | 무입력 60초. 실패 횟수 0으로 초기화 |
-| `ROUTE_GUIDE` | `SEND_TO_PHONE_PRESSED` | `QR_HANDOFF` | 미정 | QR 생성에 서버가 필요한지 다이어그램에 없음. 선택된 경로를 보낸다고 가정한다 (팀 확인 필요) |
+| `ROUTE_GUIDE` | `SEND_TO_PHONE_PRESSED` | `QR_HANDOFF` | 미정 | QR 생성에 서버가 필요한지 다이어그램에 없음. `SEND_TO_PHONE_PRESSED({ routeId })` 로 고른 경로 id 를 싣고 reducer 가 `selectedRouteId` 에 담는다 (2026-11-20). 전이는 그대로 |
 | `ROUTE_GUIDE` | `GO_HOME` | `IDLE` | - | '처음으로' 버튼. 실패 횟수 0으로 초기화 |
 | `ROUTE_GUIDE` | `INACTIVITY_TIMEOUT` | `IDLE` | - | 무입력 60초. 실패 횟수 0으로 초기화 |
 | `QR_HANDOFF` | `GO_HOME` | `IDLE` | - | '처음으로' 버튼. 실패 횟수 0으로 초기화 |
@@ -214,7 +214,8 @@ API 열은 다이어그램에 적힌 엔드포인트(`/health`, `/stt`, `/resolv
 
 - `ROUTE_GUIDE`의 경로 카드를 누르면 선택된 경로와 그 아래 타임라인·요약이 바뀐다. 상태와 이벤트는 그대로다. 표에 행을 더하지 않는다.
 - 카드를 누르는 것도 터치이므로 무입력 60초 타이머는 다시 시작한다.
-- 팀 확인 필요: 지금 `QR_HANDOFF`는 1순위 경로로 QR을 만든다. 선택된 경로를 보내려면 `SEND_TO_PHONE_PRESSED`에 경로 id를 싣는 수정이 `state/`에 필요하다. 정해지기 전까지 실제 앱은 고치지 않는다.
+- '휴대폰으로 보내기'는 `SEND_TO_PHONE_PRESSED({ routeId })` 로 고른 경로 id 를 싣는다. reducer 는 `selectedRouteId` 에 담고, `QR_HANDOFF` 는 그 경로로 QR 과 요약 판을 만든다. 그 id 가 경로 목록에 없으면 첫 경로를 쓴다. 경로를 다시 받거나(`ROUTE_FOUND`) IDLE 로 돌아가면(세션 초기화) 비운다. 상태·전이·이벤트 수는 그대로다.
+- 구현함. 팀 공유는 `docs/team-requests.md` #9 (2026-11-20, 옮기기 계획 11단계).
 
 ### 표에서 '미정'으로 둔 이유
 

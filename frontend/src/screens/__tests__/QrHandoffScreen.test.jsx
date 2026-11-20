@@ -22,8 +22,8 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true
 let container
 let root
 
-async function renderWith(routes) {
-  kiosk = { state: { routes }, dispatch: vi.fn() }
+async function renderWith(routes, selectedRouteId = null) {
+  kiosk = { state: { routes, selectedRouteId }, dispatch: vi.fn() }
   await act(async () => {
     root.render(withProviders(<QrHandoffScreen />))
   })
@@ -60,6 +60,29 @@ describe('QrHandoffScreen', () => {
     expect(container.querySelector('.btn-primary')).toBeNull()
     expect(container.textContent).not.toContain('주소 글자')
     expect(kiosk.dispatch).not.toHaveBeenCalled()
+  })
+
+  it('고른 경로(selectedRouteId = 2번)로 QR 과 요약 판을 만든다 (11단계)', async () => {
+    createQr.mockResolvedValue({ url: 'https://example.com/r/B' })
+    await renderWith(ROUTE_SUBWAY, ROUTE_SUBWAY[1].id)
+    expect(createQr).toHaveBeenCalledWith(ROUTE_SUBWAY[1].id)
+    expect(createQr).toHaveBeenCalledTimes(1)
+    expect(container.querySelector('.route-card.is-only').textContent).toContain(`${ROUTE_SUBWAY[1].durationMin}`)
+  })
+
+  it('고른 경로 id 가 목록에 없으면 첫 경로를 쓴다', async () => {
+    createQr.mockResolvedValue({ url: 'https://example.com/r/A' })
+    await renderWith(ROUTE_SUBWAY, 'no-such-route')
+    expect(createQr).toHaveBeenCalledWith(ROUTE_SUBWAY[0].id)
+  })
+
+  it('QR 무늬 둘레 흰 여백은 칸 4개 이상 (viewBox 가 무늬 밖으로 4칸 이상)', async () => {
+    createQr.mockResolvedValue({ url: 'https://example.com/r/A' })
+    await renderWith(ROUTE_SUBWAY)
+    const [x, y, w] = box().querySelector('svg').getAttribute('viewBox').split(' ').map(Number)
+    expect(x).toBeLessThanOrEqual(-4)
+    expect(y).toBe(x)
+    expect(w + x * 2).toBeGreaterThanOrEqual(21) // 무늬 칸 수
   })
 
   it('만들지 못하면(real 에 landing_url 없음 등) QR 자리에 오류 글, 이벤트 없음', async () => {

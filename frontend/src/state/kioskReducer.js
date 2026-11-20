@@ -17,6 +17,7 @@ export const initialState = Object.freeze({
   resolve: null, // /resolve 응답 { status, needConfirm, poi, candidates }
   selectedPoi: null, // 확정된 목적지 { id, name, category }
   routes: [], // /route 응답 경로 최대 3개
+  selectedRouteId: null, // '휴대폰으로 보내기'에서 고른 경로 id (SEND_TO_PHONE_PRESSED 의 routeId). QR_HANDOFF 가 이 경로를 보낸다
   qr: null, // QR 데이터(URL 등). 생성 주체(프론트/서버)가 미정이라 아직 쓰는 이벤트가 없다
   error: null, // 마지막 오류 { code, message } (UNAVAILABLE 화면 표시용, state/errorCodes.js)
   lastEvent: null, // 개발자 패널 표시용
@@ -29,6 +30,7 @@ const SESSION_RESET = Object.freeze({
   resolve: null,
   selectedPoi: null,
   routes: [],
+  selectedRouteId: null,
   qr: null,
   error: null,
 })
@@ -59,7 +61,10 @@ function payloadFields(action) {
     case EVENTS.POI_SELECTED:
       return { selectedPoi: action.poi ?? null }
     case EVENTS.ROUTE_FOUND:
-      return { routes: action.routes ?? [] }
+      // 경로를 새로 받으면 전에 고른 경로는 지운다
+      return { routes: action.routes ?? [], selectedRouteId: null }
+    case EVENTS.SEND_TO_PHONE_PRESSED:
+      return { selectedRouteId: action.routeId ?? null }
     default:
       return {}
   }

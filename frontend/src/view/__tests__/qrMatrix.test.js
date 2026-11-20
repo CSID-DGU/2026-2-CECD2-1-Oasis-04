@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { qrMatrix } from '../qrMatrix.js'
+import { qrMatrix, quietModules } from '../qrMatrix.js'
 
 describe('qrMatrix', () => {
   it('주소가 비면 null', () => {
@@ -21,6 +21,13 @@ describe('qrMatrix', () => {
       expect(path).toContain(`M0 ${i}h1v1h-1z`)
     }
     expect(path).not.toContain('M1 1h1v1h-1z') // 테두리 안쪽 흰 줄
+  })
+
+  it('둘레 여백은 칸 4개 이상, 칸이 많으면 시안 비율(그림의 1/12)', () => {
+    expect(quietModules(25)).toBe(4)
+    expect(quietModules(48)).toBe(4)
+    expect(quietModules(60)).toBe(5)
+    expect(qrMatrix('https://example.com/r/route-a').quiet).toBeGreaterThanOrEqual(4)
   })
 
   it('긴 주소(카카오맵 길찾기 주소 길이)도 만든다', () => {

@@ -9,7 +9,7 @@
 | `shoot-pick.js` | CONFIRMING·MANUAL_SELECT 의 9가지 경우를 앱과 확정 시안에서 나란히 찍는다 (5단계에서 생김). 비교는 `compare-shots.js` 의 `a`·`b` 를 `mock-step5`·`current-step5` 로 |
 | `shoot-timeout.js` | 남은 시간 알림을 무입력 화면 4개에서 앱(`?inactivityMs=15000`)과 시안(`?left=15`)으로 나란히 찍고, 긴 띠 이름(종로3가.탑골공원)도 찍는다. 판 자리와 띠 이름과의 거리(gap)를 돌려준다 (6단계에서 생김). 그림은 `mock-step6`·`current-step6` |
 | `shoot-route.js` | ROUTE_GUIDE 의 모든 경우(`?set=subway`, 버스 묶음, `?set=long`, `?pick=2·3`, `?case=` 10가지)를 앱과 시안에서 나란히 찍고, real 응답 예시 두 가지(`real-v1`, `real-transit`)는 앱만 찍는다 (9단계에서 생김). 시안 전용 안내 줄은 빼고 찍고 원래 시안의 줄이기 결과도 돌려준다. 앱 주소는 `OPTIONS.app`. 그림은 `mock-step9`·`current-step9` |
-| `shoot-qr.js` | QR_HANDOFF 를 앱과 시안(`qr-handoff-final.html`)에서 나란히 찍는다: 기본, 남은 시간 알림(`?left=15`), 긴 경로(시안에 그 경우가 없어 보내는 경로를 바꿔 찍음), 앱만 만드는 중·오류 (10단계에서 생김). QR 무늬는 시안이 예시라 늘 다르므로 비교할 때 `compare-shots.js` 의 `skip` 에 그림 자리 `[182, 373, 480, 481]` 를 넣는다. 그림은 `mock-step10`·`current-step10` |
+| `shoot-qr.js` | QR_HANDOFF 를 앱과 시안(`qr-handoff-final.html`)에서 나란히 찍는다: 기본, 남은 시간 알림(`?left=15`), 긴 경로(시안에 그 경우가 없어 보내는 경로를 바꿔 찍음), 앱만 만드는 중·오류 (10단계에서 생김). QR 무늬는 시안이 예시라 늘 다르므로 비교할 때 `compare-shots.js` 의 `skip` 에 그림 자리 `[182, 373, 480, 481]` 를 넣는다. 그림은 `mock-step10`·`current-step10`. 11단계부터 `pick1`·`pick2`·`pick3`(앱만, ROUTE_GUIDE 에서 N번 카드를 누르고 화면 버튼으로 보냄)과 `OPTIONS.only`·`mockDir`·`appDir` 가 있다 |
 | `shoot-confirm-text.js` | CONFIRMING 의 서버 질문(`confirmText`)을 후보 1개·3개·긴 이름 3개 × 질문 없음·12자·40자·80자로 앱만 찍는다(DevPanel '후보 묶음'·'질문 문구'). 안내 줄 줄 수와 카드 자리를 돌려준다. 앱 주소는 `APP`(기본 5180, 5173 을 건드리지 않으려고 따로 띄운 서버). 그림은 `confirm-text` (2026-11-20 생김) |
 | `compare-shots.js` | 그림 폴더 두 개를 같은 이름끼리 픽셀로 비교한다 (다른 픽셀 수와 다른 곳의 상자) |
 | `serve-repo.mjs` | 저장소 전체를 `http://127.0.0.1:8800/` 으로 보여 주는 작은 서버. 비교와 확정 시안 찍기에 쓴다 |

@@ -10,7 +10,8 @@
 // 오른쪽 칸: 경로가 2~3개면 위쪽에 경로 카드, 1개면 요약 판을 버튼 바로 위에 (R3).
 //   '휴대폰으로 보내기'(SEND_TO_PHONE_PRESSED) → QR_HANDOFF. '처음으로'(GO_HOME) 는 FlowFrame 의 showHome 이 그린다.
 // 카드 고르기는 화면 안 상태(useState)다. 이벤트·reducer 는 그대로 (docs/kiosk-workflow.md "전이가 아닌 화면 안 동작").
-//   처음에는 1순위. 고른 경로를 QR 로 보내는 것은 11단계에서 한다 (지금 QR 은 routes[0])
+//   처음에는 1순위. '휴대폰으로 보내기'를 누를 때 고른 경로 id 를 payload 로 싣는다: SEND_TO_PHONE_PRESSED({ routeId })
+//   reducer 가 selectedRouteId 에 담고 QR_HANDOFF 가 그 경로를 보낸다 (11단계)
 
 import { useMemo, useState } from 'react'
 import FlowFrame from '../components/FlowFrame.jsx'
@@ -46,7 +47,7 @@ export default function RouteGuideScreen() {
   const route = guide.routes[index]
 
   const send = (
-    <PrimaryButton icon="smartphone" onClick={() => dispatch({ type: EVENTS.SEND_TO_PHONE_PRESSED })}>
+    <PrimaryButton icon="smartphone" onClick={() => dispatch({ type: EVENTS.SEND_TO_PHONE_PRESSED, routeId: route?.id ?? null })}>
       휴대폰으로 보내기
     </PrimaryButton>
   )

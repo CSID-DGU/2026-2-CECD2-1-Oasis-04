@@ -111,6 +111,7 @@ export const transitions = {
   resolve: null,            // /resolve 응답 { status, needConfirm, poi, candidates }
   selectedPoi: null,        // 확정된 목적지
   routes: [],               // /route 응답 경로 최대 3개
+  selectedRouteId: null,    // '휴대폰으로 보내기'에서 고른 경로 id (SEND_TO_PHONE_PRESSED 의 routeId). ROUTE_FOUND 때 비운다 (11단계)
   qr: null,                 // QR 데이터(URL 등)
   error: null,              // 마지막 오류 { code, message } (UNAVAILABLE 화면 표시용. 아래 "오류 모양")
   lastEvent: null,          // 개발자 패널 표시용
@@ -124,7 +125,7 @@ export const transitions = {
 - reducer가 하는 일은 세 가지뿐: (1) `transitions[state][event]`로 다음 상태 결정 (2) 이벤트별 payload를 위 필드에 저장 (3) `failCount` 증감
   - `RESOLVE_NOT_UNDERSTOOD`, `CONFIRM_NONE_OF_THEM` → `failCount + 1` (누적)
   - `SWITCH_TO_VOICE` → `failCount = 0` (표 비고)
-  - `IDLE` 로 들어가는 이벤트 `GO_HOME`, `INACTIVITY_TIMEOUT`, `LISTEN_CANCEL` → `failCount = 0` 과 함께 `transcript`, `resolve`, `selectedPoi`, `routes`, `qr`, `error` 도 비운다 (회의 확정. 새 사용자를 위한 초기화)
+  - `IDLE` 로 들어가는 이벤트 `GO_HOME`, `INACTIVITY_TIMEOUT`, `LISTEN_CANCEL` → `failCount = 0` 과 함께 `transcript`, `resolve`, `selectedPoi`, `routes`, `selectedRouteId`, `qr`, `error` 도 비운다 (회의 확정. 새 사용자를 위한 초기화)
   - `DEV_RESET` → `initialState` (health 포함 전부 초기화, 개발 도구)
 - API 호출·타이머는 reducer에 절대 두지 않는다 (Spring에서 `@Transactional` 서비스 메서드가 외부 HTTP를 직접 부르지 않는 것과 같은 원칙)
 - **API 호출 위치 원칙**: 상태 전이를 일으키는 API 호출(`health`, `stt`, `resolve`, `route`)은 반드시 effect 핸들러에서만 한다. **예외**: 상태 전이를 일으키지 않는 표시용 조회(`getPois`, `createQr`)만 화면 컴포넌트가 직접 호출할 수 있다. 실패해도 화면에 오류 문구만 보여 주고 이벤트를 dispatch 하지 않는다

@@ -25,10 +25,26 @@ const MAX_ROUTES = 3
 const WALK_ONLY_M = 400 // 직선으로 이보다 가까우면 대중교통 대신 걸어가라고 안내한다
 
 let lastLandingUrl = null
+// 서버가 경로마다 휴대폰 주소(landing_url)를 줄 때 경로 id → 주소 (team-requests #7, 11단계)
+let landingUrlById = new Map()
 
 /** 마지막으로 찾은 경로의 카카오맵 길찾기 주소 (없으면 null) */
 export function getLastLandingUrl() {
   return lastLandingUrl
+}
+
+/** 고른 경로의 휴대폰 주소. 서버가 그 경로의 landing_url 을 줬으면 그것, 아니면 마지막 조회의 주소 하나 */
+export function landingUrlOf(routeId) {
+  return landingUrlById.get(routeId) ?? lastLandingUrl
+}
+
+/** 경로 목록과 서버 경로 배열에서 id → landing_url 을 기억한다 (화면 경로 모양에는 넣지 않는다) */
+function rememberLandingUrls(routes, serverRoutes) {
+  landingUrlById = new Map()
+  routes.forEach((r, i) => {
+    const url = serverRoutes?.[i]?.landing_url
+    if (url) landingUrlById.set(r.id, url)
+  })
 }
 
 /** 두 지점(경도 x, 위도 y) 사이의 직선 거리(미터) */
@@ -68,6 +84,7 @@ const point = (p) => `${encodeURIComponent(p.name || '위치')},${p.y},${p.x}`
 
 export async function route(poiId) {
   lastLandingUrl = null
+  landingUrlById = new Map()
   const dest = placeOf(poiId)
   if (!dest) throw new ApiError('UNKNOWN', null)
 
@@ -96,5 +113,7 @@ export async function route(poiId) {
   if (body.length === 0) return { routes: [] }
 
   lastLandingUrl = `https://map.kakao.com/link/by/traffic/${point(origin)}/${point(dest)}`
-  return { routes: routesFromTransit(body, poiId, { poi_id: poiId, name: dest.name }) }
+  const routes = routesFromTransit(body, poiId, { poi_id: poiId, name: dest.name })
+  rememberLandingUrls(routes, body)
+  return { routes }
 }
