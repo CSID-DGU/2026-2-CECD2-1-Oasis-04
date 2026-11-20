@@ -5,7 +5,10 @@
 import { describe, it, expect } from 'vitest'
 import { STATES } from '../../state/states.js'
 import { SCREEN_TITLES } from '../titles.js'
-import { toDisplayMessage, isErrorCode, GENERIC_ERROR_MESSAGE } from '../errorMessage.js'
+import { reasonOf, isErrorCode, GENERIC_ERROR_MESSAGE } from '../../view/unavailableReason.js'
+
+// 예전 screens/errorMessage.js 의 toDisplayMessage 와 같다 (13단계에서 그 파일을 지우고 reasonOf 를 바로 쓴다)
+const toDisplayMessage = (error) => reasonOf(error).text
 
 describe('SCREEN_TITLES', () => {
   const stateNames = Object.values(STATES)

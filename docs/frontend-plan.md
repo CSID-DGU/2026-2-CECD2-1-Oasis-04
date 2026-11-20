@@ -31,6 +31,8 @@ frontend/
   vite.config.js             # Vite 설정 (React 플러그인)
   .env.development           # VITE_USE_MOCK=true + 타이머 단축값 (예: VITE_INACTIVITY_MS=10000)
   .env.production            # 당분간 VITE_USE_MOCK=true. 실제 API 준비 후 false로 바꾸고 VITE_API_BASE_URL 추가. 타이머는 운영값
+  .env.real                  # npm run dev:real. 실제 서버(STT 8001, 경로 8000) + 실제 마이크
+  .env.demo                  # npm run dev:demo. 시연 모드: mock + VITE_DEMO=true, 긴 무입력, 기다림 화면 1초 넘게 (옮기기 계획 13단계)
   README.md                  # 실행 방법, mock 시나리오 키워드, 실제 API 교체 방법
   src/
     main.jsx                 # React를 DOM에 붙이는 진입점 (Spring의 main())
@@ -52,18 +54,21 @@ frontend/
         data/pois.js         #   가짜 목적지 목록
         data/routes.js       #   가짜 경로 3개
         mockDelay.js         #   공통 지연 헬퍼
-      real/                  #   실제 구현 자리. 같은 함수 이름으로 fetch 호출. 지금은 "Not implemented" throw
+      real/                  #   실제 구현. 같은 함수 이름으로 fetch 호출 (STT 서버 /api/v1, 경로 서버 /routes/transit). 응답 변환도 여기서
         health.js, stt.js, resolve.js, route.js, pois.js, qr.js
     devices/                 # 브라우저 장치 추상화 (마이크). 서버가 아니라 장치이므로 api/와 분리
       recorder.js            #   mock/real 선택
       mockRecorder.js        #   텍스트 입력을 음성 대신 받고, 10초 무발화·2.5초 무음 타이머를 흉내
-      realRecorder.js        #   MediaRecorder 사용 자리 (stub)
+      realRecorder.js        #   실제 마이크 녹음 (MediaRecorder + 음량 analyser)
     screens/                 # 상태 하나 = 화면 하나 (아래 3절 표 참고)
-    components/              # 화면이 공유하는 작은 부품
-      BigButton.jsx, ScreenFrame.jsx, Spinner.jsx
+    components/              # 화면이 공유하는 부품. 틀(FlowFrame·WaitFrame·IdleFrame·Stage), 띠, 버튼, 고리, 카드, 타임라인, QR
+                             #   (부품 목록은 docs/design-implementation-plan.md 2절. 예전 ScreenFrame 은 13단계에서 지웠다)
       DevPanel.jsx           #   화면 구석의 개발자 패널 (현재 상태, failCount, 마지막 이벤트, 시나리오 선택, 처음부터 버튼)
+    view/                    # React 없는 화면 계산 (글씨 줄이기, 띠, 경로 모양, QR, 음량)
+    hooks/                   # 화면 여러 곳이 쓰는 훅
+    demo/                    # 시연 모드(VITE_DEMO): 흐름 다섯 가지(demoFlows.js)와 발표자 키(DemoKeys.jsx). 기존 이벤트만 보낸다
     styles/
-      global.css             # 큰 글씨·높은 대비 기본값만
+      global.css             # 토큰(:root)과 공통 규칙. 부품 CSS 는 부품 옆에
 ```
 
 ## 2. 상태 관리 방식
@@ -176,6 +181,11 @@ Spring의 `@ConfigurationProperties`처럼 env를 한 곳에서 읽어 기본값
 | `noSpeechMs` | `VITE_NO_SPEECH_MS` | 10000 | 4000 | `LISTENING` (recorder) |
 | `silenceMs` | `VITE_SILENCE_MS` | 2500 | 2500 | `LISTENING` (recorder) |
 | `inactivityMs` | `VITE_INACTIVITY_MS` | 60000 | 8000 | 무입력 복귀 6개 상태 |
+| `maxRecordMs` | `VITE_MAX_RECORD_MS` | 25000 | (없음) | `LISTENING` (실제 녹음 상한) |
+| `choiceDelayMs` | `VITE_CHOICE_DELAY_MS` | 0 | (없음) | `FAIL_COUNT_CHECK` 가 다음 이벤트를 내기까지. 시연 모드만 1200 |
+| `mockWaitMs` | `VITE_MOCK_WAIT_MS` | 0 (= mock 호출마다 300~800ms 무작위) | (없음) | mock `stt`·`resolve`(반씩)·`route` 의 지연. 시연 모드만 1500 |
+
+시연 모드(`.env.demo`)는 무입력·무발화·재점검을 600000(10분)으로 둔다. 시연 중 처음으로 돌아가지 않게 하려고 (2026-11-20, 옮기기 계획 13단계)
 
 개발 모드에서만 주소 값으로 덮어쓸 수 있다: `http://localhost:5173/?inactivityMs=60000` (모든 키 같음, 운영 빌드에서는 무시). 개발 설정 8초는 남은 시간 알림(15초 이하)이 들어가자마자 보이므로, 알림 없는 화면을 볼 때 쓴다 (2026-11-19)
 
@@ -255,8 +265,8 @@ export function routingHandler(state, dispatch, api) {
 | `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 경로 카드(최대 3개, 화면 안에서 고른다. 처음엔 1순위) + 선택된 경로의 타임라인, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 그림(`QrBox`, 주소로 브라우저에서 만듦) + 단계 세 줄 + 보내는 경로 요약 판 + 처음으로. 만드는 중·오류는 QR 자리에 글자. 무입력 60초 복귀 (2026-11-20, 옮기기 계획 10단계) | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 
-- '처음으로' 버튼은 `ScreenFrame`의 `showHome` prop으로 넣는다. 사용자가 조작하는 7개 화면(`LISTENING`, `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF`)만 `showHome`을 켠다. 스피너 화면 5개와 `IDLE`, `IDLE_REDUCED`는 끈다
-- 공통 부품: `ScreenFrame` (제목 + 본문 + 버튼 영역 + 선택적 '처음으로'), `BigButton`. 디자인은 글씨 크기·여백만
+- '처음으로' 버튼은 틀(`FlowFrame`)의 `showHome` prop으로 넣는다 (예전 `ScreenFrame` 은 13단계에서 지웠다). 사용자가 조작하는 7개 화면(`LISTENING`, `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF`)만 `showHome`을 켠다. 스피너 화면 5개와 `IDLE`, `IDLE_REDUCED`는 끈다
+- 공통 부품: 틀 `FlowFrame`(얇은 띠 + 좌우 두 칸 + 선택적 '처음으로'), `WaitFrame`(기다림 화면), `IdleFrame`(첫 화면), `PrimaryButton`·`SecondaryButton`. 목록은 `docs/design-implementation-plan.md` 2절
 - `ManualSelectScreen`의 목적지 목록은 "미정"이지만 교체가 쉽도록 `api.getPois()`로 받는다 (내장으로 결정되면 mock을 상수로 바꾸면 끝)
 
 ## 4. mock API 함수 목록 (`src/api/mock/`)
@@ -268,7 +278,7 @@ export function routingHandler(state, dispatch, api) {
 | `health()` | 없음 | `{ server: true, stt: true }` | DevPanel 시나리오 `serverDown` → `{ server: false }`; `sttDown` → `{ server: true, stt: false }` |
 | `stt(audio)` | `{ text }` (mockRecorder가 텍스트를 담아 줌) | `{ text }` 그대로 | 입력 텍스트가 `"에러"` 포함 → `Error('STT_ERROR')`; 빈 문자열 → `{ text: '' }` |
 | `resolve(text)` | 문자열 | `{ status: 'OK', needConfirm: false, poi }` 또는 `{ status: 'OK', needConfirm: true, candidates: [poi, ...] }` | `""`/`"웅얼"` → `{ status: 'NOT_UNDERSTOOD' }`; `"하와이"` → `{ status: 'OUT_OF_SCOPE' }`; `"에러"` → `Error('SERVER_ERROR')`; `"병원"` → needConfirm=true 후보 3개; 목적지 이름 정확히 → needConfirm=false |
-| `route(poiId)` | 문자열 | `{ routes: [1순위, 2순위, 3순위] }` | `poiId === 'poi-no-route'` → `{ routes: [] }`; 시나리오 `routeError` → `Error('ROUTE_ERROR')` |
+| `route(poiId)` | 문자열 | `{ routes: [1순위, 2순위, 3순위] }` | 시나리오 `noRoute` 또는 `poiId === 'poi-no-route'` → `{ routes: [] }`; 시나리오 `routeError` → `Error('ROUTE_ERROR')`. 시연 모드에서는 '외딴섬 선착장'(poi-no-route)을 목록에서 뺀다 |
 | `getPois()` | 없음 | `[{ id, name, category }]` 10개 내외 | 시나리오 `poisError` → `Error` (화면에 "목록을 불러올 수 없어요" 표시, 전이 없음) |
 | `createQr(routeId)` | 문자열 | `{ url: 'https://example/r/...' }` | 시나리오 `qrError` → `Error` (QR 화면에 오류 문구, 전이 없음) |
 | `getLocation()` | 없음 | `{ name, text, source, snapped, accuracyM, reason, place }`. `place` 는 디자인 문서 8-5절 형식 (DevPanel '장소': 지하철역 기본 / 버스정류장 / 정보 없음 `null` / 띠 시험 데이터, `api/mock/data/places.js`) | 없음. 전이 없는 표시용 조회 (`state/LocationContext.jsx` 가 처음 화면에 들어갈 때 부른다) |
@@ -340,7 +350,7 @@ export const api = import.meta.env.VITE_USE_MOCK === 'true' ? mock : real;
 2. `ManualSelectScreen` (`getPois`) → `POI_SELECTED` → ROUTING, `SWITCH_TO_VOICE`로 failCount 초기화 확인
 3. `QrHandoffScreen` (`createQr`, 텍스트 URL로 표시. QR 이미지 라이브러리는 미정 해결 후)
 4. Phase 4의 `inactivity` 핸들러를 `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF`에도 연결 (총 6개 상태). 터치·키 입력 시 타이머 리셋 확인
-5. `ScreenFrame`의 `showHome`으로 '처음으로' 버튼을 조작 화면 7곳에만 노출
+5. `ScreenFrame`의 `showHome`으로 '처음으로' 버튼을 조작 화면 7곳에만 노출 (지금은 `FlowFrame` 의 `showHome`)
 
 완료 기준: 경로 있음/없음/오류, poi 직행, QR 화면까지 끝. 여섯 상태 모두 무입력 타이머 만료 시 IDLE로 복귀하고 failCount가 0이 됨. 화면을 터치하면 타이머가 리셋됨
 

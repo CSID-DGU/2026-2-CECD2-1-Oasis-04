@@ -1,184 +1,183 @@
-# 키오스크 프론트엔드 프로토타입
+# 키오스크 프론트엔드
 
-고령자를 위한 **대중교통 경로 안내 키오스크**의 화면 흐름 프로토타입입니다 (오아시스 팀, 동국대 종합설계2 × ㈜넥스브이).
-버스정류장·지하철역에 설치되는 키오스크에서 "어디로 가시나요?" → 음성(또는 손) 입력 → 목적지 확인 → 경로 안내 → 휴대폰으로 전달까지의 흐름을 React로 구현했습니다.
-백엔드·STT·LLM이 아직 없으므로 **모든 서버 API와 마이크는 mock(가짜)** 으로 동작합니다. 나중에 실제 API로 바꿀 때 화면·상태 로직은 그대로 두고 `src/api/real/` 만 채우면 되도록 설계했습니다.
+고령자를 위한 **대중교통 경로 안내 키오스크** 화면입니다 (오아시스 팀, 동국대 종합설계2 × ㈜넥스브이).
+버스정류장·지하철역 키오스크에서 "어디로 가시나요?" → 음성(또는 손) 입력 → 목적지 확인 → 경로 안내 → 휴대폰으로 전달까지를 React 로 만들었습니다.
+화면은 1920×1080 가로 고정이고 창 크기에 맞춰 통째로 줄어듭니다. 14화면 모두 확정 시안(`design/mockups/confirmed/`)을 옮긴 모양입니다.
 
-## 1. 실행 방법
+실행 모드는 셋입니다.
 
-### 요구 사항
+| 모드 | 명령 | 서버 | 마이크 | 쓰는 때 |
+|---|---|---|---|---|
+| 개발 (mock) | `npm run dev` | 가짜 | 가짜 (글 입력) | 화면 만들기·확인. 타이머가 짧다 (무입력 8초) |
+| 실제 | `npm run dev:real` | STT 서버 + 경로 서버 | 실제 마이크 | 서버와 함께 시험 |
+| 시연 | `npm run dev:demo` | 가짜 | 가짜 (정해진 문장) | 발표. 서버·인터넷·마이크 없이 다섯 흐름 |
 
-| 항목 | 버전 | 확인 명령 |
+## 1. 준비
+
+| 항목 | 버전 | 확인 |
 |---|---|---|
-| Node.js | **20.19 이상 또는 22.12 이상** (Vite 8 요구사항) | `node -v` |
-| npm | Node에 포함 (10.x) | `npm -v` |
+| Node.js | 20.19 이상 또는 22.12 이상 (Vite 8 요구) | `node -v` |
+| npm | Node 에 포함 | `npm -v` |
 
-Node가 없으면 https://nodejs.org 에서 LTS를 설치하세요.
-
-### 명령어
-
-저장소 루트가 아니라 **`frontend/` 폴더 안에서** 실행합니다.
+명령은 모두 저장소 루트가 아니라 **`frontend/` 안에서** 실행합니다.
 
 ```bash
 cd frontend
-npm install        # 의존성 설치 (처음 한 번, package.json 이 바뀌었을 때)
-npm run dev        # 개발 서버 → 브라우저에서 http://localhost:5173
-npx vitest run     # 테스트 전체 1회 실행 (npm test 는 파일 변경을 감시하는 모드로 켜진다)
-npm run build      # 운영 빌드 → dist/ 폴더 생성
-npm run preview    # 빌드 결과물 확인 → http://localhost:4173
-npm run lint       # ESLint 검사
+npm install          # 처음 한 번, package.json 이 바뀌었을 때
 ```
 
-개발 서버(`npm run dev`)는 `.env.development`를 읽어 타이머가 짧게(무입력 8초 등) 돌고, 빌드(`npm run build`)는 `.env.production`을 읽어 운영값(60초 등)으로 돕니다. 둘 다 mock입니다.
+Windows PowerShell 에서 `npm` 이 "스크립트를 실행할 수 없으므로" 오류를 내면 `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned` 를 한 번 실행하거나 `npm.cmd` 로 부릅니다.
 
-### Windows PowerShell에서 `npm` 이 "스크립트를 실행할 수 없으므로" 오류가 날 때
+## 2. 개발 모드 — `npm run dev`
 
-PowerShell을 열고 아래를 한 번 실행하면 됩니다 (현재 사용자에게만 적용, 관리자 권한 불필요). 또는 `npm` 대신 `npm.cmd`로 실행해도 됩니다.
-
-```powershell
-Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+```bash
+npm run dev          # http://localhost:5173
 ```
 
-## 2. 폴더 구조
+- `.env.development` 를 읽습니다: mock, 타이머 짧게(무입력 8초, 무발화 4초 등). 무입력 화면에 들어가자마자 남은 시간 알림이 뜨는 것은 정상입니다
+- 알림 없이 보고 싶으면 주소에 `?inactivityMs=60000` (개발 모드에서만 듣는 주소 값. `src/config.js`)
+- 오른쪽 아래 **개발자 패널(DevPanel)** 이 기본으로 보입니다. **Ctrl + Shift + D** 로 켜고 끕니다
 
+### 개발자 패널
+
+| 항목 | 하는 일 |
+|---|---|
+| state, failCount, lastEvent, transcript, selectedPoi, error, config | 지금 상태 머신 안의 값 |
+| mock 마이크 (LISTENING 에서만) | 말 대신 글을 넣습니다. 입력을 멈추고 2.5초 지나거나 화면의 '다 말했어요' 를 누르면 넘어갑니다 |
+| 가짜 음량 | 듣는 중 음량 막대: 말하는 듯 / 조용함 / 큰 소리 / 끄기 |
+| 장소 | 지금 계신 곳: 지하철역(종로3가역, 기본) / 버스정류장(종로3가.탑골공원) / 정보 없음 / 띠 시험 데이터 |
+| mock 시나리오 + 처음부터(DEV_RESET) | 실패 상황 흉내. 시작 점검 시나리오는 고른 뒤 '처음부터' |
+| 오류 이유, 후보 묶음, 질문 문구, 경로 묶음 | 이벤트 단추를 누를 때 실을 가짜 값 (UNAVAILABLE 이유, CONFIRMING 후보, ROUTE_GUIDE 경로 경우) |
+| 가능한 이벤트 | 지금 상태에서 전이 표에 있는 이벤트를 바로 보냅니다 |
+
+| 시나리오 | 결과 |
+|---|---|
+| `normal` | 모두 정상 (기본) |
+| `serverDown` | 시작 점검에서 서버 불가 → CHECKING |
+| `sttDown`, `micDown` | 음성 불가 → IDLE_REDUCED ('말하기' 없음) |
+| `routeError` | 경로 조회 오류 → UNAVAILABLE |
+| `noRoute` | 경로 없음 → UNAVAILABLE (시연 흐름 3번) |
+| `poisError`, `qrError` | 목록·QR 을 못 만듦 (화면 문구만, 전이 없음) |
+| `longNames` | 손으로 고르기 목록을 긴 이름 12개로 |
+
+### mock 마이크에 넣는 말
+
+| 입력 | 결과 |
+|---|---|
+| `명동` | 후보 명동역·명동성당·명동입구 → CONFIRMING |
+| `병원` | 후보 3개 → CONFIRMING |
+| 목적지 이름 그대로 (`서울역`, `명동역` 등) | 바로 ROUTING → ROUTE_GUIDE |
+| `웅얼`, 빈 입력, 그 밖의 말 | 못 알아들음 → 1회째 REASKING, 2회째 MANUAL_SELECT |
+| `하와이` | 안내 범위 밖 → UNAVAILABLE |
+| `에러` | 서버 오류 → UNAVAILABLE |
+
+목적지 목록은 `src/api/mock/data/pois.js`. 규칙이 겹치면 빈 입력·웅얼 → 하와이 → 에러 → 병원 → 이름 일치 → 명동 순서로 먼저 걸린 것이 이깁니다.
+
+## 3. 실제 모드 — `npm run dev:real`
+
+실제 마이크로 녹음해 서버 두 개에 보냅니다. 서버를 먼저 띄우고 프론트를 켭니다.
+
+| 서버 | 하는 일 | 기본 주소 | 띄우는 방법 (저장소 루트에서, 파이썬 가상환경은 루트 `README.md`) |
+|---|---|---|---|
+| STT 서버 `stt/api.py` | `/api/v1/` 아래 음성 인식 `stt`, 목적지 해석 `resolve`, 지금 위치 `location`, 목록 `pois`, 점검 `health` | http://localhost:8001 | `python stt/api.py` (포트는 `PORT`, 설정은 `stt/config.yaml`, 어댑터는 `STT_ADAPTER`. 설명은 파일 맨 위) |
+| 경로 서버 `server/app.py` | 대중교통 경로 `/routes/transit` | http://localhost:8000 | `cd server` 뒤 `uvicorn app:app --port 8000` (환경변수 `KAKAO_REST_API_KEY` 필요) |
+
+```bash
+npm run dev:real     # http://localhost:5173. vite 가 /api 는 STT 서버로, /routes 는 경로 서버로 넘긴다
 ```
-frontend/
-  index.html              진입 HTML
-  .env.development        npm run dev 가 읽는 설정 (mock + 짧은 타이머)
-  .env.production         npm run build 가 읽는 설정 (당분간 mock + 운영 타이머)
-  src/
-    main.jsx              React 를 DOM 에 붙이는 진입점
-    App.jsx               Provider 로 감싸고 현재 상태에 맞는 화면 하나를 고른다 (라우터 역할)
-    config.js             시간 설정값. env(VITE_*_MS) 를 읽고 없으면 운영 기본값
-    state/                상태 머신 (순수 로직)
-      states.js             상태 14개 (문서 이름 그대로)
-      events.js             이벤트 26개 + 개발용 DEV_RESET
-      transitions.js        전이 표 { 상태: { 이벤트: 다음상태 } } 40항목
-      kioskReducer.js       reducer. 다음 상태 결정 + payload 저장 + failCount 증감만 한다
-      KioskContext.jsx      Provider 와 useKiosk() 훅
-    effects/              상태에 "들어갔을 때" 하는 일 (API 호출, 타이머)
-      useKioskEffects.js    상태가 바뀔 때 해당 핸들러를 실행하고, 떠날 때 cleanup
-      handlers/             상태별 핸들러 (startupCheck, checking, idleReduced, listening, resolving, failCountCheck, routing, inactivity)
-    api/                  서버와 통신하는 유일한 곳
-      index.js              VITE_USE_MOCK 을 보고 mock / real 중 하나를 내보낸다
-      mock/                 가짜 구현 (키워드·시나리오로 분기, 300~800ms 지연)
-      real/                 실제 구현 자리 (지금은 "Not implemented" throw)
-    devices/              브라우저 장치(마이크) 추상화. 서버가 아니라 장치라서 api/ 와 분리
-      recorder.js           mock / real 선택
-      mockRecorder.js       텍스트 입력을 음성 대신 받고 무발화·무음 타이머를 흉내
-      realRecorder.js       MediaRecorder 자리 (stub)
-    screens/              상태 하나 = 화면 하나 (14개). titles.js 에 화면 제목 14개
-    components/           공통 부품. FlowFrame(얇은 띠 + 좌우 두 칸, 새 틀), ScreenFrame(예전 세로 틀, 옮기는 중), 버튼·고리, DevPanel(개발자 패널)
-    hooks/                화면 여러 곳이 쓰는 훅 (useNow: 지금 시각)
-  scripts/screens/        14화면 찍기·픽셀 비교 스크립트 (사용법은 그 폴더의 README.md)
-    styles/global.css     고령자 UI 스타일 (글씨 30px 이상, 버튼 112px, 고대비)
+
+- 설정은 `.env.real` (키오스크 ID `VITE_KIOSK_ID`, 타이머는 운영값). 서버 주소가 기본과 다르면 `STT_SERVER_URL=... ROUTE_SERVER_URL=... npm run dev:real` (`vite.config.js`)
+- 브라우저가 마이크 권한을 물으면 허용합니다. 위치 권한을 거절하면 서버 설정의 고정 위치를 씁니다 (DevPanel 위치 줄에 이유가 나옵니다)
+- 빌드로 돌릴 때: `npm run build:real` 로 `dist/` 를 만들면 STT 서버가 `/` 에서 함께 보여 줍니다 (`FRONTEND_DIST`). 이때 경로 서버 주소는 `.env.real` 의 `VITE_ROUTE_API_BASE_URL` 에 적고, 경로 서버가 화면 출처를 허용(CORS)해야 합니다
+
+## 4. 시연 모드 — `npm run dev:demo`
+
+발표용입니다. **서버·인터넷·마이크 없이** 확정 시안 `design/mockups/confirmed/demo.html` 의 다섯 흐름을 실제 앱으로 보여 줍니다.
+
+```bash
+npm run dev:demo     # http://localhost:5173 (이미 쓰고 있으면 vite 가 5174 처럼 다음 자리를 알려 준다)
 ```
 
-역할을 한 줄로 요약하면 다음과 같습니다. Spring에 익숙하다면 괄호 안 비유를 참고하세요.
+브라우저를 전체 화면(F11)으로 열고 화면을 한 번 누른 뒤 키보드(또는 발표용 리모컨)로 넘깁니다. 화면에는 발표자용 표시가 아무것도 나오지 않습니다.
 
-- **state/**: "지금 어느 상태이고 어떤 이벤트가 오면 어디로 가는가"만 안다. API·타이머를 모른다 (도메인 규칙).
-- **effects/**: 상태에 들어가면 API를 부르거나 타이머를 걸고, 결과를 **표에 있는 이벤트로만** dispatch 한다 (서비스 계층).
-- **api/**, **devices/**: 바깥 세계와 닿는 유일한 두 곳 (Repository/Client). 여기 말고는 어디서도 fetch 하지 않는다.
-- **screens/**: 상태를 그리고 버튼을 누르면 이벤트를 dispatch 한다. 표시용 조회(`getPois`, `createQr`)만 예외로 직접 부른다 (Controller/View).
+| 키 | 하는 일 |
+|---|---|
+| **→** 또는 PageDown | 다음 화면 (화면 버튼을 누른 것과 같은 이벤트를 보냅니다. 흐름의 마지막 화면에서는 아무 일도 하지 않습니다) |
+| **←** 또는 PageUp | 이전 화면 |
+| **Home** | 지금 흐름의 처음 화면 |
+| **1 ~ 5** | 그 흐름의 처음 화면 |
+| Ctrl + Shift + D | 개발자 패널 (시연 모드에서는 처음에 숨겨져 있습니다) |
 
-## 3. 화면 흐름
+| 키 | 흐름 | 화면 순서 | 들은 말 |
+|---|---|---|---|
+| 1 | 기본 | IDLE → LISTENING → RESOLVING → CONFIRMING → ROUTING → ROUTE_GUIDE → QR_HANDOFF → IDLE | "명동" → 명동역을 고름 |
+| 2 | 다시 말하기 | LISTENING → RESOLVING → FAIL_COUNT_CHECK → REASKING → LISTENING | "웅얼웅얼" |
+| 3 | 안내 불가 | ROUTING → UNAVAILABLE(경로 없음) → MANUAL_SELECT | — |
+| 4 | 손으로 고르기 | IDLE → MANUAL_SELECT → ROUTING → ROUTE_GUIDE | — |
+| 5 | 음성 불가 | IDLE_REDUCED → MANUAL_SELECT ('말로 하기' 없음) | — |
 
-상태 다이어그램과 전이 표(41행)는 [`docs/kiosk-workflow.md`](../docs/kiosk-workflow.md)가 기준입니다. 코드는 이 표를 1:1로 옮긴 것이고, `npx vitest run`이 문서와 `transitions.js`가 같은지 검사합니다.
-구현 계획과 설계 결정은 [`docs/frontend-plan.md`](../docs/frontend-plan.md)에 있습니다. 상태나 전이를 바꾸려면 코드보다 문서를 먼저 고칩니다.
+- 기다림 화면(RESOLVING, ROUTING 1.5초, FAIL_COUNT_CHECK 1.2초)은 저절로 넘어갑니다. 기다리는 중에 →를 누르면 바로 넘깁니다
+- 손으로 화면을 눌러 진행해도 됩니다. 키는 지금 화면이 흐름의 몇 번째인지 다시 찾아 이어 갑니다. '다 말했어요' 도 정해진 문장을 보냅니다
+- 듣는 중 음량 막대는 가짜 음량으로 움직입니다. 무입력·무발화·재점검 시간은 10분이라 시연 중 처음으로 돌아가지 않습니다
+- ROUTE_GUIDE 에서 →는 1번 경로를 보냅니다. 다른 경로를 보여 주려면 카드를 누르고 화면의 '휴대폰으로 보내기' 를 누릅니다
+- 키는 새 상태·전이·이벤트를 만들지 않습니다. ←·Home·숫자 키는 `DEV_RESET`(개발 도구 이벤트) 뒤 그 화면까지의 이벤트를 한 번에 보내 바로 그 화면에 섭니다 (`src/demo/demoFlows.js`, `DemoKeys.jsx`)
+- 설정은 `.env.demo`. 흐름을 고치려면 `src/demo/demoFlows.js` 와 `design/mockups/confirmed/demo.html` 을 함께 고칩니다
 
-대표 흐름: `STARTUP_CHECK → IDLE → LISTENING → RESOLVING → (CONFIRMING →) ROUTING → ROUTE_GUIDE → QR_HANDOFF`
+## 5. 테스트·린트
 
-## 4. mock 키워드
-
-마이크 대신 **DevPanel 의 'mock 마이크' 입력창**에 글을 넣습니다 (`LISTENING` 일 때만 보임. 화면 시안에 입력창이 없어서 2단계에서 화면에서 DevPanel 로 옮겼다). 아래 글자를 넣고 화면의 '다 말했어요'를 누르거나 잠시 기다리면 해당 흐름을 탑니다.
-
-| 입력 | 결과 | 도착 화면 |
-|---|---|---|
-| `서울역` (목적지 이름과 정확히 일치) | 바로 확정 | ROUTING → ROUTE_GUIDE |
-| `병원` | 후보 3개(동국대병원·서울병원·중앙병원) 중 고르기 | CONFIRMING |
-| `웅얼` | 못 알아들음. 1회째 → 다시 묻기, 2회째 → 손으로 고르기 | REASKING → MANUAL_SELECT |
-| (빈 입력) | 아무것도 치지 않고 기다리면 무발화 타이머가 빈 텍스트로 보냄. `웅얼`과 같은 흐름 | REASKING |
-| `하와이` | 안내 범위 밖 | UNAVAILABLE |
-| `에러` | STT 서버 오류(throw) | UNAVAILABLE |
-| 그 외 아무 말 | 못 알아들음 (`웅얼`과 같음) | REASKING |
-| **경로 없음 테스트** | '손으로 고르기'에서 **외딴섬 선착장** 선택 → 경로 0개 | UNAVAILABLE |
-
-정확히 일치하는 목적지 이름 목록은 `src/api/mock/data/pois.js`에 있습니다 (서울역, 시청, 동국대학교, 남산타워, 고속터미널, 동국대병원, 서울병원, 중앙병원, 남대문시장, 외딴섬 선착장).
-키워드가 겹치면 mock은 **빈 입력·`웅얼` → `하와이` → `에러` → `병원` → 이름 정확히 일치** 순으로 먼저 걸리는 규칙을 적용합니다. 예를 들어 `병원 에러`는 `에러`가 먼저 걸려 UNAVAILABLE로 갑니다.
-
-## 5. DevPanel (개발자 패널)
-
-화면 **우하단의 작은 회색 상자**입니다. 개발 도구이므로 고령자 UI 기준(큰 글씨)에서 제외되어 있습니다.
-
-- `npm run dev`에서는 **기본으로 보이고**, `npm run build` / `npm run preview` 결과물에서는 **기본으로 숨겨집니다**.
-- 어느 쪽이든 **Ctrl + Shift + D** 를 누르면 켜고 끌 수 있습니다 (시연 중 상태 확인용). 키오스크에 키보드가 없으면 빌드에서는 볼 수 없습니다.
-
-보여 주는 것: 현재 상태(`state`), `failCount`, 마지막 이벤트, `transcript`, `selectedPoi`, `resolve.status`, `error`(원래 오류 코드), 지금 적용 중인 시간 설정값(`config`).
-
-할 수 있는 것:
-
-- **scenario 드롭다운**: mock API와 mock 마이크의 실패 상황을 강제합니다. 바꾼 뒤 해당 화면에 다시 들어가면 적용됩니다.
-- **처음부터 (DEV_RESET)**: 어느 상태에서든 초기 상태(`STARTUP_CHECK`)로 되돌립니다. 워크플로우에 없는 개발용 이벤트입니다.
-- **가능한 이벤트 버튼**: 현재 상태에서 표에 있는 전이를 버튼으로 직접 쏩니다. API나 타이머를 기다리지 않고 화면을 건너뛸 때 씁니다.
-
-| 시나리오 | 영향 | 결과 |
-|---|---|---|
-| `normal` | 모두 정상 | 기본값 |
-| `serverDown` | `health()` → 서버 불가 | 시작 시 CHECKING. 재시도 타이머 후 재점검 |
-| `sttDown` | `health()` → STT 불가 | IDLE_REDUCED (마이크 버튼 숨김). 재점검 타이머 후 복구 확인 |
-| `micDown` | `checkMic()` → 마이크 불가 | IDLE_REDUCED |
-| `routeError` | `route()` throw | ROUTING → UNAVAILABLE |
-| `poisError` | `getPois()` throw | MANUAL_SELECT에 "목록을 불러올 수 없어요" (전이 없음) |
-| `qrError` | `createQr()` throw | QR_HANDOFF에 "QR을 만들지 못했어요" (전이 없음) |
-
-시작 점검 시나리오(`serverDown`, `sttDown`, `micDown`)를 시험하려면 드롭다운을 바꾼 뒤 **처음부터 (DEV_RESET)** 를 누르세요.
-
-## 6. 시간 설정값
-
-`src/config.js`가 env에서 읽습니다. 핸들러와 recorder는 이 값만 보고 숫자를 직접 쓰지 않습니다. DevPanel의 `config` 줄에서 지금 적용 중인 값을 확인할 수 있습니다.
-
-| 키 | env 변수 | 운영값 (`.env.production`, 비워 두면 기본값) | 개발값 (`.env.development`) | 쓰는 곳 |
-|---|---|---|---|---|
-| `healthRetryMs` | `VITE_HEALTH_RETRY_MS` | 30000 (30초) | 3000 | CHECKING: 서버 재시도 |
-| `recheckMs` | `VITE_RECHECK_MS` | 60000 (60초) | 5000 | IDLE_REDUCED: 마이크·STT 재점검 |
-| `noSpeechMs` | `VITE_NO_SPEECH_MS` | 10000 (10초) | 4000 | LISTENING: 무발화 → 빈 텍스트 |
-| `silenceMs` | `VITE_SILENCE_MS` | 2500 (2.5초) | 2500 | LISTENING: 마지막 입력 후 무음 → 발화 종료 |
-| `inactivityMs` | `VITE_INACTIVITY_MS` | 60000 (60초) | 8000 | 조작 화면 6곳: 무입력 → IDLE 복귀 |
-
-값을 바꾼 뒤에는 개발 서버를 다시 시작해야 합니다 (`.env` 파일은 시작할 때 한 번 읽힙니다).
-
-## 7. 실제 API로 교체하는 방법
-
-1. `src/api/real/*.js`의 함수(`health`, `stt`, `resolve`, `route`, `getPois`, `createQr`)에 `fetch` 구현을 채웁니다. 함수 이름과 반환 형식은 `src/api/mock/*.js`와 같게 맞춥니다. 백엔드 응답 형식이 다르면 **이 파일 안에서 변환**합니다.
-2. 실제 마이크는 `src/devices/realRecorder.js`에 `MediaRecorder`를 구현합니다. `start({ onSpeechEnd })` / `onInput` / `stop` / `checkMic` 인터페이스는 mock과 같습니다.
-3. `.env.production`에서 `VITE_USE_MOCK=false`로 바꾸고 `VITE_API_BASE_URL=https://...`을 추가합니다.
-4. `npm run build` 후 `npm run preview`로 확인합니다.
-
-화면(`screens/`), reducer(`state/`), effect 핸들러(`effects/`)는 **손대지 않습니다**. 요청·응답 형식 중 백엔드와 합의가 필요한 항목은 [`docs/frontend-plan.md` 7절](../docs/frontend-plan.md#7-백엔드와-합의-필요)에 정리돼 있습니다.
-
-## 8. 아직 정해지지 않은 사항
-
-[`docs/frontend-plan.md` 6절](../docs/frontend-plan.md#6-결정-필요-사항)의 '미정' 항목입니다. 프로토타입에서는 괄호 안처럼 임시 처리했습니다.
-
-- **손으로 고르기 목적지 목록**: 서버에서 받을지, 키오스크에 내장할지 (지금은 `api.getPois()` mock 호출. 내장으로 결정되면 상수로 교체)
-- **QR 생성 주체**: 프론트에서 그릴지, 서버가 만들어 줄지 (지금은 `api.createQr()`이 URL을 돌려주고 화면에 글자로 표시. QR 이미지 라이브러리 보류)
-- **ROUTE_GUIDE에서 2·3순위 경로 선택**과 휴대폰으로 보내지 않고 끝내는 방법 (지금은 2·3순위 표시만, 종료는 '처음으로'·무입력 복귀)
-- **시작 점검에서 서버 불가와 마이크·STT 불가가 동시에 날 때** 우선순위 (지금은 서버 불가 우선)
-- **CHECKING → STARTUP_CHECK** 점선의 의미 (지금은 30초 자동 재시도로 해석)
-- **`/resolve` 응답 형식**, **`/stt` 입력 형식** (파일 업로드 vs 스트리밍) (mock은 `{ status, needConfirm, poi, candidates }`, `{ text }`로 가정)
-- **마이크 mock 방식**은 임시로 DevPanel 의 텍스트 입력창을 씁니다. 실제 `MediaRecorder`는 `realRecorder.js` 자리만 있습니다.
-
-## 9. 테스트
-
-`npx vitest run`으로 돌아가는 것들입니다. 상태 머신·핸들러·recorder가 대상이고 화면 렌더링 테스트는 없습니다.
+```bash
+npm test -- --run    # 테스트 전체 한 번 (npm test 만 치면 파일 변경을 지켜보는 모드)
+npm run lint         # ESLint
+```
 
 | 위치 | 내용 |
 |---|---|
-| `src/state/__tests__/` | 전이 표가 문서와 같은지(40항목, 상태 14, 이벤트 26), reducer의 failCount·세션 초기화 규칙 |
-| `src/screens/__tests__/` | 화면 제목 14개가 상태 14개와 1:1인지, 오류 코드 → 사용자 문구 변환 |
-| `src/effects/__tests__/` | 핸들러별로 API 응답 → 이벤트 변환, 타이머 만료·리셋, cleanup 뒤 dispatch 0회 (fake timers) |
-| `src/devices/__tests__/` | mockRecorder의 무발화·무음 타이머, stop 후 콜백 없음 |
+| `src/state/__tests__/` | 전이 표가 `docs/kiosk-workflow.md` 와 같은지, reducer 규칙, 위치 Context |
+| `src/effects/__tests__/` | 상태별 핸들러: API 결과 → 이벤트, 타이머, cleanup 뒤 dispatch 없음 |
+| `src/screens/__tests__/`, `src/components/__tests__/` | 화면·부품이 그리는 것과 보내는 이벤트 |
+| `src/view/__tests__/`, `src/hooks/__tests__/` | 화면 계산 (글씨 줄이기, 띠, 경로 모양, QR, 음량) |
+| `src/devices/__tests__/` | mock 녹음기 타이머 |
+| `src/demo/__tests__/` | 시연 흐름이 demo.html 과 같은 순서인지, 모든 화면에 갈 수 있는지 |
 
-`inactivity.test.js`만 `document`가 필요해 파일 첫 줄의 `// @vitest-environment jsdom` 주석으로 jsdom을 켭니다. 나머지는 node 환경입니다.
+`transitions.test.js` 는 저장소의 `docs/kiosk-workflow.md` 를 직접 읽으므로 저장소 전체를 받은 상태에서 돌립니다.
 
-`transitions.test.js`는 저장소의 `docs/kiosk-workflow.md`를 직접 읽어 코드와 대조하므로, `frontend/` 폴더만 따로 복사해 두면 그 테스트 하나가 "파일 없음"으로 실패합니다. 저장소 전체를 clone 한 상태에서 실행하세요.
+## 6. 화면 찍기·비교·시연 흐름 시험 (`scripts/screens/`)
+
+Playwright 를 의존성으로 넣지 않았으므로, Claude Code 의 Playwright MCP(`browser_run_code`)에 파일 이름을 주고 돌립니다. 자세한 것은 [`scripts/screens/README.md`](scripts/screens/README.md).
+
+| 파일 | 하는 일 |
+|---|---|
+| `shoot-screens.js` | 14화면(+ UNAVAILABLE 이유별)을 1920×1080 으로 찍고 하한선 숫자(글씨 30px, 버튼 112px, 색 조합, 스크롤)를 돌려줍니다 |
+| `shoot-pick.js`, `shoot-timeout.js`, `shoot-route.js`, `shoot-qr.js`, `shoot-confirm-text.js` | 화면별 여러 경우를 앱과 시안에서 나란히 찍습니다 |
+| `compare-shots.js` + `serve-repo.mjs` | 두 그림 폴더를 픽셀로 비교합니다 |
+| `demo-flows.js` | 시연 모드 다섯 흐름을 → 키로 끝까지 돌려 화면 순서가 demo.html 과 같은지 봅니다 (`npm run dev:demo` 를 먼저) |
+
+최종 화면 그림은 `design/after/`, 옮기기 전과 나란히 보는 페이지는 `design/compare.html` 입니다.
+
+## 7. 폴더 구조
+
+```
+frontend/
+  .env.development / .env.production / .env.real / .env.demo   모드별 설정 (비밀 값을 넣지 않는다)
+  scripts/screens/        화면 찍기·비교·시연 흐름 시험
+  src/
+    App.jsx               Provider, 상태에 맞는 화면 하나, DevPanel, (시연 모드) 발표자 키
+    config.js             시간 설정값과 시연 모드 여부. env 를 읽고 없으면 운영 기본값
+    state/                상태 머신 (states, events, transitions, kioskReducer) + KioskContext, LocationContext
+    effects/              상태에 들어갔을 때 하는 일 (API 호출, 타이머). handlers/ 에 상태별로
+    api/                  서버와 통신하는 유일한 곳. mock/ 과 real/ 을 VITE_USE_MOCK 으로 고른다
+    devices/              마이크 (mockRecorder / realRecorder)
+    screens/              상태 하나 = 화면 하나 (14개)
+    components/           틀(FlowFrame, WaitFrame, IdleFrame, Stage), 띠, 버튼, 고리, 카드, 타임라인, QR, DevPanel
+    view/                 React 없는 화면 계산 (테스트하기 쉽게 분리)
+    hooks/                화면 여러 곳이 쓰는 훅
+    demo/                 시연 모드 흐름과 발표자 키
+    styles/global.css     토큰(:root)과 공통 규칙. 부품 CSS 는 각 부품 옆에
+    assets/               글꼴(Pretendard), 아이콘, 라이선스
+```
+
+- **state/** 는 "어느 상태에서 어떤 이벤트가 오면 어디로 가나" 만 압니다 (도메인 규칙). 상태·전이를 바꿀 때는 `docs/kiosk-workflow.md` 를 먼저 고칩니다
+- **effects/** 는 결과를 전이 표에 있는 이벤트로만 보냅니다 (서비스 계층)
+- **api/**, **devices/** 만 바깥과 닿습니다 (Repository/Client). 실제 서버로 바꿀 때 화면·reducer 는 손대지 않습니다
+
+기준 문서: 화면 흐름 `docs/kiosk-workflow.md`, 설계 `docs/frontend-plan.md`, 디자인 `docs/design-guidelines.md`, 시안 옮기기 기록 `docs/design-implementation-plan.md`.
