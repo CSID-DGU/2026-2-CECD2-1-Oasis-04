@@ -228,6 +228,8 @@ export function routingHandler(state, dispatch, api) {
 | `ListeningScreen` (화면) | 듣는 중 표시와 "다 말했어요", "취소", "처음으로" 버튼을 그린다. 버튼: 다 말했어요 → `SPEECH_END({ text: recorder.getText() })`, 취소 → `LISTEN_CANCEL`, 처음으로 → `GO_HOME` |
 | `DevPanel` (mock 입력, 개발 도구) | mock 모드의 LISTENING 에서만 글 입력창을 보인다. 입력이 바뀔 때마다 `recorder.onInput(text)`로 알린다 (2026-11-19, 옮기기 계획 2단계에서 화면에서 옮겨 옴. 확정 시안에 입력창이 없다) |
 | `recorder` (장치) | 지금까지 받은 글을 `getText()` 로 알려 준다(real 은 늘 빈 글). 타이머 두 개를 관리한다. **무발화 타이머**: `start()` 직후 `config.noSpeechMs`(10초) 동안 `onInput`이 한 번도 오지 않으면 `onSpeechEnd({ text: '' })`. **무음 타이머**: 첫 `onInput` 이후부터 동작하며, `onInput`마다 리셋되고 `config.silenceMs`(2.5초) 동안 입력이 없으면 `onSpeechEnd({ text })`. 첫 입력이 오면 무발화 타이머는 해제한다. `stop()`에서 둘 다 clear |
+| `VoiceMeter` (음량 막대) | 프레임마다(`requestAnimationFrame`) `recorder.getLevel()` 로 음량(RMS)을 읽어 막대 `<line>` 속성만 바꾼다. React 상태·reducer 를 거치지 않는다. 음량 → 막대 길이는 `view/voiceLevel.js` 순수 함수. `null`(세션 없음·마이크 안 열림·잴 수 없음)이면 시안의 멈춘 모양. 화면을 떠나면 프레임 반복을 멈춘다 (2026-11-20, 옮기기 계획 12단계) |
+| `recorder.getLevel()` | real: 녹음 중인 같은 스트림의 analyser 를 읽기만 한다(마이크를 따로 열지 않고, 말소리 판단·타이머·녹음은 그대로). mock: 가짜 음량(DevPanel '가짜 음량': 켜기·조용함·큰 소리·끄기). `stop()` 뒤에는 `null` |
 | `LISTENING` 핸들러 (effect) | `recorder.start({ onSpeechEnd: ({ text }) => dispatch(SPEECH_END, { text }) })` 를 호출하고, cleanup에서 `recorder.stop()` |
 
 빈 텍스트로 넘어간 `SPEECH_END`는 `RESOLVING`에서 `resolve('')` → `NOT_UNDERSTOOD` → `FAIL_COUNT_CHECK`로 이어져 기존 실패 흐름을 그대로 탄다 (회의 확정). `LISTEN_CANCEL`·`GO_HOME`은 둘 다 `IDLE`로 가고 failCount를 0으로 만든다. 버튼이 둘인 이유는 '취소'는 "말하기만 그만둔다"는 뜻이고 '처음으로'는 모든 조작 화면에 공통으로 두는 버튼이기 때문이다.

@@ -186,3 +186,37 @@ describe('mockRecorder (무발화·무음 타이머)', () => {
     expect(recorder.getText()).toBe('')
   })
 })
+
+describe('mockRecorder 가짜 음량 (getLevel, 12단계)', () => {
+  afterEach(() => {
+    recorder.stop()
+    recorder.setFakeLevel('speak')
+  })
+
+  it('세션이 없으면 null (잴 수 없음)', () => {
+    expect(recorder.getLevel()).toBeNull()
+  })
+
+  it('조용함은 잡음 기준 아래, 큰 소리는 최대값 위, 끄기는 null', async () => {
+    const { NOISE_GATE, FULL_RMS } = await import('../../view/voiceLevel.js')
+    recorder.start({ onSpeechEnd: () => {} })
+    recorder.setFakeLevel('quiet')
+    expect(recorder.getLevel()).toBeLessThan(NOISE_GATE)
+    recorder.setFakeLevel('loud')
+    expect(recorder.getLevel()).toBeGreaterThan(FULL_RMS)
+    recorder.setFakeLevel('off')
+    expect(recorder.getLevel()).toBeNull()
+    recorder.setFakeLevel('없는 값')
+    expect(recorder.getFakeLevel()).toBe('speak')
+  })
+
+  it('켜기는 0~최대값 사이 숫자, stop() 뒤에는 null', async () => {
+    const { FULL_RMS } = await import('../../view/voiceLevel.js')
+    recorder.start({ onSpeechEnd: () => {} })
+    const v = recorder.getLevel()
+    expect(v).toBeGreaterThanOrEqual(0)
+    expect(v).toBeLessThanOrEqual(FULL_RMS)
+    recorder.stop()
+    expect(recorder.getLevel()).toBeNull()
+  })
+})

@@ -18,6 +18,7 @@ import { DEV_EVENTS, EVENTS } from '../state/events.js'
 import { transitions } from '../state/transitions.js'
 import { config } from '../config.js'
 import { SCENARIOS, getScenario, setScenario } from '../api/mock/scenario.js'
+import { FAKE_LEVELS, getFakeLevel, setFakeLevel } from '../devices/mockRecorder.js'
 import { STATES } from '../state/states.js'
 import { USE_MOCK } from '../api/index.js'
 import { recorder } from '../devices/recorder.js'
@@ -97,6 +98,34 @@ function MockSpeechInput() {
       <div>
         입력 없이 {toSeconds(config.noSpeechMs)}초, 또는 입력을 멈추고 {toSeconds(config.silenceMs)}초 지나면 넘어감
       </div>
+    </div>
+  )
+}
+
+// mock 마이크의 가짜 음량 (LISTENING 음량 막대, 옮기기 계획 12단계). 녹음기 모듈 변수라 바로 다음 프레임부터 바뀐다
+const FAKE_LEVEL_LABELS = {
+  [FAKE_LEVELS.speak]: '켜기 (말하는 듯 오르내림)',
+  [FAKE_LEVELS.quiet]: '조용함',
+  [FAKE_LEVELS.loud]: '큰 소리',
+  [FAKE_LEVELS.off]: '끄기 (잴 수 없음 → 멈춘 모양)',
+}
+
+function MockLevelSelect() {
+  const [mode, setModeView] = useState(getFakeLevel)
+  const onChange = (e) => {
+    setFakeLevel(e.target.value)
+    setModeView(e.target.value)
+  }
+  return (
+    <div style={{ marginTop: 6 }}>
+      <strong>가짜 음량</strong>{' '}
+      <select value={mode} onChange={onChange} aria-label="가짜 음량">
+        {Object.values(FAKE_LEVELS).map((m) => (
+          <option key={m} value={m}>
+            {FAKE_LEVEL_LABELS[m]}
+          </option>
+        ))}
+      </select>
     </div>
   )
 }
@@ -258,6 +287,7 @@ export default function DevPanel() {
       <LocationInfo />
 
       {USE_MOCK && state.state === STATES.LISTENING && <MockSpeechInput />}
+      {USE_MOCK && <MockLevelSelect />}
 
       <div style={{ marginTop: 6 }}>
         <strong>scenario</strong> {scenario}

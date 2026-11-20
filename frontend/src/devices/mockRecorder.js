@@ -13,6 +13,7 @@
 import { config } from '../config.js'
 import { mockDelay } from '../api/mock/mockDelay.js'
 import { getScenario, SCENARIOS } from '../api/mock/scenario.js'
+import { FULL_RMS, fakeVoice } from '../view/voiceLevel.js'
 
 // STARTUP_CHECK 에서 마이크 사용 가능 여부를 묻는다.
 //   시나리오 micDown → { available: false }  (STARTUP_CHECK 핸들러가 MIC_OR_STT_UNAVAILABLE 로 바꾼다)
@@ -31,6 +32,16 @@ let speechEndCallback = null // start() 에서 받은 onSpeechEnd. stop() 에서
 let noSpeechTimer = null // 무발화 타이머 id
 let silenceTimer = null // 무음 타이머 id
 let currentText = '' // onInput 으로 받은 마지막 텍스트
+let startedAt = 0 // start() 시각 (가짜 음량의 시간 기준)
+
+// 가짜 음량 (LISTENING 음량 막대, 옮기기 계획 12단계). DevPanel '가짜 음량' 에서 고른다. 개발 도구라 reducer 상태가 아니다.
+//   speak 말하는 듯한 오르내림 (시안의 가짜 음량) / quiet 조용함(잡음 기준 아래) / loud 큰 소리(최대값 위) / off 잴 수 없음
+export const FAKE_LEVELS = { speak: 'speak', quiet: 'quiet', loud: 'loud', off: 'off' }
+let fakeLevel = FAKE_LEVELS.speak
+export const getFakeLevel = () => fakeLevel
+export function setFakeLevel(mode) {
+  fakeLevel = FAKE_LEVELS[mode] ?? FAKE_LEVELS.speak
+}
 
 function clearTimers() {
   if (noSpeechTimer !== null) {
@@ -60,6 +71,7 @@ export function start({ onSpeechEnd }) {
 
   speechEndCallback = onSpeechEnd
   currentText = ''
+  startedAt = performance.now()
   console.log('[mock] recorder start (무발화 타이머', config.noSpeechMs, 'ms)')
 
   noSpeechTimer = setTimeout(() => {
@@ -92,6 +104,15 @@ export function onInput(text) {
 // 입력창이 화면에서 DevPanel 로 옮겨 가서(계획서 4-2절) 화면은 글을 직접 들고 있지 않다. 세션이 없으면 ''
 export function getText() {
   return speechEndCallback === null ? '' : currentText
+}
+
+// 지금 음량 (RMS 0~1). VoiceMeter 가 프레임마다 읽는다. 세션이 없거나 '끄기' 면 null (잴 수 없음 → 멈춘 모양)
+export function getLevel() {
+  if (speechEndCallback === null) return null
+  if (fakeLevel === FAKE_LEVELS.off) return null
+  if (fakeLevel === FAKE_LEVELS.quiet) return 0.01
+  if (fakeLevel === FAKE_LEVELS.loud) return FULL_RMS * 1.5
+  return fakeVoice((performance.now() - startedAt) / 1000) * FULL_RMS
 }
 
 // LISTENING 을 떠날 때(cleanup) 호출. 타이머 둘 다 해제하고 콜백도 비운다.

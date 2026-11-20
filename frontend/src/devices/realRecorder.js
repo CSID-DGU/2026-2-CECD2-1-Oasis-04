@@ -1,6 +1,7 @@
 // 실제 마이크 구현. navigator.mediaDevices.getUserMedia + MediaRecorder 로 녹음하고,
 // AnalyserNode 로 음량을 재서 말이 시작됐는지·끝났는지 판단한다.
-// mockRecorder 와 함수 이름·시그니처가 같다 (checkMic / start / onInput / stop). 추가로 takeRecording 이 있다.
+// mockRecorder 와 함수 이름·시그니처가 같다 (checkMic / start / onInput / getText / getLevel / stop). 추가로 takeRecording 이 있다.
+// getLevel 은 녹음 중인 같은 스트림의 analyser 를 읽기만 한다 (마이크를 따로 열지 않고, 말소리 판단·타이머는 그대로. 12단계).
 //
 // 타이머 규칙은 mockRecorder 와 같다 (계획서 2-5절 'LISTENING 책임 분리'):
 //   무발화: start() 뒤 config.noSpeechMs 동안 말소리가 한 번도 안 잡히면 onSpeechEnd({ text: '' })
@@ -71,6 +72,7 @@ export function start({ onSpeechEnd }) {
     audioCtx: null,
     analyser: null,
     buffer: null,
+    levelBuffer: null, // getLevel 전용 (poll 의 buffer 와 나눠 둔다)
     pollTimer: null,
     noSpeechTimer: null,
     maxTimer: null,
@@ -119,6 +121,7 @@ async function open(s) {
     s.analyser.fftSize = 1024
     s.audioCtx.createMediaStreamSource(stream).connect(s.analyser)
     s.buffer = new Float32Array(s.analyser.fftSize)
+    s.levelBuffer = new Float32Array(s.analyser.fftSize)
     if (s.audioCtx.state === 'suspended') s.audioCtx.resume().catch(() => {})
   } catch (e) {
     console.warn('[recorder] 음량 측정을 쓸 수 없음 (녹음은 계속):', e?.message)
@@ -252,6 +255,25 @@ function discardPending() {
     discardTimer = null
   }
   pendingRecording = null
+}
+
+function rmsOf(buffer) {
+  let sum = 0
+  for (let i = 0; i < buffer.length; i += 1) sum += buffer[i] * buffer[i]
+  return Math.sqrt(sum / buffer.length)
+}
+
+// 지금 음량 (RMS 0~1). LISTENING 의 VoiceMeter 가 프레임마다 읽는다 (옮기기 계획 12단계).
+// 녹음 중인 analyser 를 읽기만 한다. 세션이 없거나, 마이크가 아직 안 열렸거나(권한 대기·거부), 음량을 못 재면 null.
+export function getLevel() {
+  const s = session
+  if (!s || !s.analyser || !s.levelBuffer || s.audioCtx?.state !== 'running') return null
+  try {
+    s.analyser.getFloatTimeDomainData(s.levelBuffer)
+  } catch {
+    return null
+  }
+  return rmsOf(s.levelBuffer)
 }
 
 // 실제 마이크에서는 화면 입력이 없다. mockRecorder 와 인터페이스를 맞추기 위한 빈 함수
