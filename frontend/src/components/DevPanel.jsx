@@ -137,6 +137,7 @@ const SCENARIO_LABELS = {
   [SCENARIOS.sttDown]: 'sttDown — STT 불가 → IDLE_REDUCED',
   [SCENARIOS.micDown]: 'micDown — 마이크 불가 → IDLE_REDUCED',
   [SCENARIOS.routeError]: 'routeError — 경로 조회 오류 → UNAVAILABLE',
+  [SCENARIOS.noRoute]: 'noRoute — 경로 없음 → UNAVAILABLE (시연 흐름 3번)',
   [SCENARIOS.poisError]: 'poisError — 목적지 목록 오류 (화면 문구만, 전이 없음)',
   [SCENARIOS.longNames]: 'longNames — 목적지 목록을 긴 이름 12개로 (줄 바꿈 시험)',
   [SCENARIOS.qrError]: 'qrError — QR 생성 오류 (화면 문구만, 전이 없음)',

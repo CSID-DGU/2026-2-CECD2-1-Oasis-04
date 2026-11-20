@@ -14,7 +14,7 @@
 
 import { EVENTS } from '../../state/events.js'
 
-export function failCountCheckHandler(state, dispatch) {
+export function failCountCheckHandler(state, dispatch, { config } = {}) {
   const { failCount } = state
 
   let type
@@ -31,7 +31,7 @@ export function failCountCheckHandler(state, dispatch) {
 
   const timer = setTimeout(() => {
     dispatch({ type })
-  }, 0)
+  }, config?.choiceDelayMs ?? 0) // 운영·개발은 0 (한 틱 뒤). 시연 모드만 화면이 보이게 늘린다 (config.js choiceDelayMs)
 
   return () => {
     clearTimeout(timer)

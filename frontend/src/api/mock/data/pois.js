@@ -58,4 +58,8 @@ const OTHER_POIS = [
   { id: 'poi-no-route', name: '외딴섬 선착장', category: '테스트(경로 없음)' },
 ]
 
-export const POIS = Object.freeze([...OTHER_POIS, ...MANUAL_POIS, ...MYEONGDONG.slice(1)])
+// 시연 모드(VITE_DEMO)에서는 시험용 '외딴섬 선착장'을 뺀다. 경로 없음은 시나리오 noRoute 로 낸다 (옮기기 계획 5-1절)
+const TEST_ONLY_IDS = new Set(['poi-no-route'])
+const visible = (p) => !(import.meta.env.VITE_DEMO === 'true' && TEST_ONLY_IDS.has(p.id))
+
+export const POIS = Object.freeze([...OTHER_POIS, ...MANUAL_POIS, ...MYEONGDONG.slice(1)].filter(visible))
