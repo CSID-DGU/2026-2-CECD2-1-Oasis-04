@@ -66,6 +66,21 @@ def fixed_place(kb, kiosk, near_m=PLACE_NEAR_M):
     return found[0] if found and found[0]["distance_m"] <= near_m else None
 
 
+def pinned(kb, poi_id):
+    """설정에서 직접 정한 역·정류장 → 출발지. 지식베이스에 없거나 역·정류장이 아니면 None
+
+    GPS 가 없는 PC 처럼 브라우저 위치를 믿을 수 없을 때 쓴다. locate 가 돌려주는 것과 같은 모양이고 source 만 'MANUAL' 이다.
+    """
+    p = kb.poi(poi_id) if poi_id else None
+    if not p or p.get("poi_type") not in ("SUBWAY_STATION", "BUS_STOP") or p.get("x") is None or p.get("y") is None:
+        return None
+    label = place_label(p)
+    return {
+        "source": "MANUAL", "x": p["x"], "y": p["y"], "name": label, "snapped": True, "accuracy_m": None,
+        "nearest": {"poi_id": p["poi_id"], "name": label, "poi_type": p["poi_type"], "x": p["x"], "y": p["y"], "distance_m": 0},
+    }
+
+
 def locate(kb, x, y, accuracy_m=None, snap_m=SNAP_M, max_accuracy_m=MAX_ACCURACY_M, max_distance_m=MAX_DISTANCE_M):
     """(x 경도, y 위도, 오차 반경 m) → (출발지, None) 또는 (None, 쓰지 못한 이유)
 

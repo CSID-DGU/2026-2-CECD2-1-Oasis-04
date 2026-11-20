@@ -8,7 +8,8 @@
 // 3) 위치를 못 받았거나 서버가 쓸 수 없다고 판단하면(오차가 큼·서울 밖) 서버 설정의 키오스크 고정 위치가 쓰인다.
 //    좌표 없이도 서버에 알리는 이유: 전에 기억해 둔 위치를 지우고 고정 위치로 돌아가게 하려는 것.
 //
-// 결과: { name, text, source: 'GPS' | 'KIOSK', snapped, accuracyM, reason, place }
+// 결과: { name, text, source: 'GPS' | 'KIOSK' | 'MANUAL', snapped, accuracyM, reason, place }
+//   source  GPS 브라우저 위치 / KIOSK 서버 설정의 고정 위치 / MANUAL 설정에서 직접 정한 역·정류장
 //   text    화면에 그대로 보여 줄 문장. 예) '지금 계신 곳: 경동시장앞 정류장'
 //   snapped 정류장·역 바로 근처라 그곳으로 맞췄으면 true. 조금 떨어져 있으면 false 이고 이름이 '○○ 정류장 근처'
 //   reason  고정 위치를 쓰게 된 이유. GPS 를 썼으면 null
@@ -17,8 +18,12 @@
 //   place   큰 띠의 장소 정보 (디자인 문서 8-5절 형식). 서버가 아직 주지 않으므로 지금은 늘 null → 띠는 "정보 없음"
 //           서버가 data.place 를 주면 그대로 쓴다 (docs/team-requests.md #1)
 // 서버 호출이 실패하면 Error 를 throw 한다. 화면은 위치 줄을 비워 둔다 (전이 없음).
+//
+// 설정 페이지의 '위치' 탭에서 역·정류장을 직접 정해 두었으면(settings/kioskPlace.js) 브라우저 위치를 읽지 않고
+// 그곳의 id(poi_id)를 서버에 알린다. 서버는 그곳을 지금 계신 곳으로 쓴다 (source: 'MANUAL').
 
 import { apiFetch, errorMessageOf, KIOSK_ID } from './http.js'
+import { readKioskPlace } from '../../settings/kioskPlace.js'
 
 const POSITION_TIMEOUT_MS = 8000
 const GEO_ERROR = { 1: 'PERMISSION_DENIED', 2: 'POSITION_UNAVAILABLE', 3: 'TIMEOUT' }
@@ -53,12 +58,23 @@ export function readPosition(timeoutMs = POSITION_TIMEOUT_MS) {
   })
 }
 
+/** 역 번호·정류장 번호·이름으로 역·정류장을 찾는다 (설정의 '위치' 탭 전용). → [{ poiId, name, type, number, line }] */
+export async function findPlaces(query) {
+  const body = await apiFetch(`/places?q=${encodeURIComponent(query)}`, { timeoutMs: 8000 })
+  if (!body.success) throw new Error(errorMessageOf(body, 'PLACE_SEARCH_ERROR'))
+  return (body.data?.places ?? []).map((p) => ({ poiId: p.poi_id, name: p.name ?? '', type: p.poi_type ?? null, number: p.number ?? '', line: p.line ?? '' }))
+}
+
 export async function getLocation() {
-  const { position, reason: browserReason } = await readPosition()
+  const chosen = readKioskPlace()
+  const manual = chosen.mode === 'manual'
+  const { position, reason: browserReason } = manual ? { position: null, reason: null } : await readPosition()
 
   // 좌표는 주소(URL)에 싣지 않고 본문으로 보낸다 (접속 로그에 남지 않게)
   const report = { kiosk_id: KIOSK_ID }
-  if (position) {
+  if (manual) {
+    report.poi_id = chosen.place.poiId
+  } else if (position) {
     report.x = position.x
     report.y = position.y
     if (position.accuracy !== null) report.accuracy = position.accuracy
@@ -74,7 +90,7 @@ export async function getLocation() {
     source: d.source ?? 'KIOSK',
     snapped: Boolean(d.snapped),
     accuracyM: d.accuracy_m ?? null,
-    reason: d.source === 'GPS' ? null : (browserReason ?? d.fallback_reason ?? null),
+    reason: d.source === 'GPS' || d.source === 'MANUAL' ? null : (browserReason ?? d.fallback_reason ?? null),
     place: d.place ?? null,
   }
   console.info('[location]', result.source, result.name, result.reason ?? '', result.accuracyM !== null ? `±${result.accuracyM}m` : '')

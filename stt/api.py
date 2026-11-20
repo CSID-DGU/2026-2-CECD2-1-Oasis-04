@@ -39,9 +39,10 @@ from destination import (apply_context, category_question, choice_text, exact_ca
                          number_families, number_question, outside_region)
 from intent import classify, confirm_text  # noqa: E402
 from normalize import normalize_name  # noqa: E402
-from origin import MAX_ACCURACY_M, MAX_DISTANCE_M, PLACE_NEAR_M, SNAP_M, fixed_place, locate, place_of  # noqa: E402
+from origin import (MAX_ACCURACY_M, MAX_DISTANCE_M, PLACE_NEAR_M, SNAP_M, fixed_place, locate, pinned,  # noqa: E402
+                    place_label, place_of)
 from rag_correct import RagCorrector  # noqa: E402
-from search import TransitKB  # noqa: E402
+from search import TransitKB, place_number  # noqa: E402
 
 VERSION = "0.1.0"
 MAX_SECONDS = 30
@@ -231,6 +232,7 @@ class LocationReport(BaseModel):
     x: Optional[float] = Field(None, description="브라우저 위치의 경도 (WGS84). 위치를 못 받았으면 비운다")
     y: Optional[float] = Field(None, description="브라우저 위치의 위도")
     accuracy: Optional[float] = Field(None, description="브라우저가 알려 준 오차 반경(m)")
+    poi_id: Optional[str] = Field(None, description="설정에서 직접 정한 역·정류장 (GET /places 의 poi_id). 주면 x·y 대신 이곳을 쓴다")
 
 
 class ResolveRequest(BaseModel):
@@ -300,13 +302,22 @@ def resolve_origin(kiosk_id: str):
 
 
 def report_location(kiosk_id: str, x: Optional[float] = None, y: Optional[float] = None,
-                    accuracy: Optional[float] = None):
-    """키오스크가 알린 브라우저 위치를 반영한다 → (지금부터 쓸 출발지, 고정 위치를 쓰게 된 이유 또는 None, 오류 코드 또는 None).
+                    accuracy: Optional[float] = None, poi_id: Optional[str] = None):
+    """키오스크가 알린 위치를 반영한다 → (지금부터 쓸 출발지, 고정 위치를 쓰게 된 이유 또는 None, 오류 코드 또는 None).
 
     쓸 만한 위치면 가장 가까운 정류장·역에 맞춰 기억해 두고, 이후 /stt·/resolve·/pois 가 그 위치를 출발지로 쓴다.
     화면은 돌려받은 출발지 좌표(x, y)를 경로 서버(server/app.py)에 경로를 물을 때 출발지로 쓴다.
     위치가 없거나 쓸 수 없으면(오차가 큼·안내 범위 밖) 기억해 둔 위치를 지우고 설정 파일의 고정 위치로 돌아간다.
+    poi_id 를 주면(설정에서 역·정류장을 직접 정한 경우) 브라우저 위치를 보지 않고 그곳을 출발지로 쓴다.
     """
+    if poi_id:
+        got = pinned(S.kb, poi_id) if S.kb is not None else None
+        if got:
+            S.live_origin[kiosk_id] = got
+            return got, None, None
+        S.live_origin.pop(kiosk_id, None)
+        origin, err = resolve_origin(kiosk_id)
+        return origin, "KB_NOT_READY" if S.kb is None else "PLACE_NOT_FOUND", err
     reason = "NO_POSITION"
     if x is not None and y is not None:
         if S.kb is None:
@@ -467,14 +478,19 @@ def location(req: LocationReport):
     x·y 를 비웠거나 쓸 수 없는 위치면 설정된 고정 위치로 돌아간다 (source=KIOSK, fallback_reason 에 이유).
 
     place 는 첫 화면 역명판 띠가 쓰는 장소 정보다 (docs/team-requests.md #1, 형식은 kb/origin.py place_of).
-    지금 계신 곳이 역·정류장 가까이(300 m 안)일 때만 주고, 아니면 null 이다. 고정 위치일 때는 name 도 그 역·정류장 이름이다."""
+    지금 계신 곳이 역·정류장 가까이(300 m 안)일 때만 주고, 아니면 null 이다. 고정 위치일 때는 name 도 그 역·정류장 이름이다.
+
+    poi_id 를 주면 그 역·정류장을 지금 계신 곳으로 쓴다 (source=MANUAL). GPS 가 없는 PC 에서 설정으로 위치를 정할 때 쓴다."""
     t0 = time.time()
-    origin, reason, err = report_location(req.kiosk_id, req.x, req.y, req.accuracy)
+    origin, reason, err = report_location(req.kiosk_id, req.x, req.y, req.accuracy, req.poi_id)
     if err:
         return fail(err, f"unknown kiosk_id {req.kiosk_id}", t0)
+    # 왜 이 위치가 되었는지 서버 기록에 남긴다. 좌표는 적지 않는다
+    print(f"[location] {req.kiosk_id} source={origin.get('source')} reason={reason} accuracy={req.accuracy} "
+          f"asked={'place' if req.poi_id else 'position' if req.x is not None else 'none'} name={origin.get('name')}", flush=True)
     name, place = origin["name"], None
     if S.kb is not None:
-        if origin.get("source") == "GPS":
+        if origin.get("source") in ("GPS", "MANUAL"):
             near = origin.get("nearest") or {}
             place = place_of(S.kb, near) if near.get("distance_m", PLACE_NEAR_M + 1) <= PLACE_NEAR_M else None
         else:
@@ -482,6 +498,18 @@ def location(req: LocationReport):
             if place:
                 name = place["name"]
     return ok({**origin, "name": name, "place": place, "fallback_reason": reason, "easy_text": f"지금 계신 곳: {name}"}, t0)
+
+
+@router.get("/places", summary="역 번호·정류장 번호·이름으로 역·정류장 찾기 (설정에서 키오스크 위치를 정할 때)")
+def places(q: str, limit: int = 20):
+    """명세 v0.1 에는 없는 설정 화면용 조회. 숫자면 번호(역 번호 '130', 정류장 번호 '01-013')로, 아니면 이름에 그 글자가 든 곳을 찾는다.
+    돌려준 poi_id 를 POST /location 의 poi_id 로 보내면 그곳이 지금 계신 곳이 된다."""
+    t0 = time.time()
+    if S.kb is None:
+        return fail("MODEL_NOT_READY", "kb loading", t0)
+    rows = S.kb.find_places(q, limit=max(1, min(limit, 50)))
+    return ok({"places": [{"poi_id": r["poi_id"], "name": place_label(r), "poi_type": r["poi_type"], "number": place_number(r),
+                           "line": (r.get("line_info") or "").split("/")[0].strip(), "x": r["x"], "y": r["y"]} for r in rows]}, t0)
 
 
 @router.get("/pois", summary="손으로 고르기 화면용 목적지 목록 (출발지에서 가까운 지하철역)")

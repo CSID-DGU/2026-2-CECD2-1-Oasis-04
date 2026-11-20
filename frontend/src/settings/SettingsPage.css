@@ -124,6 +124,72 @@
   margin: 0 0 20px;
 }
 
+/* 위치 탭: 고른 방법 아래에 펼쳐지는 부분 (위치 확인, 역·정류장 찾기) */
+.settings-block {
+  margin: 0 0 20px;
+  padding: 16px 20px 0;
+  background: var(--color-bg-group);
+  border-radius: var(--radius);
+}
+
+.settings-block > .settings-button {
+  margin-bottom: 16px;
+}
+
+.settings-search label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 700;
+}
+
+.settings-search-row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.settings-search-row input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  font: inherit;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: var(--border-thin) solid var(--color-text-sub);
+  border-radius: var(--radius);
+}
+
+.settings-places {
+  display: grid;
+  gap: 6px;
+  max-height: 320px;
+  margin: 0 0 16px;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.settings-place {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--color-bg);
+  border: var(--border-thin) solid transparent;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.settings-place:has(input:checked) {
+  border-color: var(--color-primary);
+}
+
+.settings-place input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--color-primary);
+}
+
 .settings-error {
   margin: 0 0 20px;
   color: var(--color-error);

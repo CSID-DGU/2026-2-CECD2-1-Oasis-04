@@ -4,12 +4,14 @@
 // 탭
 //   서버 연동  STT 서버(음성 인식·목적지 해석·현재 위치)와 연동할지: 자동 / 켜기 / 끄기 (settings/integration.js)
 //              학습한 음성 모델이 올라간 서버가 없는 PC 에서는 끄거나 자동으로 두면 연습용 데이터로 돈다
+//   위치       키오스크가 놓인 곳: 현재 위치로 찾기 / 역 번호·정류장 번호·이름으로 직접 지정 (LocationTab.jsx, settings/kioskPlace.js)
 // 탭을 더할 때는 TABS 에 한 줄을 넣고 그 탭의 컴포넌트를 만든다.
 //
 // 저장하면 선택을 브라우저에 적고 키오스크 화면을 새로 연다. 연동 여부는 화면을 열 때 한 번 정해지기 때문이다.
 
 import { useEffect, useState } from 'react'
 import { CHOICES, DEMO_BUILD, MOCK_BUILD, REASON_TEXT, decide, probeStt, readChoice, statusText, writeChoice } from './integration.js'
+import LocationTab from './LocationTab.jsx'
 import './SettingsPage.css'
 
 const CHOICE_TEXT = Object.freeze({
@@ -89,7 +91,10 @@ function IntegrationTab({ storage, probe, onDone }) {
   )
 }
 
-const TABS = Object.freeze([{ id: 'integration', label: '서버 연동', Component: IntegrationTab }])
+const TABS = Object.freeze([
+  { id: 'integration', label: '서버 연동', Component: IntegrationTab },
+  { id: 'location', label: '위치', Component: LocationTab },
+])
 
 /** 설정을 닫고 키오스크 화면을 새로 연다 (연동 여부를 다시 정하도록). 주소에서 #settings 를 떼고 새로 연다 */
 function leaveSettings() {

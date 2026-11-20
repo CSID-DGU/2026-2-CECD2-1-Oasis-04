@@ -13,6 +13,7 @@ import heapq
 import json
 import math
 import os
+import re
 import sqlite3
 import sys
 import threading
@@ -27,6 +28,21 @@ def haversine_m(x1, y1, x2, y2):
     dp, dl = math.radians(y2 - y1), math.radians(x2 - x1)
     a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 2 * r * math.asin(math.sqrt(a))
+
+
+def station_number(poi_id: str) -> str:
+    """지하철역의 역 번호. 'SUB_0130_1호선' → '0130' (역 번호가 없는 자료로 만든 역은 '')"""
+    m = re.match(r"SUB_([0-9A-Za-z]+)_", str(poi_id))
+    return m.group(1) if m else ""
+
+
+def place_number(p: dict) -> str:
+    """사람이 읽는 번호: 지하철역은 역 번호('130'), 버스정류장은 정류장 번호('01-013'). 없으면 ''"""
+    if p.get("poi_type") == "SUBWAY_STATION":
+        number = station_number(p.get("poi_id", ""))
+        return number.lstrip("0") or number
+    ars = str(p.get("ars_id") or "").strip()
+    return f"{ars[:2]}-{ars[2:]}" if len(ars) == 5 and ars.isdigit() else ars
 
 
 class TransitKB:
@@ -102,6 +118,43 @@ class TransitKB:
             if len(out) >= limit:
                 break
         return out
+
+    def find_places(self, query, limit=20):
+        """역 번호·정류장 번호 또는 이름으로 역·정류장을 찾는다. 설정에서 키오스크가 놓인 곳을 직접 정할 때 쓴다.
+
+        숫자만 있으면 번호로 본다: 정류장 번호('01013', '01-013')와 역 번호('130', '0130').
+        네 자리 이하면 둘 다 찾고, 줄표가 있거나 다섯 자리면 정류장 번호로만 찾는다.
+        그 밖에는 이름에 그 글자가 들어 있는 곳 ('종로3가', '종로3가역', '탑골공원').
+        이름이 꼭 같은 곳, 지하철역, 이름 순으로 돌려준다. 말을 알아듣는 검색(search)과 달리 비슷한 이름은 찾지 않는다.
+        """
+        q = str(query or "").strip()
+        if not q:
+            return []
+        digits = re.sub(r"[\s\-]", "", q)
+        with self._lock:
+            if digits.isdigit():
+                stops = [dict(r) for r in self.con.execute(
+                    "SELECT * FROM transit_poi WHERE poi_type='BUS_STOP' AND ars_id IN (?, ?)", (digits, digits.zfill(5)))]
+                # 줄표가 있거나 다섯 자리면 정류장 번호로만 본다 ('01-013' 이 역 번호 1013 과 섞이지 않게)
+                stations = [] if "-" in q or len(digits) >= 5 else [
+                    dict(r) for r in self.con.execute("SELECT * FROM transit_poi WHERE poi_type='SUBWAY_STATION'")]
+                number = digits.lstrip("0")
+                rows = [r for r in stations if number and station_number(r["poi_id"]).lstrip("0") == number] + stops
+                key = None
+            else:
+                key = normalize_name(q)
+                keys = {key, key[:-1] if key.endswith("역") and len(key) > 2 else key,
+                        key[:-3] if key.endswith("정류장") and len(key) > 4 else key} - {""}
+                rows = {}
+                for k in keys:
+                    for r in self.con.execute("SELECT * FROM transit_poi WHERE poi_type IN ('SUBWAY_STATION', 'BUS_STOP') "
+                                              "AND name_norm LIKE ?", (f"%{k}%",)):
+                        rows[r["poi_id"]] = dict(r)
+                rows = list(rows.values())
+                key = min(keys, key=len)
+        rows.sort(key=lambda r: (key is not None and r["name_norm"] not in (key, key + "역"), r["poi_type"] != "SUBWAY_STATION",
+                                 r["name_norm"], r["poi_id"]))
+        return rows[: max(1, int(limit))]
 
     def nearest_any(self, xy, limit=1):
         """종류(정류장·역)를 가리지 않고 가까운 순으로 장소를 돌려준다. 현재 위치를 가장 가까운 정류장·역에 맞출 때 쓴다.
