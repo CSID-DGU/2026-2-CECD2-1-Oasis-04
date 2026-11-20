@@ -9,24 +9,32 @@
 // 불러오기 상태는 이 화면만 쓰는 임시값이라 reducer 가 아니라 로컬 state(useState) 에 둔다.
 //   status: 'loading' → '불러오는 중이에요'
 //           'error'   → '목록을 불러올 수 없어요'
-//           'ready'   → pois 를 큰 버튼으로
+//           'ready'   → pois 를 고르는 카드 3열로
 // StrictMode 규칙: cancelled 플래그. 화면이 사라진 뒤(또는 StrictMode 1차 실행의 cleanup 뒤) 도착한 응답은 무시한다.
 //
 // 버튼: 목적지 → POI_SELECTED({ poi })  (reducer 가 poi 객체 전체를 selectedPoi 에 저장. ROUTING 이 .id, 화면이 .name 을 쓴다)
 //       '말로 하기' → SWITCH_TO_VOICE (reducer 가 failCount 를 0 으로)
-//       '처음으로' → GO_HOME (ScreenFrame 의 showHome 이 그린다)
+//       '처음으로' → GO_HOME (FlowFrame 의 showHome 이 그린다)
 //
 // '말로 하기' 숨김: 시작 점검 결과(state.health)에서 mic 또는 stt 가 false 면 버튼을 그리지 않는다.
 //   IDLE_REDUCED(마이크·STT 불가) → 손으로 고르기 로 들어온 경우, 말로 하기를 눌러도 LISTENING 에서 실패할 뿐이기 때문.
 //   화면 표시만 바꾸며 상태 전이·reducer 는 그대로다. health 가 아직 없거나(null) 값이 null 이면 "모름" 으로 보고 버튼을 보인다.
 
+// 모양: 확정 시안 manual-select-final.html, 디자인 문서 11-1·11-3·12-4절. 위치·크기는 ManualSelectScreen.css
+//   불러오는 중: 작은 고리 + '불러오는 중이에요', 오류: '목록을 불러올 수 없어요'(48 굵게 오류 색). 두 상태 모두 목록 자리 가운데
+
 import { useEffect, useState } from 'react'
-import ScreenFrame from '../components/ScreenFrame.jsx'
+import FlowFrame from '../components/FlowFrame.jsx'
+import SecondaryButton from '../components/SecondaryButton.jsx'
+import PickList from '../components/PickList.jsx'
+import PickCard from '../components/PickCard.jsx'
+import SmallRing from '../components/SmallRing.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { api } from '../api/index.js'
 import { SCREEN_TITLES } from './titles.js'
+import './ManualSelectScreen.css'
 
 const LOAD_ERROR_MESSAGE = '목록을 불러올 수 없어요'
 
@@ -60,33 +68,42 @@ export default function ManualSelectScreen() {
   }, []) // 화면이 처음 열릴 때 한 번. 상태가 MANUAL_SELECT 로 바뀔 때마다 새로 마운트되므로 매번 다시 불러온다.
 
   return (
-    <ScreenFrame
-      title={SCREEN_TITLES[STATES.MANUAL_SELECT]}
+    <FlowFrame
+      countdown
       showHome
+      left={
+        <>
+          <div className="select">
+            <h1 className="select-title">{SCREEN_TITLES[STATES.MANUAL_SELECT]}</h1>
+            {load.status === 'ready' && (
+              <PickList variant="select">
+                {load.pois.map((poi) => (
+                  // key: 서버가 준 고유 id. 목록 묶음 전체를 주 버튼 하나로 본다 (디자인 문서 2절 예외).
+                  <PickCard key={poi.id} name={poi.name} kind={poi.category} onClick={() => dispatch({ type: EVENTS.POI_SELECTED, poi })} />
+                ))}
+              </PickList>
+            )}
+          </div>
+          {load.status === 'loading' && (
+            <div className="select-status">
+              <SmallRing />
+              <p className="select-status-text">불러오는 중이에요</p>
+            </div>
+          )}
+          {load.status === 'error' && (
+            <div className="select-status">
+              <p className="select-status-text is-error">{LOAD_ERROR_MESSAGE}</p>
+            </div>
+          )}
+        </>
+      }
       actions={
         voiceAvailable ? (
-          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.SWITCH_TO_VOICE })}>
+          <SecondaryButton icon="mic" onClick={() => dispatch({ type: EVENTS.SWITCH_TO_VOICE })}>
             말로 하기
-          </button>
+          </SecondaryButton>
         ) : null
       }
-    >
-      {load.status === 'loading' && <p>불러오는 중이에요</p>}
-      {load.status === 'error' && <p className="error">{LOAD_ERROR_MESSAGE}</p>}
-
-      {load.status === 'ready' && (
-        <ul className="btn-list">
-          {load.pois.map((poi) => (
-            // key: 서버가 준 고유 id. 목록 버튼 묶음은 주 버튼 하나로 본다 (global.css 예외 규칙).
-            <li key={poi.id}>
-              <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.POI_SELECTED, poi })}>
-                {poi.name}
-                {poi.category && <small> ({poi.category})</small>}
-              </button>
-            </li>
-          ))}
-        </ul>
-      )}
-    </ScreenFrame>
+    />
   )
 }

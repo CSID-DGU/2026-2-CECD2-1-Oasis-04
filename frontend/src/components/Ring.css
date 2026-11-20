@@ -1,0 +1,97 @@
+/* Ring — 고리. 기준: design/mockups/shared/flow.css .ring-halo .ring-core .ring-icon, 디자인 문서 3-4절
+ * 바깥 원 반지름 152·선 6·주 색 35%, 안쪽 원 반지름 118·선 6·흰 채움, 가운데 그림 152 본문색 */
+.ring {
+  --halo-opacity: 0.35;
+  /* 상자 크기: 바깥 원 + 선 굵기 절반씩. 고리의 가운데가 상자의 가운데다 */
+  --ring-box: calc(2 * var(--halo-r) + var(--ring-width));
+
+  position: relative;
+  width: var(--ring-box);
+  height: var(--ring-box);
+}
+
+.ring-circles {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+
+.ring-circles circle {
+  cx: 50%;
+  cy: 50%;
+  stroke-width: var(--ring-width);
+}
+
+.ring-halo {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-opacity: var(--halo-opacity);
+  r: var(--halo-r);
+}
+
+.ring-core {
+  fill: var(--color-bg);
+  stroke: var(--color-primary);
+  r: var(--ring-r);
+}
+
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 호: 바깥 고리 위, 12시 방향에서 시작. 기준: design/mockups/confirmed/wait.css .ring-arc, 디자인 문서 10-2절.
+ * 도는 호는 둘레의 22%, 줄어드는 호(CHECKING)는 남은 비율을 Ring.jsx 가 strokeDasharray 로 넣는다.
+ * 그리는 순서가 바깥 원 → 호 → 안쪽 원이라 시안처럼 안쪽 흰 원이 호의 안쪽 가장자리를 덮는다 */
+.ring-circles .ring-arc {
+  --arc-spin-length: 22 78;
+
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: var(--arc-width);
+  stroke-linecap: round;
+  stroke-dasharray: var(--arc-spin-length);
+  r: var(--halo-r);
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+}
+
+@keyframes ring-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .ring-arc.is-spinning {
+    animation: ring-spin var(--motion-wait) linear infinite;
+  }
+}
+
+/* CHECKING: 고리 가운데의 남은 초. 숫자 폭을 고정해서 3 → 2 → 1 로 바뀔 때 흔들리지 않게 */
+.ring-count {
+  font-size: var(--font-figure);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+/* REASKING: 옅은 고리. 안쪽 고리도 바깥 고리와 같은 진하기(35%)로 낮춘다. 가운데 그림은 본문색 그대로 (12-2절, 시안 states.css .is-soft) */
+.ring.is-soft .ring-core {
+  stroke-opacity: var(--halo-opacity);
+}
+
+/* UNAVAILABLE: 주 색이 아니라 본문색 고리. 바깥 35%, 안쪽 100% (12-3절, 시안 states.css .is-text) */
+.ring.is-text .ring-halo,
+.ring.is-text .ring-core {
+  stroke: var(--color-text);
+}

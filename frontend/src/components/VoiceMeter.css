@@ -1,0 +1,33 @@
+/* VoiceMeter — 듣는 중 표시 640px. 기준: design/mockups/confirmed/listening-final.html 의 <style> 과 막대 스크립트, 3-5절 */
+.voice-meter {
+  --meter-size: 640px;
+  --bar-width: 14px; /* 띠의 노선 선과 같은 굵기 (시안 --line-width) */
+  --bar-gap: 28px; /* 바깥 고리와 막대 사이 */
+  --bar-reach: 130px; /* 가장 길 때. 끝의 둥근 머리(7px)까지 더해도 상자(320)를 넘지 않는다 */
+
+  position: relative;
+  flex-shrink: 0;
+  width: var(--meter-size);
+  height: var(--meter-size);
+}
+
+.voice-meter-bars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.voice-meter-bars g {
+  stroke: var(--color-primary);
+  stroke-width: var(--bar-width);
+  stroke-linecap: round;
+}
+
+.voice-meter-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}

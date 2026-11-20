@@ -1,69 +1,96 @@
-// ROUTE_GUIDE: 5 경로 안내 (계획서 3절). 휴대폰으로 보내기 / 처음으로. 무입력 60초(INACTIVITY_TIMEOUT)는 effect 담당 (Phase 5 4번).
+// ROUTE_GUIDE: 5 경로 안내 (계획서 3절, 디자인 문서 9절, 확정 시안 route-guide-final.html).
+// 무입력 60초(INACTIVITY_TIMEOUT)는 effect 담당이고, 남은 15초부터 띠에 알림을 보인다 (FlowFrame 의 countdown, 11-4절).
 //
-// 보여 주는 데이터는 reducer 의 state.routes (ROUTING 핸들러가 ROUTE_FOUND 에 담아 준 /route 응답. 1순위가 첫 번째).
-//   1순위      → 크게 (요약, 소요 시간, 환승 횟수)
-//   2·3순위    → 작게. 표시만 하고 선택은 안 된다 (계획서 6절 8번 미정 → 임시 처리)
-//   0개        → 안내 문구만 (정상 흐름에선 오지 않는다. 빈 배열이면 ROUTING 핸들러가 UNAVAILABLE 로 보낸다)
-// 버튼: '휴대폰으로 보내기'(SEND_TO_PHONE_PRESSED) → QR_HANDOFF. '처음으로'(GO_HOME) 는 ScreenFrame 의 showHome 이 그린다.
+// 데이터: reducer 의 state.routes (ROUTING 핸들러가 ROUTE_FOUND 에 담아 준 /route 응답, 1순위가 첫 번째)를
+//   view/routeView.js 의 toRouteGuide 로 바꾼 것만 쓴다. 어떤 경로를 보일지(R1), 카드인지 요약 판인지(R3),
+//   라벨·구간 줄(R7·R8)은 거기서 정하고, 이 화면은 판단하지 않는다.
+//   경로에 출발 장소(start)가 없으면(real) 지금 계신 곳 이름을 LocationContext 에서 가져와 " 키오스크" 만 떼고 쓴다("역"·"정류장" 은 남김, view/placeName.js startPlaceName).
 //
-// Route 구조는 백엔드와 합의 전이라 mock 의 최소 필드만 쓴다: { id, rank, summary, durationMin, transfers }.
-// 필드가 없을 수도 있으므로(DevPanel 가짜 payload 등) 하나씩 있는지 확인하고 그린다.
+// 왼쪽 칸: 제목 + 고른 경로의 타임라인 (Timeline 이 재서 줄이기 단계를 고른다, R2)
+// 오른쪽 칸: 경로가 2~3개면 위쪽에 경로 카드, 1개면 요약 판을 버튼 바로 위에 (R3).
+//   '휴대폰으로 보내기'(SEND_TO_PHONE_PRESSED) → QR_HANDOFF. '처음으로'(GO_HOME) 는 FlowFrame 의 showHome 이 그린다.
+// 카드 고르기는 화면 안 상태(useState)다. 이벤트·reducer 는 그대로 (docs/kiosk-workflow.md "전이가 아닌 화면 안 동작").
+//   처음에는 1순위. 고른 경로를 QR 로 보내는 것은 11단계에서 한다 (지금 QR 은 routes[0])
 
-import ScreenFrame from '../components/ScreenFrame.jsx'
+import { useMemo, useState } from 'react'
+import FlowFrame from '../components/FlowFrame.jsx'
+import PrimaryButton from '../components/PrimaryButton.jsx'
+import RouteCard from '../components/RouteCard.jsx'
+import RouteSummary from '../components/RouteSummary.jsx'
+import Timeline from '../components/Timeline.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
+import { useLocation } from '../state/LocationContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
+import { toRouteGuide } from '../view/routeView.js'
+import { startPlaceName, PLACE_TYPES } from '../view/placeName.js'
 import { SCREEN_TITLES } from './titles.js'
+import './RouteGuideScreen.css'
 
-/** 소요 시간·환승을 한 줄 문구로. 값이 없는 항목은 뺀다. */
-function detailsOf(route) {
-  const parts = []
-  if (typeof route.durationMin === 'number') parts.push(`약 ${route.durationMin}분`)
-  if (typeof route.transfers === 'number') parts.push(route.transfers === 0 ? '환승 없음' : `환승 ${route.transfers}회`)
-  return parts.join(' · ')
+const KIND_OF_PLACE_TYPE = { [PLACE_TYPES.SUBWAY_STATION]: 'STATION', [PLACE_TYPES.BUS_STOP]: 'STOP' }
+
+/** 위치 조회 결과 → 타임라인 첫 점에 쓸 지금 계신 곳 { name, kind }. 이름이 없으면 null (routeView 가 '지금 계신 곳') */
+function hereOf(location) {
+  const name = startPlaceName(location)
+  if (!name) return null
+  return { name, kind: KIND_OF_PLACE_TYPE[location?.place?.type] ?? 'PLACE' }
 }
 
 export default function RouteGuideScreen() {
   const { state, dispatch } = useKiosk()
-  // 1순위가 첫 번째라는 응답 규약(계획서 7절)을 믿고 배열 순서대로 쓴다.
-  const [best, ...others] = state.routes
+  const { location } = useLocation()
+  // 경로나 위치 결과가 바뀔 때만 다시 만든다 (타임라인이 그때만 다시 잰다)
+  const guide = useMemo(() => toRouteGuide(state.routes, { here: hereOf(location) }), [state.routes, location])
+  const [picked, setPicked] = useState({ index: 0, byTap: false })
+  const index = Math.min(picked.index, Math.max(0, guide.routes.length - 1))
+  const route = guide.routes[index]
+
+  const send = (
+    <PrimaryButton icon="smartphone" onClick={() => dispatch({ type: EVENTS.SEND_TO_PHONE_PRESSED })}>
+      휴대폰으로 보내기
+    </PrimaryButton>
+  )
 
   return (
-    <ScreenFrame
-      title={SCREEN_TITLES[STATES.ROUTE_GUIDE]}
+    <FlowFrame
+      countdown
       showHome
-      actions={
-        <button type="button" className="btn btn-primary" onClick={() => dispatch({ type: EVENTS.SEND_TO_PHONE_PRESSED })}>
-          휴대폰으로 보내기
-        </button>
-      }
-    >
-      <p>목적지: {state.selectedPoi?.name ?? '(없음)'}</p>
-
-      {!best && <p>보여 드릴 경로가 없어요</p>}
-
-      {best && (
-        // 1순위: 제목 크기로 강조. 스타일은 global.css 의 .route-best. "이렇게 가세요" 는 화면 제목이 맡는다
-        <div className="route-best">
-          <div>{best.summary}</div>
-          {detailsOf(best) && <div className="route-best-detail">{detailsOf(best)}</div>}
+      left={
+        <div className="route-guide">
+          <h1 className="route-guide-title">{SCREEN_TITLES[STATES.ROUTE_GUIDE]}</h1>
+          {route ? (
+            // key: 다른 경로를 고르면 타임라인을 새로 그리고 처음부터 다시 잰다
+            <Timeline key={route.id ?? index} route={route} fallback={guide.fallback} appear={picked.byTap} />
+          ) : (
+            <p className="route-guide-empty">보여 드릴 경로가 없어요</p>
+          )}
         </div>
-      )}
-
-      {others.length > 0 && (
-        <>
-          <p className="hint">다른 방법</p>
-          {/* 선택 불가 → 버튼이 아니라 목록으로만 그린다 (계획서 6절 8번) */}
-          <ol start={2} className="route-others">
-            {others.map((route) => (
-              <li key={route.id}>
-                {route.summary}
-                {detailsOf(route) && <small> ({detailsOf(route)})</small>}
+      }
+      rightTop={
+        guide.routes.length > 1 && (
+          <ul className="route-cards">
+            {guide.routes.map((r, i) => (
+              <li key={r.id ?? i}>
+                <RouteCard route={r} selected={i === index} onSelect={() => setPicked({ index: i, byTap: true })} />
               </li>
             ))}
-          </ol>
-        </>
-      )}
-    </ScreenFrame>
+          </ul>
+        )
+      }
+      actions={
+        guide.single ? (
+          <>
+            <ul className="route-cards">
+              <li>
+                <RouteSummary route={route} />
+              </li>
+            </ul>
+            {send}
+          </>
+        ) : (
+          send
+        )
+      }
+    />
   )
 }

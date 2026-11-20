@@ -1,42 +1,30 @@
 /* ------------------------------------------------------------------
- * global.css — 고령자 키오스크 최소 디자인 (계획서 Phase 6-1)
+ * global.css — 키오스크 공통 스타일
  *
- * 기준: docs/design-guidelines.md (2026-11-16). 값을 바꿀 때는 그 문서를 먼저 고치고 이 파일을 맞춘다
- *   글꼴   Pretendard (굵기 400·700, 파일은 src/assets/fonts/). 못 읽으면 기기의 한글 글꼴로 대체
- *   글씨   제목 48px / 본문·버튼 36px / 보조 설명 30px (세 단계뿐. 30px 보다 작은 글씨는 화면에 두지 않는다). 줄 간격 1.4
- *   버튼   최소 높이 112px, 최소 너비 280px, 버튼 사이 24px, 테두리 3px, 모서리 16px
- *   색     검정 #111111 / 보조 글씨 #444444 / 흰색 #FFFFFF / 파랑 #0A4A9F / 오류 빨강 #8C1D18 (빨강은 오류에만)
- *          옅은 배경 2색(묶음 #F2F2F2, 강조 #EAF2FC)은 토큰만 있고 아직 쓰는 곳이 없다 (문서 4절 6번, 시안에서 정함)
- *          명도 대비(WCAG 2.1, 흰 배경): 본문 18.88:1, 보조 설명 9.74:1, 오류 9.11:1, 주 버튼 흰 글씨 8.42:1 (모두 7:1 이상)
- *          글씨·배경은 문서 3-2절 '허용 조합' 표에 있는 것만 쓴다
- *   배치   세로 1열. 위에서 아래로 주 버튼 → 보조 버튼 → '처음으로'(복귀)
+ * 기준: docs/design-guidelines.md. 값을 바꿀 때는 그 문서를 먼저 고치고 이 파일을 맞춘다
+ * 옮기는 계획: docs/design-implementation-plan.md (확정 시안 → 실제 앱, 단계별)
  *
- * 주 버튼 / 보조 버튼 규칙
- *   .btn-primary   화면당 1개. "다음으로 가려면 이걸 누른다" 는 버튼. 파랑 채움 + 흰 글씨
- *   .btn-secondary 대안 경로와 복귀('처음으로', '취소'). 흰 배경 + 검정 테두리. 크기는 주 버튼과 같다
- *                  (보조 버튼을 작게 만들면 고령자에게 "누를 수 없는 것" 으로 보인다. 구분은 색 채움과 순서로만)
- *   예외: 목록 버튼(CONFIRMING 후보, MANUAL_SELECT 목적지)은 .btn-list 안의 묶음 전체를 주 버튼 하나로 본다.
- *        목록의 각 항목이 모두 .btn-primary 이지만, "화면당 주 버튼 1개" 규칙은 묶음 단위로 센다.
+ * 값 규칙 (계획서 2-A절, CLAUDE.md)
+ *   여러 부품이 함께 쓰는 값은 아래 :root 토큰. 한 부품 안에서만 쓰는 값은 그 부품 CSS 맨 위의 지역 변수.
+ *   화면 파일(JSX)에는 숫자와 색을 쓰지 않는다
  *
- * 적용 범위
- *   모든 규칙은 .screen (ScreenFrame 의 section) 아래에만 건다.
- *   DevPanel 은 .screen 바깥의 형제 요소이고 인라인 스타일(12px, 우하단 고정)을 쓰므로 이 파일의 영향을 받지 않는다.
+ * 글꼴   Pretendard (굵기 400·700, 파일은 src/assets/fonts/). 못 읽으면 기기의 한글 글꼴로 대체
+ * 글씨   읽는 글 48 / 36 / 30px, 큰 글씨 72 / 120px (문서 3-3절). 30px 보다 작은 글씨는 두지 않는다
+ * 색     글씨는 모두 본문색 #111111 (오류 문구와 주 버튼·띠 위의 흰 글씨만 예외, 문서 3-1절).
+ *        #444444(--color-text-sub)는 테두리와 점선에만 쓰고 글씨에는 쓰지 않는다. 빨강은 오류에만
+ *        글씨·배경은 문서 3-2절 '허용 조합' 표에 있는 것만 쓴다 (모두 7:1 이상)
  *
- * 캔버스 (문서 1절)
- *   무대는 가로 1920×1080 고정이다. 반응형을 만들지 않고, 무대(.stage, components/Stage.jsx)를 창 크기에 맞춰 통째로 줄인다.
- *   무대는 가로로 맞췄다. 화면 배치는 아직 세로로 쌓는 예전 구조다 (제목 → 본문 → 버튼 영역).
- *   문서 6절의 좌우 두 칸(왼쪽 1160 / 사이 64 / 오른쪽 600)과 8절의 첫 화면·띠는 아직 옮기지 않았다.
+ * 화면 배치 (2026-11-19)
+ *   무대는 1920×1080 가로 고정이고 창 크기에 맞춰 통째로 줄인다 (components/Stage.jsx, 문서 1절)
+ *   지금 화면은 아직 세로로 쌓는 예전 틀(.screen: 제목 → 본문 → 버튼 영역)이다. 이 파일 아래쪽의 예전 틀 규칙은
+ *   계획서 2단계부터 화면을 하나씩 새 틀(얇은 띠 + 좌우 두 칸, 문서 6절)로 옮기는 동안 남겨 두고, 13단계에서 지운다.
+ *   새 부품의 CSS 는 .screen 이 아니라 자기 클래스 아래에만 건다 (예전 규칙과 서로 덮지 않게, 계획서 2-A-5절)
  *
- * 레이아웃 (지금의 세로로 쌓는 구조)
- *   .screen 은 무대 높이(1080px)를 꽉 채우는 세로 flex 다. 제목(.screen-title)과 버튼 영역(.screen-actions)은 줄어들지 않고
- *   본문(.screen-body)만 남는 높이를 차지하며 넘치면 본문 안에서 스크롤한다.
- *   → 목록이 아무리 길어도 '처음으로'·'취소' 는 항상 화면 아래에 보인다.
+ * 예전 틀의 규칙 (옮기기 전 화면에만 해당)
+ *   .btn-primary 는 화면당 1개. 목록 버튼(CONFIRMING 후보, MANUAL_SELECT 목적지)은 .btn-list 묶음 전체를 주 버튼 하나로 센다 (문서 2절)
+ *   .screen-body 만 남는 높이를 차지하고, 넘치면 본문 안에서만 스크롤한다 ('처음으로'는 늘 화면 아래)
  *
- * 세로 공간 (무대 높이 1080px, 지금 구조 기준)
- *   바깥 여백 48×2 + 제목 67 + 구역 사이 24×2 = 211px 를 빼면 본문과 버튼 영역에 869px 가 남는다.
- *   버튼 영역은 버튼 1개 139px, 2개 275px, 3개 411px (구분선 3 + 위 여백 24 + 버튼 112 + 사이 24).
- *   MANUAL_SELECT(버튼 2개)는 본문이 594px 인데 목적지 12개는 2열 6줄 772px 라서 본문 안에서 스크롤된다.
- *   문서 6절의 배치(목록은 왼쪽 칸 3열 4줄, 버튼은 오른쪽 칸)로 옮기면 스크롤 없이 들어간다 (문서 6절 '세로 공간 계산').
+ * 적용 범위: 화면 규칙은 .screen (ScreenFrame 의 section) 아래에만 건다. DevPanel 은 .screen 밖이라 영향을 받지 않는다
  * ------------------------------------------------------------------ */
 
 /* ---------- 글꼴 (문서 3-3절) ----------
@@ -73,13 +61,19 @@
   --color-on-primary: #ffffff;
   --color-secondary-pressed: #e6e6e6;
   --color-error: #8c1d18;
-  --color-bg-group: #f2f2f2; /* 묶음 배경. 아직 쓰는 곳 없음 */
-  --color-bg-highlight: #eaf2fc; /* 강조 배경. 아직 쓰는 곳 없음 */
-  --color-band: #111111; /* 머리말 띠·남은 시간 알림 판 (문서 3-1절). 위에는 흰 글씨만. 아직 화면에서 쓰는 곳 없음 */
+  --color-bg-group: #f2f2f2; /* 묶음 배경: 띠, 요약 판 */
+  --color-bg-highlight: #eaf2fc; /* 강조 배경: 선택된 경로 카드 */
+  --color-band: #111111; /* 남은 시간 알림 판 (문서 3-1절). 위에는 흰 글씨만 */
 
   --font-title: 48px;
   --font-body: 36px;
   --font-sub: 30px;
+  --font-display: 72px; /* 화면의 핵심 한 줄, 소요 시간 숫자 (문서 3-3절) */
+  --font-figure: 120px; /* CHECKING 고리 안의 남은 초 */
+  --font-wait: 112px; /* 기다림 화면의 큰 글씨. 넘치면 step 씩 min 까지 줄인다 */
+  --font-wait-min: 72px;
+  --font-wait-step: 8px;
+  --font-say: 52px; /* 예시 문구 (IDLE, REASKING) */
   --line-height: 1.4;
 
   --btn-height: 112px;
@@ -91,6 +85,88 @@
   --radius: 16px;
   --screen-padding: 48px;
   --block-gap: 24px;
+
+  /* 모서리·테두리·그림자 (문서 3-4절 시안 값 표, 3-1절 그림자) */
+  --radius-primary: 28px; /* 주 버튼 */
+  --radius-card: 24px; /* 보조 버튼, 고르는 카드, 경로 카드, 요약 판, QR 상자 */
+  --radius-plate: 20px; /* IDLE 띠의 이름 상자 */
+  --border-thin: 2px; /* 보조 버튼·경로 카드·QR 상자 테두리 (--color-text-sub) */
+  --btn-depth: 8px; /* 주 버튼 아래 턱 */
+  --shadow-primary: 0 var(--btn-depth) 0 var(--color-primary-pressed), 0 20px 32px rgba(8, 58, 125, 0.28);
+  --focus-width: 4px;
+  --focus-offset: 3px;
+
+  /* 칸과 버튼 (문서 6절) */
+  --band-thin-height: 96px;
+  --content-left: 140px;
+  --col-right: 600px;
+  --col-gap: 64px;
+  --btn-primary-height: 180px;
+  --btn-icon-primary: 64px;
+  --btn-icon: 44px;
+
+  /* 첫 화면 큰 띠 (문서 7절, 8-2·8-3절). 이름 크기만 바꾸면 이름 상자·띠 높이·본문 자리가 함께 바뀐다 */
+  --place-name-size: 112px; /* 역·정류장 이름의 기본 크기. 줄이는 최소·단계는 PlaceBand.css */
+  --place-plate-height: calc(var(--place-name-size) * 1.12 + 104px); /* 이름 상자: 한 줄 + 위아래 52 */
+  --place-band-height: calc(var(--band-thin-height) + var(--place-plate-height) + 12px); /* 337px */
+  --idle-col-right: 740px; /* 첫 화면의 버튼 칸 */
+  --idle-primary-height: 500px; /* 첫 화면 주 버튼 */
+  --idle-secondary-height: 160px; /* 첫 화면 보조 버튼 */
+  --idle-depth: 12px; /* 첫 화면 주 버튼 아래 턱 (버튼이 커서 8px 은 얇아 보인다) */
+  --font-question: 96px; /* 첫 화면 질문 "어디로 가시나요?" */
+
+  /* 고리 (문서 3-4절, 10-2절) */
+  --ring-r: 118px; /* 안쪽 주 색 원 */
+  --halo-r: 152px; /* 바깥 옅은 원 */
+  --ring-icon: 152px; /* 가운데 그림 */
+  --ring-width: 6px;
+  --arc-width: 10px; /* 도는 호 */
+  --ring-center-y: 399px; /* 본문 위에서 고리 가운데까지 (화면으로 495px) */
+
+  /* 카드와 노선 표지 (문서 6절, 11-1절, 3-6절) */
+  --card-height: 168px;
+  --check-size: 40px;
+  --mark-height: 52px;
+
+  /* 움직임 (문서 3-5절) */
+  --motion-press: 100ms;
+  --motion-screen: 250ms;
+  --motion-loop: 1.6s;
+  --motion-wait: 1.6s;
+
+  /* 노선색·버스 종류 색 (문서 3-6절. 모두 임시, 공식 자료로 확인하지 않았다). 글씨 색으로 쓰지 않는다 */
+  --line-seoul-1: #0052a4;
+  --line-seoul-2: #00a84d;
+  --line-seoul-3: #ef7c1c;
+  --line-seoul-4: #00a5de;
+  --line-seoul-5: #996cac;
+  --line-seoul-6: #cd7c2f;
+  --line-seoul-7: #747f00;
+  --line-seoul-8: #e6186c;
+  --line-seoul-9: #bdb092;
+  --line-arex: #0090d2;
+  --line-gyeongui-jungang: #77c4a3;
+  --line-suin-bundang: #fabe00;
+  --line-gtx-a: #9a6292;
+  --bus-trunk: #0068b7;
+  --bus-branch: #53b332;
+  --bus-express: #e60012;
+  --bus-circular: #f2b70a;
+  --line-none: #dcdcdc;
+
+  /* 띠의 선·고리 진하기: 노선색이 남는 비율 (문서 8-4절). 주 버튼과 비슷한 파랑은 -soft */
+  --line-tint: 0.3;
+  --line-tint-soft: 0.2;
+  --ring-tint: 0.6;
+  --ring-tint-soft: 0.45;
+}
+
+/* 선택 사항: 프로젝터용 진한 선 (문서 8-4절). <html class="is-strong-lines"> */
+:root.is-strong-lines {
+  --line-tint: 0.5;
+  --line-tint-soft: 0.35;
+  --ring-tint: 0.8;
+  --ring-tint-soft: 0.6;
 }
 
 /* ---------- 리셋 (이전 index.css 내용) ---------- */
@@ -226,8 +302,8 @@ body {
 
 /* 키보드 포커스(접근성)와 터치 피드백 겸용. 4px 외곽선이 버튼 바깥에 보인다 */
 .screen .btn:focus-visible {
-  outline: 4px solid var(--color-text);
-  outline-offset: 3px;
+  outline: var(--focus-width) solid var(--color-text);
+  outline-offset: var(--focus-offset);
 }
 
 /* 버튼 안의 부가 정보(카테고리 등). 보조 설명 크기 30px, 굵기는 보통 */
@@ -273,65 +349,38 @@ body {
 }
 
 .screen .text-input:focus-visible {
-  outline: 4px solid var(--color-primary);
-  outline-offset: 3px;
+  outline: var(--focus-width) solid var(--color-primary);
+  outline-offset: var(--focus-offset);
 }
 
-/* 입력창 안내글. 브라우저 기본 회색(#757575, 4.61:1)은 7:1 미달이라 보조 글씨색(9.74:1)으로 바꾼다.
+/* 입력창 안내글. 브라우저 기본 회색(#757575, 4.61:1)은 7:1 미달이고, 글씨는 모두 본문색이라(문서 3-1절) 본문색으로 둔다.
    opacity: 1 이 없으면 Firefox 가 글씨를 반투명하게 만들어 대비가 다시 낮아진다 */
 .screen .text-input::placeholder {
-  color: var(--color-text-sub);
+  color: var(--color-text);
   opacity: 1;
 }
 
 /* ---------- 글 종류 ---------- */
 
-/* 보조 설명: 남은 초, 개발용 안내, 참고용 경로 등. 30px 아래로는 내려가지 않는다 */
+/* 보조 설명: 남은 초, 개발용 안내, 참고용 경로 등. 30px 아래로는 내려가지 않는다.
+   덜 눈에 띄게 하는 것은 색이 아니라 크기로 (문서 3-1절, 3-9절) */
 .screen .hint {
   font-size: var(--font-sub);
-  color: var(--color-text-sub);
+  color: var(--color-text);
 }
 
-/* 첫 화면의 '지금 계신 곳' 한 줄. 본문과 같은 크기에 굵게 */
-.screen .location {
-  font-weight: 700;
-}
-
-/* 오류 문구: UNAVAILABLE 이유, 목록·QR 불러오기 실패. 빨강은 오류에만 쓴다 */
+/* 오류 문구: UNAVAILABLE 이유, 목록 불러오기 실패. 빨강은 오류에만 쓴다 */
 .screen .error {
   color: var(--color-error);
   font-weight: 700;
 }
 
-/* ROUTE_GUIDE 1순위 경로: 제목 크기로 강조 */
-.screen .route-best {
-  margin: 0 0 var(--block-gap);
-  font-size: var(--font-title);
-  font-weight: 700;
+/* 긴 글의 고른 줄 바꿈 (디자인 문서 6절 카드 이름, 10-2절 긴 글 규칙). 클래스는 view/textWrap.js 의 evenWrapClass 가 고른다.
+ * 띄어쓰기가 있으면 띄어쓰기에서만(is-keep-all), 한 단어면 글자 사이에서. 둘 다 줄 길이를 고르게. 말줄임표는 쓰지 않는다 */
+.wrap-even {
+  text-wrap: balance;
 }
 
-.screen .route-best-detail {
-  font-size: var(--font-body);
-  font-weight: 400;
-}
-
-/* ROUTE_GUIDE 2·3순위: 표시만, 선택 불가 */
-.screen .route-others {
-  margin: 0;
-  padding-left: 1.2em;
-  font-size: var(--font-sub);
-  color: var(--color-text-sub);
-}
-
-/* 2·3순위의 괄호 글씨(소요 시간·환승). <small> 은 브라우저 기본값이 부모보다 작게(약 0.83배)라서
-   그대로 두면 30px 아래로 내려간다. 보조 설명 크기로 고정한다 */
-.screen .route-others small {
-  font-size: var(--font-sub);
-}
-
-/* QR_HANDOFF 의 URL 텍스트 (QR 이미지 도입 전 임시) */
-.screen .qr-url {
-  font-size: var(--font-title);
-  font-weight: 700;
-  word-break: break-all;
+.wrap-even.is-keep-all {
+  word-break: keep-all;
 }

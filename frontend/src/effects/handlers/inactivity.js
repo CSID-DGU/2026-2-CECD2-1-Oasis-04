@@ -11,9 +11,13 @@
 // 화면 어디를 건드리든 타이머가 처음부터 다시 돈다. 버튼을 눌러 상태가 바뀌면 cleanup 이 타이머와 리스너를 함께 거둔다.
 //
 // StrictMode 규칙: cleanup 에서 clearTimeout 과 removeEventListener 둘 다 한다.
+// 남은 시간 알림(디자인 문서 11-4절): 타이머를 걸 때 마감 시각을 effects/inactivityClock.js 에 적고, 지우거나 끝날 때 비운다.
+// 화면은 그 값만 읽는다. 타이머는 이 핸들러 하나만 건다 (계획서 4-2절).
+//
 // 리스너는 add 와 remove 에 반드시 같은 함수 참조(resetTimer)를 넘겨야 떼어진다.
 
 import { EVENTS } from '../../state/events.js'
+import { setInactivityDeadline } from '../inactivityClock.js'
 
 /** 사용자 입력으로 보는 document 이벤트. 터치·마우스는 pointerdown 하나로 다 들어온다. */
 const ACTIVITY_EVENTS = ['pointerdown', 'keydown']
@@ -22,8 +26,10 @@ export function inactivityHandler(state, dispatch, { config }) {
   let timer = null
 
   const armTimer = () => {
+    setInactivityDeadline(Date.now() + config.inactivityMs)
     timer = setTimeout(() => {
       timer = null
+      setInactivityDeadline(null)
       dispatch({ type: EVENTS.INACTIVITY_TIMEOUT })
     }, config.inactivityMs)
   }
@@ -40,6 +46,7 @@ export function inactivityHandler(state, dispatch, { config }) {
   return () => {
     if (timer !== null) clearTimeout(timer)
     timer = null
+    setInactivityDeadline(null)
     for (const name of ACTIVITY_EVENTS) document.removeEventListener(name, resetTimer)
   }
 }

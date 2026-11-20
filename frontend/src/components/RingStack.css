@@ -1,0 +1,62 @@
+/* RingStack — 기준: design/mockups/confirmed/states.css .stack .ring-big .stack-title .core-line, 디자인 문서 12-1절 */
+.ring-stack {
+  --stack-width: 640px; /* LISTENING 의 듣는 중 표시 폭. 왼쪽 칸 x 140 ~ 780, 가운데 460 */
+  --ring-slot: 340px; /* 고리 칸. 기다림 화면(WaitFrame)과 같다 */
+  --ring-slot-pull: -8px; /* 칸 아래의 빈 자리를 조금 줄인다 (시안 .ring-big margin-bottom) */
+  --core-gap: 4px;
+  --more-gap: 8px; /* 핵심 줄 → 나머지 문장·들은 말 */
+  --line-height-text: 1.4;
+  --line-height-core: 1.2;
+  --core-letter-spacing: -0.02em;
+
+  position: absolute;
+  left: 0;
+  width: var(--stack-width);
+  top: calc(var(--ring-center-y) - var(--ring-slot) / 2);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.ring-stack-ring {
+  flex-shrink: 0;
+  width: var(--ring-slot);
+  height: var(--ring-slot);
+  margin-bottom: var(--ring-slot-pull);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-stack-title {
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 400;
+  line-height: var(--line-height-text);
+}
+
+.flow .ring-stack-core {
+  margin-top: var(--core-gap);
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: var(--line-height-core);
+  letter-spacing: var(--core-letter-spacing);
+}
+
+/* 이유 첫 문장만 오류 색 (흰 바탕 9.11:1, 3-2절) */
+.flow .ring-stack-core.is-error {
+  color: var(--color-error);
+}
+
+/* 핵심 줄 아래의 나머지 문장 (UNAVAILABLE): 36px 본문색 */
+.flow .ring-stack-more {
+  margin-top: var(--more-gap);
+  font-size: var(--font-body);
+  line-height: var(--line-height-text);
+}
+
+/* 묶음 안의 들은 말은 핵심 줄에 더 붙인다 (시안 .stack .heard) */
+.flow .ring-stack .heard-line {
+  margin-top: var(--more-gap);
+}

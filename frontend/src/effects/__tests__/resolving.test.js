@@ -64,13 +64,12 @@ describe('resolvingHandler', () => {
     expect(dispatchedTypes(dispatch)).toEqual([EVENTS.RESOLVE_NOT_UNDERSTOOD])
   })
 
-  it('status OUT_OF_SCOPE 면 RESOLVE_OUT_OF_SCOPE_OR_ERROR 를 사용자용 문장(error)과 함께 dispatch 한다', async () => {
+  it('status OUT_OF_SCOPE 면 RESOLVE_OUT_OF_SCOPE_OR_ERROR 를 오류 코드 OUT_OF_SCOPE 와 앱 문구(error)와 함께 dispatch 한다', async () => {
     const { dispatch } = await run({ transcript: '하와이', resolveResult: { status: 'OUT_OF_SCOPE' } })
     expect(dispatch).toHaveBeenCalledTimes(1)
     const action = dispatch.mock.calls[0][0]
     expect(action.type).toBe(EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR)
-    expect(action.error).toBeTypeOf('string')
-    expect(action.error.length).toBeGreaterThan(0)
+    expect(action.error).toEqual({ code: 'OUT_OF_SCOPE', message: '이 키오스크에서 안내할 수 없는 곳이에요' })
   })
 
   it('표에 없는 status 가 오면 RESOLVE_OUT_OF_SCOPE_OR_ERROR 로 처리하고 경고를 남긴다', async () => {
@@ -86,7 +85,7 @@ describe('resolvingHandler', () => {
       },
     })
     expect(dispatch).toHaveBeenCalledTimes(1)
-    expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: 'STT_ERROR' })
+    expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: { code: 'UNKNOWN', message: 'STT_ERROR' } })
     expect(api.resolve).not.toHaveBeenCalled()
   })
 
@@ -97,7 +96,7 @@ describe('resolvingHandler', () => {
       },
     })
     expect(dispatch).toHaveBeenCalledTimes(1)
-    expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: 'SERVER_ERROR' })
+    expect(dispatch).toHaveBeenCalledWith({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: { code: 'UNKNOWN', message: 'SERVER_ERROR' } })
   })
 
   it('state.transcript 가 stt 에 { text } 로, stt 결과 텍스트가 resolve 에 그대로 전달된다', async () => {

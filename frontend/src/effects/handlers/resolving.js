@@ -4,8 +4,9 @@
 //   status OK,  needConfirm false → RESOLVE_CONFIRMED          ({ resolve }  reducer 가 resolve.poi 를 selectedPoi 로)
 //   status OK,  needConfirm true  → RESOLVE_NEED_CONFIRM       ({ resolve }  CONFIRMING 이 resolve.candidates 를 보여 줌)
 //   status NOT_UNDERSTOOD         → RESOLVE_NOT_UNDERSTOOD     (reducer 가 failCount + 1)
-//   status OUT_OF_SCOPE           → RESOLVE_OUT_OF_SCOPE_OR_ERROR ({ error })
-//   stt() 또는 resolve() throw    → RESOLVE_OUT_OF_SCOPE_OR_ERROR ({ error })
+//   status OUT_OF_SCOPE           → RESOLVE_OUT_OF_SCOPE_OR_ERROR ({ error: { code: OUT_OF_SCOPE, message: 앱 문구 } })
+//   stt() 또는 resolve() throw    → RESOLVE_OUT_OF_SCOPE_OR_ERROR ({ error: toKioskError(e) })   (UNKNOWN 등)
+//   error 는 { code, message } 다 (docs/frontend-plan.md 2-3절 "오류 모양")
 //
 // mock 에서 stt 의 입력은 { text } 객체다 (mockRecorder 가 음성 대신 텍스트를 넘기므로).
 // 실제 마이크로 바꾸면 recorder 가 { audio } 를 주고 real/stt.js 가 그것을 받도록 바뀐다. 이 핸들러는 그대로다.
@@ -13,8 +14,10 @@
 // StrictMode 규칙: cancelled 플래그 + 모든 await 뒤 확인. 타이머는 없다.
 
 import { EVENTS } from '../../state/events.js'
+import { ERROR_CODES, kioskError } from '../../state/errorCodes.js'
+import { toKioskError } from '../../api/apiError.js'
 
-/** OUT_OF_SCOPE 응답일 때 UNAVAILABLE 화면에 보여 줄 문구 */
+/** OUT_OF_SCOPE 응답일 때 UNAVAILABLE 화면에 보여 줄 문구. 서버 문장과 다르다 (docs/team-requests.md #8, 결정 전까지 앱 문구) */
 const OUT_OF_SCOPE_MESSAGE = '이 키오스크에서 안내할 수 없는 곳이에요'
 
 export function resolvingHandler(state, dispatch, { api }) {
@@ -44,16 +47,16 @@ export function resolvingHandler(state, dispatch, { api }) {
         return
       }
       if (result.status === 'OUT_OF_SCOPE') {
-        dispatch({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: OUT_OF_SCOPE_MESSAGE })
+        dispatch({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: kioskError(ERROR_CODES.OUT_OF_SCOPE, OUT_OF_SCOPE_MESSAGE) })
         return
       }
       // 표에 없는 status. 백엔드 형식이 바뀐 경우이므로 오류로 처리하고 경고를 남긴다.
       console.warn('[resolving] 알 수 없는 resolve status:', result.status)
-      dispatch({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: `알 수 없는 응답 (${result.status})` })
+      dispatch({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: kioskError(ERROR_CODES.UNKNOWN) })
     } catch (e) {
       if (cancelled) return
       console.warn('[resolving] stt/resolve 실패:', e?.message)
-      dispatch({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: e?.message ?? '알 수 없는 오류' })
+      dispatch({ type: EVENTS.RESOLVE_OUT_OF_SCOPE_OR_ERROR, error: toKioskError(e) })
     }
   })()
 

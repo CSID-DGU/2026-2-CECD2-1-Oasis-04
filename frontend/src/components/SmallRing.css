@@ -1,0 +1,61 @@
+/* SmallRing — 기준: design/mockups/confirmed/states.css .ring-small, 디자인 문서 12-4절
+ * Ring 과 같은 선·색, 반지름만 절반. 상자는 바깥 고리(지름 152) + 호 굵기(10) + 여유 = 172 */
+.small-ring {
+  --small-box: 172px;
+  --small-halo-r: calc(var(--halo-r) / 2);
+  --small-core-r: calc(var(--ring-r) / 2);
+  --small-halo-opacity: 0.35;
+  --small-arc-length: 22 78;
+
+  display: block;
+  width: var(--small-box);
+  height: var(--small-box);
+  overflow: visible;
+}
+
+.small-ring circle {
+  cx: 50%;
+  cy: 50%;
+  stroke-width: var(--ring-width);
+}
+
+.small-ring-halo {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-opacity: var(--small-halo-opacity);
+  r: var(--small-halo-r);
+}
+
+.small-ring-core {
+  fill: var(--color-bg);
+  stroke: var(--color-primary);
+  r: var(--small-core-r);
+}
+
+/* 12시 방향에서 시작. 그리는 순서가 바깥 원 → 호 → 안쪽 원이라 안쪽 흰 원이 호의 안쪽 가장자리를 덮는다 (시안과 같다) */
+.small-ring .small-ring-arc {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: var(--arc-width);
+  stroke-linecap: round;
+  stroke-dasharray: var(--small-arc-length);
+  r: var(--small-halo-r);
+  transform-box: view-box;
+  transform-origin: 50% 50%;
+  transform: rotate(-90deg);
+}
+
+@keyframes small-ring-spin {
+  from {
+    transform: rotate(-90deg);
+  }
+  to {
+    transform: rotate(270deg);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .small-ring .small-ring-arc {
+    animation: small-ring-spin var(--motion-wait) linear infinite;
+  }
+}

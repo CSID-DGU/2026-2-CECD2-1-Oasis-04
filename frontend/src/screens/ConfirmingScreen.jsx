@@ -2,24 +2,60 @@
 // 무입력 60초(INACTIVITY_TIMEOUT)는 effect 담당 (Phase 4 5번).
 //
 // 보여 주는 데이터는 reducer 의 state.resolve (RESOLVING 핸들러가 RESOLVE_NEED_CONFIRM 에 담아 준 /resolve 응답).
-//   후보 1개  → "OO 맞나요?" + '예'
-//   후보 여러 개 → "가시려는 곳을 하나 골라 주세요" + 후보마다 큰 버튼
-//   후보 0개  → 안내 문구만 (정상 흐름에선 오지 않는다. DevPanel 로 payload 없이 들어온 경우)
+//   후보 1개    → "“OO” 맞나요?" + 분류 + '예' 주 버튼 (왼쪽 칸 안, 디자인 문서 2절 예외)
+//   후보 여러 개 → "가시려는 곳을 하나 골라 주세요" + 고르는 카드 1열
+//   후보 0개    → 안내 문구만 (정상 흐름에선 오지 않는다. DevPanel 로 payload 없이 들어온 경우)
 // 어느 후보를 누르든 DESTINATION_CONFIRMED({ poi }) → reducer 가 selectedPoi 에 저장 → ROUTING.
-// 그 밖에 '모두 아니에요'(CONFIRM_NONE_OF_THEM, failCount +1), '다른 곳 말하기'(CONFIRM_SAY_OTHER_PLACE).
-// '처음으로'(GO_HOME) 는 ScreenFrame 의 showHome 이 그린다.
+// 오른쪽 칸: '모두 아니에요'(CONFIRM_NONE_OF_THEM, failCount +1), '다른 곳 말하기'(CONFIRM_SAY_OTHER_PLACE),
+//            '처음으로'(GO_HOME, FlowFrame 의 showHome 이 그린다)
+// 모양: 확정 시안 confirming-final.html, 디자인 문서 11-1·11-2절. 위치·크기는 ConfirmingScreen.css
 
-import ScreenFrame from '../components/ScreenFrame.jsx'
+import FlowFrame from '../components/FlowFrame.jsx'
+import PrimaryButton from '../components/PrimaryButton.jsx'
+import SecondaryButton from '../components/SecondaryButton.jsx'
+import HeardLine from '../components/HeardLine.jsx'
+import PickList from '../components/PickList.jsx'
+import PickCard from '../components/PickCard.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { SCREEN_TITLES } from './titles.js'
+import './ConfirmingScreen.css'
 
 /** /resolve 응답에서 후보 목록을 꺼낸다. candidates 가 없고 poi 만 있으면 그것을 유일한 후보로 본다. */
 function candidatesOf(resolve) {
   if (Array.isArray(resolve?.candidates) && resolve.candidates.length > 0) return resolve.candidates
   if (resolve?.poi) return [resolve.poi]
   return []
+}
+
+function OneCandidate({ poi, onConfirm }) {
+  return (
+    <div className="confirm-choose">
+      <p className="confirm-ask">“{poi.name}” 맞나요?</p>
+      {poi.category && <p className="confirm-ask-kind">{poi.category}</p>}
+      <div className="confirm-yes">
+        <PrimaryButton icon="check" onClick={onConfirm}>
+          예
+        </PrimaryButton>
+      </div>
+    </div>
+  )
+}
+
+function ManyCandidates({ candidates, question, onConfirm }) {
+  return (
+    <div className="confirm-choose">
+      {/* 서버가 되묻는 질문("종로 몇 가로 가세요?", "○○과 △△ 중 어디로 가세요?")이 있으면 그것을 보여 준다 */}
+      <p className="confirm-lead">{question || '가시려는 곳을 하나 골라 주세요'}</p>
+      <PickList variant="confirm">
+        {candidates.map((poi) => (
+          // key: React 가 목록의 각 항목을 구분하는 이름표. 서버가 준 고유 id 를 쓴다 (인덱스 X).
+          <PickCard key={poi.id} name={poi.name} kind={poi.category} onClick={() => onConfirm(poi)} />
+        ))}
+      </PickList>
+    </div>
+  )
 }
 
 export default function ConfirmingScreen() {
@@ -30,53 +66,32 @@ export default function ConfirmingScreen() {
   const heard = state.transcript || state.resolve?.transcript
 
   return (
-    <ScreenFrame
-      title={SCREEN_TITLES[STATES.CONFIRMING]}
+    <FlowFrame
+      countdown
       showHome
+      left={
+        <div className="confirm">
+          <h1 className="confirm-title">{SCREEN_TITLES[STATES.CONFIRMING]}</h1>
+          <HeardLine text={heard} />
+          {candidates.length === 0 && (
+            <div className="confirm-choose">
+              <p className="confirm-lead">후보 목적지를 찾지 못했어요</p>
+            </div>
+          )}
+          {candidates.length === 1 && <OneCandidate poi={candidates[0]} onConfirm={() => confirm(candidates[0])} />}
+          {candidates.length > 1 && <ManyCandidates candidates={candidates} question={state.resolve?.confirmText} onConfirm={confirm} />}
+        </div>
+      }
       actions={
         <>
-          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.CONFIRM_NONE_OF_THEM })}>
+          <SecondaryButton icon="close" onClick={() => dispatch({ type: EVENTS.CONFIRM_NONE_OF_THEM })}>
             모두 아니에요
-          </button>
-          <button type="button" className="btn btn-secondary" onClick={() => dispatch({ type: EVENTS.CONFIRM_SAY_OTHER_PLACE })}>
+          </SecondaryButton>
+          <SecondaryButton icon="mic" onClick={() => dispatch({ type: EVENTS.CONFIRM_SAY_OTHER_PLACE })}>
             다른 곳 말하기
-          </button>
+          </SecondaryButton>
         </>
       }
-    >
-      {heard && <p>들은 말: "{heard}"</p>}
-
-      {candidates.length === 0 && <p>후보 목적지를 찾지 못했어요</p>}
-
-      {candidates.length === 1 && (
-        <>
-          <p>
-            "{candidates[0].name}" 맞나요?
-            {candidates[0].category && <small> ({candidates[0].category})</small>}
-          </p>
-          <button type="button" className="btn btn-primary" onClick={() => confirm(candidates[0])}>
-            예
-          </button>
-        </>
-      )}
-
-      {candidates.length > 1 && (
-        <>
-          {/* 서버가 되묻는 질문("종로 몇 가로 가세요?", "○○과 △△ 중 어디로 가세요?")이 있으면 그것을 보여 준다 */}
-          <p>{state.resolve?.confirmText || '가시려는 곳을 하나 골라 주세요'}</p>
-          <ul className="btn-list">
-            {candidates.map((poi) => (
-              // key: React 가 목록의 각 항목을 구분하는 이름표. 서버가 준 고유 id 를 쓴다 (인덱스 X).
-              <li key={poi.id}>
-                <button type="button" className="btn btn-primary" onClick={() => confirm(poi)}>
-                  {poi.name}
-                  {poi.category && <small> ({poi.category})</small>}
-                </button>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
-    </ScreenFrame>
+    />
   )
 }

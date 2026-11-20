@@ -1,0 +1,65 @@
+/* CONFIRMING 왼쪽 칸. 기준: design/mockups/confirmed/confirming-final.html 의 <style>, 디자인 문서 11-2절
+ * 위쪽에 제목(36 보통) → 들은 말(36), 남은 높이의 세로 가운데에 고를 것 (후보 목록, 또는 물음 + '예') */
+.confirm {
+  --confirm-top: 32px;
+  --confirm-heard-gap: 8px;
+  --lead-gap: 20px; /* 안내 → 카드 */
+  --ask-line-height: 1.2;
+  --ask-letter-spacing: -0.02em;
+  --ask-kind-gap: 8px;
+  --yes-gap: 32px; /* 물음 → '예' */
+
+  position: absolute;
+  top: var(--confirm-top);
+  bottom: var(--screen-padding);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.confirm-title {
+  margin: 0;
+  font-size: var(--font-body);
+  font-weight: 400;
+  line-height: var(--line-height);
+}
+
+.flow .confirm .heard-line {
+  margin-top: var(--confirm-heard-gap);
+}
+
+.confirm-choose {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-height: 0;
+}
+
+.flow .confirm-lead {
+  margin-bottom: var(--lead-gap);
+  font-size: var(--font-body);
+  line-height: var(--line-height);
+}
+
+/* 후보 1개: 큰 물음 (72 굵게, 두 줄까지) */
+.confirm-ask {
+  font-size: var(--font-display);
+  font-weight: 700;
+  line-height: var(--ask-line-height);
+  letter-spacing: var(--ask-letter-spacing);
+  word-break: keep-all;
+}
+
+.flow .confirm-ask-kind {
+  margin-top: var(--ask-kind-gap);
+  font-size: var(--font-body);
+  line-height: var(--line-height);
+}
+
+/* '예': 오른쪽 칸 주 버튼과 같은 모양·너비 (600) */
+.confirm-yes {
+  width: var(--col-right);
+  margin-top: var(--yes-gap);
+}

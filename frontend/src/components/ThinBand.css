@@ -1,0 +1,41 @@
+/* ThinBand — 얇은 띠. 기준: design/mockups/shared/flow.css .thin*, 디자인 문서 8-1절, consistency-audit.md 1절
+ * 로고 x 48·44px, 서비스 이름 36/700, 가운데 이름 48/700, 날짜·시각 30/400 오른쪽 끝 x 1872 */
+.thin-band {
+  --brand-gap: 14px; /* 로고와 서비스 이름 사이 */
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: var(--band-thin-height);
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  padding: 0 var(--screen-padding);
+  background: var(--color-bg-group);
+  color: var(--color-text);
+}
+
+.thin-band-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--brand-gap);
+  font-size: var(--font-body);
+  font-weight: 700;
+}
+
+.thin-band-logo {
+  width: var(--btn-icon);
+  height: var(--btn-icon);
+}
+
+.thin-band-place {
+  font-size: var(--font-title);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.thin-band-now {
+  font-size: var(--font-sub);
+  text-align: right;
+}

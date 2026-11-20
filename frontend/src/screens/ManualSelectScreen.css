@@ -1,0 +1,48 @@
+/* MANUAL_SELECT 왼쪽 칸. 기준: design/mockups/confirmed/manual-select-final.html 의 <style>, 디자인 문서 11-3·12-4절
+ * 제목(48 굵게) → 24 아래 고르는 카드 3열 4줄. 불러오는 중·오류는 목록 자리(제목 아래 24 ~ 본문 아래 여백)의 가운데 */
+.select,
+.select-status {
+  --select-top: 32px;
+  --select-title-line-height: 1.4;
+  --select-status-gap: 24px;
+}
+
+.select {
+  position: absolute;
+  top: var(--select-top);
+  left: 0;
+  right: 0;
+}
+
+.select-title {
+  margin: 0 0 var(--block-gap);
+  font-size: var(--font-title);
+  font-weight: 700;
+  line-height: var(--select-title-line-height);
+}
+
+.select-status {
+  position: absolute;
+  top: calc(var(--select-top) + var(--font-title) * var(--select-title-line-height) + var(--block-gap));
+  bottom: var(--screen-padding);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--select-status-gap);
+  text-align: center;
+}
+
+.select-status-text {
+  font-size: var(--font-body);
+  line-height: var(--line-height);
+}
+
+/* 오류 색은 이 문구에만 (흰 바탕 9.11:1, 3-2절) */
+.select-status-text.is-error {
+  font-size: var(--font-title);
+  font-weight: 700;
+  color: var(--color-error);
+}
