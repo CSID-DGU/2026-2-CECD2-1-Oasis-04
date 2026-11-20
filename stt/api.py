@@ -39,7 +39,7 @@ from destination import (apply_context, category_question, choice_text, exact_ca
                          number_families, number_question, outside_region)
 from intent import classify, confirm_text  # noqa: E402
 from normalize import normalize_name  # noqa: E402
-from origin import MAX_ACCURACY_M, MAX_DISTANCE_M, SNAP_M, locate  # noqa: E402
+from origin import MAX_ACCURACY_M, MAX_DISTANCE_M, PLACE_NEAR_M, SNAP_M, fixed_place, locate, place_of  # noqa: E402
 from rag_correct import RagCorrector  # noqa: E402
 from search import TransitKB  # noqa: E402
 
@@ -463,13 +463,25 @@ def resolve(req: ResolveRequest):
 @router.post("/location", summary="키오스크가 현재 위치를 알린다 (가까운 정류장·역에 맞춘 출발지를 돌려준다)")
 def location(req: LocationReport):
     """명세 v0.1 에는 없는 프론트 연동용. 화면이 브라우저 위치(GPS)를 알리면 서버가 이 키오스크의 출발지로 기억하고,
-    첫 화면에 보여 줄 '지금 계신 곳' 문구를 돌려준다. 좌표가 주소(URL)와 접속 로그에 남지 않도록 본문으로 받는다.
-    x·y 를 비웠거나 쓸 수 없는 위치면 설정된 고정 위치로 돌아간다 (source=KIOSK, fallback_reason 에 이유)."""
+    첫 화면에 보여 줄 '지금 계신 곳'을 돌려준다. 좌표가 주소(URL)와 접속 로그에 남지 않도록 본문으로 받는다.
+    x·y 를 비웠거나 쓸 수 없는 위치면 설정된 고정 위치로 돌아간다 (source=KIOSK, fallback_reason 에 이유).
+
+    place 는 첫 화면 역명판 띠가 쓰는 장소 정보다 (docs/team-requests.md #1, 형식은 kb/origin.py place_of).
+    지금 계신 곳이 역·정류장 가까이(300 m 안)일 때만 주고, 아니면 null 이다. 고정 위치일 때는 name 도 그 역·정류장 이름이다."""
     t0 = time.time()
     origin, reason, err = report_location(req.kiosk_id, req.x, req.y, req.accuracy)
     if err:
         return fail(err, f"unknown kiosk_id {req.kiosk_id}", t0)
-    return ok({**origin, "fallback_reason": reason, "easy_text": f"지금 계신 곳: {origin['name']}"}, t0)
+    name, place = origin["name"], None
+    if S.kb is not None:
+        if origin.get("source") == "GPS":
+            near = origin.get("nearest") or {}
+            place = place_of(S.kb, near) if near.get("distance_m", PLACE_NEAR_M + 1) <= PLACE_NEAR_M else None
+        else:
+            place = place_of(S.kb, fixed_place(S.kb, S.kiosks.get(req.kiosk_id) or {"x": origin["x"], "y": origin["y"]}))
+            if place:
+                name = place["name"]
+    return ok({**origin, "name": name, "place": place, "fallback_reason": reason, "easy_text": f"지금 계신 곳: {name}"}, t0)
 
 
 @router.get("/pois", summary="손으로 고르기 화면용 목적지 목록 (출발지에서 가까운 지하철역)")

@@ -65,6 +65,12 @@ class TransitKB:
             self.model_name = meta.get("embedding_model") or "jhgan/ko-sroberta-multitask"
         self._poi_cache = {}
         self._all_pois = None    # nearest_any 가 처음 불릴 때 한 번 읽어 둔다
+        # 역의 노선과 앞·다음 역 (station_lines.py 가 만든다). 파일이 없으면 빈 표라서 위치 응답의 place.lines 가 비어 간다
+        self.station_lines = {}
+        lines_path = os.path.join(self.dir, "station_lines.json")
+        if os.path.exists(lines_path):
+            with open(lines_path, encoding="utf-8") as f:
+                self.station_lines = json.load(f)
 
     def _model(self):
         if self.model is None:

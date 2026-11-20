@@ -7,11 +7,17 @@
 외부 호출이 없고 지식베이스(TransitKB)만 쓴다.
 """
 import math
+import os
 import re
+import sys
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from station_lines import lines_at  # noqa: E402
 
 SNAP_M = 150.0            # 이 거리 안에 정류장·역이 있으면 그곳에 있는 것으로 보고 출발 좌표도 그곳으로 맞춘다
 MAX_ACCURACY_M = 1000.0   # 브라우저가 알려 준 오차 반경이 이보다 크면 믿지 않는다 (IP 주소로 추정한 위치 등)
 MAX_DISTANCE_M = 2000.0   # 가장 가까운 정류장·역이 이보다 멀면 안내 범위(지식베이스) 밖으로 본다
+PLACE_NEAR_M = 300.0      # 이 거리 안의 정류장·역만 화면의 "지금 계신 곳"(역명판 띠)으로 내보낸다
 
 
 def place_label(p: dict) -> str:
@@ -23,6 +29,41 @@ def place_label(p: dict) -> str:
     if p.get("poi_type") == "BUS_STOP":
         return name if name.endswith(("정류장", "정류소")) else f"{name} 정류장"
     return name
+
+
+def place_of(kb, poi):
+    """정류장·역 하나 → 화면 첫 화면의 역명판 띠가 쓰는 장소 정보 (프런트 디자인 문서 8-5절). 종류를 모르면 None
+
+      지하철역   {"type": "SUBWAY_STATION", "name": "종로3가역", "lines": [{"lineId": "seoul-1", "label": "1", "prev": "종각", "next": "종로5가"}]}
+                 노선과 앞·다음 역은 지식베이스 폴더의 station_lines.json 에서 찾는다 (station_lines.py). 파일이 없으면 빈 목록
+      버스정류장 {"type": "BUS_STOP", "name": "종로3가.탑골공원 정류장", "buses": []}
+                 서는 버스 번호 자료가 지식베이스에 아직 없어서 빈 목록이다
+    poi 는 {"name", "poi_type", "x", "y"} 를 가진 것 (지식베이스의 장소, 또는 locate 가 돌려준 nearest)
+    """
+    if not poi:
+        return None
+    label = place_label(poi)
+    if poi.get("poi_type") == "SUBWAY_STATION":
+        table = getattr(kb, "station_lines", None) or {}
+        return {"type": "SUBWAY_STATION", "name": label, "lines": lines_at(table, poi["name"], poi["y"], poi["x"])}
+    if poi.get("poi_type") == "BUS_STOP":
+        return {"type": "BUS_STOP", "name": label, "buses": []}
+    return None
+
+
+def fixed_place(kb, kiosk, near_m=PLACE_NEAR_M):
+    """설정 파일의 고정 위치(키오스크)가 놓인 역·정류장을 찾는다. near_m 안에 없으면 None
+
+    역과 정류장이 붙어 있는 곳이 많아서 가장 가까운 것 하나로는 정할 수 없다. 설정의 place_type
+    (SUBWAY_STATION | BUS_STOP) 을 따르고, 없으면 키오스크 이름으로 짐작한다 ('…정류장…' 은 정류장, '…역…' 은 역).
+    """
+    kind = kiosk.get("place_type")
+    name = str(kiosk.get("name", ""))
+    if kind not in ("SUBWAY_STATION", "BUS_STOP"):
+        kind = "BUS_STOP" if "정류장" in name or "정류소" in name else "SUBWAY_STATION" if "역" in name else None
+    xy = (kiosk["x"], kiosk["y"])
+    found = kb.nearest(xy, poi_type=kind, limit=1) if kind else kb.nearest_any(xy, limit=1)
+    return found[0] if found and found[0]["distance_m"] <= near_m else None
 
 
 def locate(kb, x, y, accuracy_m=None, snap_m=SNAP_M, max_accuracy_m=MAX_ACCURACY_M, max_distance_m=MAX_DISTANCE_M):

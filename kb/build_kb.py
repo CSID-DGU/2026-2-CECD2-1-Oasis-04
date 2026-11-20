@@ -241,6 +241,9 @@ def main():
     ap.add_argument("--out", default="~/data/kb")
     ap.add_argument("--embedding-model", default="jhgan/ko-sroberta-multitask")
     ap.add_argument("--no-embedding", action="store_true", help="임베딩 색인 생략 (자모 검색만)")
+    ap.add_argument("--station-master",
+                    default=os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "server", "data", "서울시 역사마스터 정보.csv"),
+                    help="서울시 역사마스터 정보 CSV. 있으면 역의 노선과 앞·다음 역(station_lines.json)도 만든다 (kb/station_lines.py)")
     args = ap.parse_args()
     if not (args.bus or args.bus_seoul or args.subway or args.facility):
         sys.exit("--bus / --bus-seoul / --subway / --facility 중 하나 이상 필요")
@@ -379,8 +382,20 @@ def main():
         n_common = len(common)
         print(f"common words: {n_common} (count >= {args.common_min_count}, from {len(args.common_words_from)} files)")
 
+    n_lines = 0
+    master = os.path.expanduser(args.station_master or "")
+    if master and os.path.exists(master):
+        from station_lines import build as build_station_lines
+        from station_lines import read_master
+        table = build_station_lines(read_master(master))
+        with open(os.path.join(out_dir, "station_lines.json"), "w", encoding="utf-8") as f:
+            json.dump(table, f, ensure_ascii=False, indent=0)
+        n_lines = len(table)
+        print(f"station lines: {n_lines} stations (from {os.path.basename(master)})")
+
     meta = {
         "built_at": time.strftime("%Y-%m-%d %H:%M"), "pois": len(pois), "aliases": len(alias_rows), "common_words": n_common,
+        "station_lines": n_lines,
         "by_type": {t: sum(1 for p in pois if p["poi_type"] == t) for t in ("BUS_STOP", "SUBWAY_STATION", "FACILITY")},
         "regions": regions, "embedding_model": None if args.no_embedding else args.embedding_model,
         "sources": {"bus": args.bus, "bus_seoul": args.bus_seoul, "subway": args.subway, "facility": args.facility},
