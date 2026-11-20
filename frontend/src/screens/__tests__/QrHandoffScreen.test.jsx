@@ -76,11 +76,11 @@ describe('QrHandoffScreen', () => {
     expect(createQr).toHaveBeenCalledWith(ROUTE_SUBWAY[0].id)
   })
 
-  it('QR 무늬 둘레 흰 여백은 칸 4개 이상 (viewBox 가 무늬 밖으로 4칸 이상)', async () => {
+  it('QR 무늬 둘레 흰 여백은 늘 칸 4개 (viewBox 가 무늬 밖으로 4칸)', async () => {
     createQr.mockResolvedValue({ url: 'https://example.com/r/A' })
     await renderWith(ROUTE_SUBWAY)
     const [x, y, w] = box().querySelector('svg').getAttribute('viewBox').split(' ').map(Number)
-    expect(x).toBeLessThanOrEqual(-4)
+    expect(x).toBe(-4)
     expect(y).toBe(x)
     expect(w + x * 2).toBeGreaterThanOrEqual(21) // 무늬 칸 수
   })

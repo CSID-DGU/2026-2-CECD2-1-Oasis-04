@@ -17,7 +17,7 @@
   border-radius: var(--radius-card);
 }
 
-/* 그림은 상자 안쪽 전체(여백 포함)를 차지한다. 여백은 SVG viewBox 가 칸 수로 넣는다 (view/qrMatrix.js quietModules) */
+/* 그림은 상자 안쪽 전체(여백 포함)를 차지한다. 여백은 SVG viewBox 가 칸 수로 넣는다 (view/qrMatrix.js QUIET_MODULES, 늘 4칸) */
 .qr-box-code {
   display: block;
   flex-shrink: 0;

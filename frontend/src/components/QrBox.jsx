@@ -17,7 +17,7 @@ export default function QrBox({ status, url = null, message = '' }) {
   return (
     <div className="qr-box" data-status={status}>
       {matrix ? (
-        // 무늬 + 둘레 여백(matrix.quiet 칸)을 상자 안쪽 전체(그림 + 여백 40px × 2)에 그린다 (12-5절 'QR 조용한 여백')
+        // 무늬 + 둘레 여백(늘 4칸)을 상자 안쪽 전체(560px)에 그린다. 칸이 많으면 한 칸이 작아진다 (12-5절 'QR 조용한 여백')
         <svg
           className="qr-box-code"
           viewBox={`${-matrix.quiet} ${-matrix.quiet} ${matrix.size + matrix.quiet * 2} ${matrix.size + matrix.quiet * 2}`}
