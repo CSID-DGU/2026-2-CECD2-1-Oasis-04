@@ -673,7 +673,7 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 
 ## 12. REASKING, UNAVAILABLE, QR_HANDOFF, MANUAL_SELECT 불러오는 중·오류 (확정 2026-11-19)
 
-확정 시안은 `design/mockups/confirmed/` 의 `reasking-final.html`, `unavailable-final.html`, `qr-handoff-final.html`, `manual-select-final.html?state=loading | error` 이고, 공통 스타일은 `states.css`, 찍기는 `states-shoot.sh` 다. REASKING·UNAVAILABLE 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 4단계. `components/RingStack.jsx`, 이유는 `view/unavailableReason.js`). QR_HANDOFF·MANUAL_SELECT 는 아직이다.
+확정 시안은 `design/mockups/confirmed/` 의 `reasking-final.html`, `unavailable-final.html`, `qr-handoff-final.html`, `manual-select-final.html?state=loading | error` 이고, 공통 스타일은 `states.css`, 찍기는 `states-shoot.sh` 다. REASKING·UNAVAILABLE 은 `frontend/` 에 옮겼다(2026-11-19, 옮기기 계획 4단계. `components/RingStack.jsx`, 이유는 `view/unavailableReason.js`). MANUAL_SELECT 는 5단계, QR_HANDOFF 는 10단계에 옮겼다(2026-11-20. `screens/QrHandoffScreen.jsx`, `components/QrBox.jsx`·`StepNumber.jsx`, 요약 판은 ROUTE_GUIDE 의 `RouteSummary`, QR 무늬는 `view/qrMatrix.js`).
 
 ### 12-1. REASKING·UNAVAILABLE 공통 틀
 
@@ -732,7 +732,9 @@ WCAG 2.1 계산식으로 직접 계산했다: 대비 = (L1 + 0.05) / (L2 + 0.05)
 | 시선 순서 | QR → 단계 안내 → 경로 요약 → 처음으로 |
 
 - **구현 시 코드 문구 변경 필요**: 단계 세 줄은 새 문구다. 실제 앱(`QrHandoffScreen.jsx`)은 "휴대폰 카메라로 QR을 찍으면 길 안내를 볼 수 있어요" 한 줄과 "(지금은 QR 대신 주소 글자로 보여 드려요)"를 보인다. 확정 시안은 단계 세 줄만 쓰고 괄호 문구는 뺐다
-- 불러오는 중("만드는 중이에요")과 오류("QR을 만들지 못했어요", "보낼 경로가 없어요") 상태는 그리지 않았다
+- 불러오는 중("만드는 중이에요")과 오류("QR을 만들지 못했어요", "보낼 경로가 없어요") 상태는 그리지 않았다. 실제 앱은 QR 상자 자리(560px 흰 상자)의 가운데에 그 문구를 글자로 둔다: 만드는 중 36px, 오류 48px 굵게 오류 색(12-4절 MANUAL_SELECT 와 같은 글씨). 오류여도 단계 안내·요약 판·'처음으로'는 그대로다 (2026-11-20, 옮기기 계획 6-1절 #9)
+- QR 그림은 키오스크(브라우저)가 인터넷 없이 주소로 만든다: npm `qrcode-generator`(MIT, 오류 정정 M, 칸 수는 주소 길이에 맞춤). 서버가 그림을 줄지(`docs/team-requests.md` #10)가 정해지기 전의 대체 동작이다. 시안의 QR 은 예시 무늬(29칸)라 앱과 무늬·칸 수가 다르다. 상자 크기와 그림 크기(480px)는 같다 (2026-11-20)
+- 휴대폰 주소가 없을 때(실제 서버가 `landing_url` 을 주지 않음. 새 경로 서버 `/routes/transit` 는 늘 없음, `docs/team-requests.md` #7·#15): 위 오류 상태 "QR을 만들지 못했어요" 를 보인다. 전이는 없고 '처음으로'로 나간다 (2026-11-20)
 
 ### 12-6. 확인 필요
 

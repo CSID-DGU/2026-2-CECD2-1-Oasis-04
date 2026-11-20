@@ -1,71 +1,86 @@
-// QR_HANDOFF: 6 QR 전달 (계획서 3절). 처음으로만. 무입력 60초(INACTIVITY_TIMEOUT)는 effect 담당 (Phase 5 4번).
+// QR_HANDOFF: 6 QR 전달 (계획서 3절, 디자인 문서 12-5절, 확정 시안 qr-handoff-final.html).
+// 무입력 60초(INACTIVITY_TIMEOUT)는 effect 담당이고, 남은 15초부터 띠에 알림을 보인다 (FlowFrame 의 countdown, 11-4절).
 //
-// 화면이 열리면 1순위 경로(state.routes[0]) 의 id 로 api.createQr(routeId) 를 불러 받은 URL 을 텍스트로 크게 보여 준다.
-// QR 이미지 라이브러리는 아직 쓰지 않는다 (계획서 6절 2번: QR 생성 주체 미정 → 보류). 결정되면 URL 을 이미지로 바꾸기만 하면 된다.
+// 보내는 경로: ROUTE_GUIDE 가 처음 보이는 경로와 같은 것 = toRouteGuide(state.routes).routes[0]
+//   (보통 1순위 state.routes[0]. R1 로 1순위가 빠지면 화면에 보였던 첫 경로). 고른 경로를 보내는 것은 11단계에서 한다.
+// 화면이 열리면 그 경로의 id 로 api.createQr(routeId) 를 불러 받은 주소로 QR 그림을 만든다 (QrBox, 인터넷 없이).
+//   화면 컴포넌트가 API 를 직접 부르는 것은 getPois / createQr 둘만 허용된다 (계획서 2-3절 예외).
+//   만들든 실패하든 상태는 QR_HANDOFF 그대로이고, 실패해도 이벤트를 dispatch 하지 않고 QR 자리에 글만 보인다 (계획서 4절).
+//   status: 'loading' → '만드는 중이에요' / 'error' → 'QR을 만들지 못했어요' 또는 '보낼 경로가 없어요' / 'ready' → QR
+//   real 모드에서 경로 응답에 휴대폰 주소(landing_url)가 없으면 createQr 가 실패한다 → 'QR을 만들지 못했어요' (12-5절의 오류 상태,
+//   docs/team-requests.md #7·#15)
 //
-// 화면 컴포넌트가 API 를 직접 부르는 것은 getPois / createQr 둘만 허용된다 (계획서 2-3절 예외).
-// QR 이 만들어지든 실패하든 상태는 QR_HANDOFF 그대로이고, 실패해도 이벤트를 dispatch 하지 않고 오류 문구만 보여 준다 (계획서 4절).
-// 불러오기 패턴은 ManualSelectScreen 과 같다: 로컬 state { status, url } + cancelled 플래그.
-//   status: 'loading' → '만드는 중이에요'
-//           'error'   → 'QR 을 만들지 못했어요'
-//           'ready'   → URL 텍스트
-// 1순위 경로가 없으면(정상 흐름에선 오지 않는다. DevPanel 로 routes 없이 들어온 경우) API 를 부르지 않고 바로 error 로 둔다.
-// 버튼은 '처음으로'(GO_HOME) 하나뿐이며 ScreenFrame 의 showHome 이 그린다.
+// 왼쪽 칸: 제목 → QR 상자 + 단계 세 줄. 오른쪽 칸: 보내는 경로의 요약 판(RouteSummary, 9-1 R3 와 같은 모양) + '처음으로'.
+// 주 버튼 없음 (디자인 문서 2절의 의도한 예외). 버튼은 '처음으로'(GO_HOME) 하나이고 FlowFrame 의 showHome 이 그린다.
 
-import { useEffect, useState } from 'react'
-import ScreenFrame from '../components/ScreenFrame.jsx'
+import { useEffect, useMemo, useState } from 'react'
+import FlowFrame from '../components/FlowFrame.jsx'
+import QrBox from '../components/QrBox.jsx'
+import RouteSummary from '../components/RouteSummary.jsx'
+import StepNumber from '../components/StepNumber.jsx'
 import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { api } from '../api/index.js'
+import { toRouteGuide } from '../view/routeView.js'
 import { SCREEN_TITLES } from './titles.js'
-
-const GUIDE_MESSAGE = '휴대폰 카메라로 QR을 찍으면 길 안내를 볼 수 있어요'
-const CREATE_ERROR_MESSAGE = 'QR을 만들지 못했어요'
-const NO_ROUTE_MESSAGE = '보낼 경로가 없어요'
+import { QR_MESSAGES, QR_STEPS } from './qrHandoffText.js'
+import './QrHandoffScreen.css'
 
 export default function QrHandoffScreen() {
   const { state } = useKiosk()
-  // 1순위 경로 id. 응답 규약(1순위가 첫 번째, 계획서 7절)대로 배열의 첫 항목을 쓴다.
-  const routeId = state.routes[0]?.id
+  const route = useMemo(() => toRouteGuide(state.routes).routes[0] ?? null, [state.routes])
+  const routeId = route?.id ?? null
 
-  // routeId 가 없으면 부를 수 없으므로 처음부터 error 로 시작한다 (effect 안에서 동기 setState 를 피하기 위해 초기값에서 결정).
+  // 경로가 없으면 부를 수 없으므로 처음부터 error 로 시작한다 (effect 안에서 동기 setState 를 피하려고 초기값에서 정한다)
   const [load, setLoad] = useState(() =>
-    routeId ? { status: 'loading', url: null, message: null } : { status: 'error', url: null, message: NO_ROUTE_MESSAGE },
+    routeId ? { status: 'loading', url: null } : { status: 'error', url: null, message: QR_MESSAGES.noRoute },
   )
 
   useEffect(() => {
     if (!routeId) return undefined
     let cancelled = false
-
     ;(async () => {
       try {
         const { url } = await api.createQr(routeId)
         if (cancelled) return
-        setLoad({ status: 'ready', url, message: null })
+        if (!url) throw new Error('QR_ERROR')
+        setLoad({ status: 'ready', url })
       } catch (e) {
         if (cancelled) return
         console.warn('[qrHandoff] createQr 실패:', e?.message)
-        // 전이 없음: dispatch 하지 않는다. 사용자는 '처음으로' 로 나갈 수 있다.
-        setLoad({ status: 'error', url: null, message: CREATE_ERROR_MESSAGE })
+        setLoad({ status: 'error', url: null, message: QR_MESSAGES.createError })
       }
     })()
-
     return () => {
       cancelled = true
     }
-  }, [routeId]) // 화면이 열릴 때 한 번. routeId 는 QR_HANDOFF 에 머무는 동안 바뀌지 않는다.
+  }, [routeId]) // 화면이 열릴 때 한 번. QR_HANDOFF 에 머무는 동안 경로는 바뀌지 않는다
+
+  const message = load.status === 'loading' ? QR_MESSAGES.loading : load.message
 
   return (
-    <ScreenFrame title={SCREEN_TITLES[STATES.QR_HANDOFF]} showHome>
-      <p>{GUIDE_MESSAGE}</p>
-      <p className="hint">(지금은 QR 대신 주소 글자로 보여 드려요)</p>
-
-      {load.status === 'loading' && <p>만드는 중이에요</p>}
-      {load.status === 'error' && <p className="error">{load.message}</p>}
-      {load.status === 'ready' && (
-        // QR 자리. 이미지 라이브러리 도입 후 이 블록만 <img> 로 바꾸면 된다.
-        <p className="qr-url">{load.url}</p>
-      )}
-    </ScreenFrame>
+    <FlowFrame
+      countdown
+      showHome
+      left={
+        <div className="qr-handoff">
+          <h1 className="qr-handoff-title">{SCREEN_TITLES[STATES.QR_HANDOFF]}</h1>
+          <div className="qr-handoff-row">
+            <QrBox status={load.status} url={load.url} message={message} />
+            <div className="qr-handoff-side">
+              <ol className="qr-handoff-steps">
+                {QR_STEPS.map((text, i) => (
+                  <li key={text}>
+                    <StepNumber n={i + 1} />
+                    <span>{text}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </div>
+        </div>
+      }
+      actions={route && <RouteSummary route={route} />}
+    />
   )
 }

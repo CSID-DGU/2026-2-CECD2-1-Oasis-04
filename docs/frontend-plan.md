@@ -250,7 +250,7 @@ export function routingHandler(state, dispatch, api) {
 | `UNAVAILABLE` | `UnavailableScreen.jsx` | "안내해 드릴 수 없어요" + 오류 코드별 그림·문구(디자인 문서 12-3절) + 손으로 고르기 / 처음으로. 무입력 60초 복귀 | `MANUAL_SELECT_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `MANUAL_SELECT` | `ManualSelectScreen.jsx` | 목적지 큰 버튼 목록 (`api.getPois()`), 말로 하기 / 처음으로. `state.health`의 `mic` 또는 `stt`가 `false`면 '말로 하기'를 숨긴다 (전이 변경 없음). 무입력 60초 복귀 | `POI_SELECTED`(poi), `SWITCH_TO_VOICE`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 | `ROUTE_GUIDE` | `RouteGuideScreen.jsx` | 경로 카드(최대 3개, 화면 안에서 고른다. 처음엔 1순위) + 선택된 경로의 타임라인, 휴대폰으로 보내기 / 처음으로. 무입력 60초 복귀 | `SEND_TO_PHONE_PRESSED`, `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
-| `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 자리(텍스트/URL) 표시 + 처음으로. 무입력 60초 복귀 | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
+| `QR_HANDOFF` | `QrHandoffScreen.jsx` | QR 그림(`QrBox`, 주소로 브라우저에서 만듦) + 단계 세 줄 + 보내는 경로 요약 판 + 처음으로. 만드는 중·오류는 QR 자리에 글자. 무입력 60초 복귀 (2026-11-20, 옮기기 계획 10단계) | `GO_HOME` (`INACTIVITY_TIMEOUT`은 effect) |
 
 - '처음으로' 버튼은 `ScreenFrame`의 `showHome` prop으로 넣는다. 사용자가 조작하는 7개 화면(`LISTENING`, `CONFIRMING`, `REASKING`, `UNAVAILABLE`, `MANUAL_SELECT`, `ROUTE_GUIDE`, `QR_HANDOFF`)만 `showHome`을 켠다. 스피너 화면 5개와 `IDLE`, `IDLE_REDUCED`는 끈다
 - 공통 부품: `ScreenFrame` (제목 + 본문 + 버튼 영역 + 선택적 '처음으로'), `BigButton`. 디자인은 글씨 크기·여백만
@@ -355,7 +355,7 @@ export const api = import.meta.env.VITE_USE_MOCK === 'true' ? mock : real;
 | # | 항목 | 출처 | 상태 | 처리 |
 |---|---|---|---|---|
 | 1 | `MANUAL_SELECT` 목적지 목록: 서버 vs 내장 | 표 미정 5건 | 미정 | `api.getPois()`로 mock 호출. 내장으로 결정되면 상수로 교체 |
-| 2 | QR 생성: 프론트 vs 서버 | 표 미정 | 미정 | `api.createQr()` mock이 URL 반환, 화면엔 텍스트로 표시. QR 이미지 라이브러리 도입 보류 |
+| 2 | QR 생성: 프론트 vs 서버 | 표 미정 | 미정 (대체 동작 구현) | `api.createQr()` 가 주소를 돌려주고, 프론트가 npm `qrcode-generator`(MIT, 오프라인)로 QR 그림을 그린다(`view/qrMatrix.js`, 2026-11-20). 서버가 그림을 주기로 하면 `QrBox` 만 바꾼다. `docs/team-requests.md` #10 |
 | 3 | `CONFIRMING`의 "자동 녹음" 처리 | 표 미정 + 확인 필요 10 | **확정** | 자동 녹음 없음. 버튼(예 / 모두 아니에요 / 다른 곳 말하기 / 처음으로)으로만 진행. `CONFIRMING → RESOLVING` 전이 없음 |
 | 4 | `REASKING`의 "자동 녹음" | 확인 필요 10 | **확정** | 자동 녹음 없음. 버튼(`RETRY_SPEECH` / `MANUAL_SELECT_PRESSED` / `GO_HOME`)으로만 |
 | 5 | `LISTENING` 탈출 조건 | 확인 필요 6 | **확정** | 진입 후 10초 무발화면 빈 텍스트로 `SPEECH_END` → 기존 NOT_UNDERSTOOD 흐름. 입력 시작 후엔 발화 후 2.5초 무음. '취소'(`LISTEN_CANCEL`) → IDLE. 시간값은 설정 |

@@ -1,0 +1,16 @@
+/* StepNumber — 단계 번호 원. 기준: qr-handoff-final.html .step-no (LineMark .is-circle 과 같은 크기·테두리) */
+.step-number {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--mark-height);
+  height: var(--mark-height);
+  font-size: var(--font-sub);
+  font-weight: 400;
+  line-height: 1;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: var(--ring-width) solid var(--color-text);
+  border-radius: 50%;
+}

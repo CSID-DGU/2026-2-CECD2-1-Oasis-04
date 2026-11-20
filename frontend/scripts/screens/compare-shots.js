@@ -4,6 +4,7 @@
 //   names     비교할 파일 이름 (.png 빼고)
 //   threshold 한 픽셀에서 R·G·B 차이가 이 값보다 커야 "다름"으로 센다 (글자 가장자리의 미세한 차이 무시)
 //   diffOut   다른 픽셀을 빨갛게 칠한 그림을 둘 폴더 (절대 경로). 비우면 만들지 않는다
+//   skip      차이로 세지 않을 상자 [x, y, w, h] 목록 (예: QR_HANDOFF 의 QR 그림 [182, 374, 480, 480] — 시안은 예시 무늬라 늘 다르다. 10단계에서 생김)
 // 돌려주는 것: 이름마다 다른 픽셀 수와 다른 곳을 감싼 상자(x, y, w, h)
 async (page) => {
   const OPTIONS = {
@@ -16,11 +17,12 @@ async (page) => {
     ],
     threshold: 8,
     diffOut: '',
+    skip: [],
   }
   await page.goto(OPTIONS.server)
   const lines = []
   for (const name of OPTIONS.names) {
-    const r = await page.evaluate(async ({ a, b, name, threshold }) => {
+    const r = await page.evaluate(async ({ a, b, name, threshold, skip }) => {
       const load = (src) => new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = () => no(new Error('못 읽음 ' + src)); i.src = src + '?' + Date.now() })
       const [ia, ib] = await Promise.all([load(`/${a}/${name}.png`), load(`/${b}/${name}.png`)])
       if (ia.width !== ib.width || ia.height !== ib.height) return { size: `${ia.width}x${ia.height} / ${ib.width}x${ib.height}` }
@@ -29,6 +31,8 @@ async (page) => {
       const [cb, gb, db] = px(ib)
       let n = 0, x0 = 1e9, y0 = 1e9, x1 = -1, y1 = -1
       for (let i = 0; i < da.data.length; i += 4) {
+        const q = i / 4, qx = q % ia.width, qy = (q / ia.width) | 0
+        if (skip.some(([sx, sy, sw, sh]) => qx >= sx && qx < sx + sw && qy >= sy && qy < sy + sh)) continue
         if (Math.abs(da.data[i] - db.data[i]) > threshold || Math.abs(da.data[i + 1] - db.data[i + 1]) > threshold || Math.abs(da.data[i + 2] - db.data[i + 2]) > threshold) {
           n++
           const p = i / 4, x = p % ia.width, y = (p / ia.width) | 0
@@ -38,7 +42,7 @@ async (page) => {
       }
       gb.putImageData(db, 0, 0)
       return { n, box: n ? [x0, y0, x1 - x0 + 1, y1 - y0 + 1] : null, diff: n ? cb.toDataURL('image/png') : null }
-    }, { a: OPTIONS.a, b: OPTIONS.b, name, threshold: OPTIONS.threshold })
+    }, { a: OPTIONS.a, b: OPTIONS.b, name, threshold: OPTIONS.threshold, skip: OPTIONS.skip })
     if (r.size) { lines.push(`${name}: 크기 다름 ${r.size}`); continue }
     lines.push(`${name}: ${r.n}px${r.box ? ' 상자 ' + r.box.join(',') : ''}`)
     if (OPTIONS.diffOut && r.diff) {

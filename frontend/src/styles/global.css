@@ -369,17 +369,10 @@ body {
   color: var(--color-text);
 }
 
-/* 오류 문구: UNAVAILABLE 이유, 목록·QR 불러오기 실패. 빨강은 오류에만 쓴다 */
+/* 오류 문구: UNAVAILABLE 이유, 목록 불러오기 실패. 빨강은 오류에만 쓴다 */
 .screen .error {
   color: var(--color-error);
   font-weight: 700;
-}
-
-/* QR_HANDOFF 의 URL 텍스트 (QR 이미지 도입 전 임시) */
-.screen .qr-url {
-  font-size: var(--font-title);
-  font-weight: 700;
-  word-break: break-all;
 }
 
 /* 긴 글의 고른 줄 바꿈 (디자인 문서 6절 카드 이름, 10-2절 긴 글 규칙). 클래스는 view/textWrap.js 의 evenWrapClass 가 고른다.

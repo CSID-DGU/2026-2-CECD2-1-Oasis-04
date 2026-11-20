@@ -1,0 +1,65 @@
+/* QR_HANDOFF 왼쪽 칸. 기준: qr-handoff-final.html .qr-title, .qr-row, .steps, 디자인 문서 12-5절
+ * 제목은 칸 위 32px(FlowFrame 의 --top-gap). 그 아래 남은 높이(아래 여백 48)의 세로 가운데에 QR 상자 + 64px + 단계 안내 */
+.qr-handoff {
+  --steps-gap: 28px; /* 단계 줄 사이 */
+  --step-no-gap: 16px; /* 번호 원과 글자 사이 */
+
+  position: absolute;
+  inset: 0;
+}
+
+.qr-handoff-title {
+  position: absolute;
+  top: var(--top-gap);
+  left: 0;
+  margin: 0;
+  font-size: var(--font-title);
+  font-weight: 700;
+  line-height: var(--line-height);
+}
+
+.qr-handoff-row {
+  position: absolute;
+  top: calc(var(--top-gap) + var(--font-title) * var(--line-height));
+  bottom: var(--screen-padding);
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--col-gap);
+}
+
+.qr-handoff-side {
+  min-width: 0;
+}
+
+/* 단계 세 줄: 번호 원은 글자 앞에 매달아(내어쓰기) 줄이 바뀌어도 글자 왼쪽 끝이 맞는다 */
+.qr-handoff-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--steps-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--font-title);
+  font-weight: 700;
+  line-height: var(--line-height);
+  word-break: keep-all;
+}
+
+.qr-handoff-steps li {
+  display: grid;
+  grid-template-columns: var(--mark-height) 1fr;
+  column-gap: var(--step-no-gap);
+}
+
+/* 번호 원은 첫 줄 글자의 세로 가운데에 맞춘다 */
+.qr-handoff-steps .step-number {
+  align-self: start;
+  margin-top: calc((var(--font-title) * var(--line-height) - var(--mark-height)) / 2);
+}
+
+/* 첫 단계가 한 줄에 안 들어가면 줄 길이를 고르게 ("휴대폰 / 카메라를 켜요") */
+.qr-handoff-steps li > span:last-child {
+  text-wrap: balance;
+}
