@@ -73,6 +73,25 @@ describe('LocationContext', () => {
     expect(seen).toEqual({ location: { name: '종로3가역' }, status: 'ready' })
   })
 
+  it('응답이 오기 전에 처음 화면을 떠나도 늦게 온 결과를 버리지 않는다 (띠 이름 빠짐, 2026-11-20)', async () => {
+    let answer
+    getLocation.mockReturnValue(new Promise((r) => (answer = r)))
+    await renderAt('IDLE')
+    await renderAt('LISTENING') // 위치 응답(실제는 GPS 최대 8초)보다 먼저 마이크를 누른 경우
+    await act(async () => answer({ name: '종로3가역' }))
+    expect(seen).toEqual({ location: { name: '종로3가역' }, status: 'ready' })
+  })
+
+  it('늦게 온 앞 조회 결과가 나중 조회 결과를 덮지 않는다', async () => {
+    let first
+    getLocation.mockReturnValueOnce(new Promise((r) => (first = r))).mockResolvedValueOnce({ name: '새 장소' })
+    await renderAt('IDLE')
+    await renderAt('LISTENING')
+    await renderAt('IDLE')
+    await act(async () => first({ name: '옛 장소' }))
+    expect(seen.location.name).toBe('새 장소')
+  })
+
   it('한 번도 받지 못하고 실패하면 error', async () => {
     getLocation.mockRejectedValue(new Error('끊김'))
     await renderAt('IDLE_REDUCED')

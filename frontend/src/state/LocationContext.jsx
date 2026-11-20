@@ -32,28 +32,36 @@ export function LocationProvider({ children }) {
   const [asked, setAsked] = useState(0) // 개발자 패널이 다시 조회를 부탁한 횟수
   const refresh = useCallback(() => setAsked((n) => n + 1), [])
   const answered = useRef(0) // 마지막으로 조회한 때의 asked
+  const latest = useRef(0) // 마지막으로 시작한 조회 번호. 늦게 온 앞 조회가 나중 결과를 덮지 않게 한다
+  const mounted = useRef(true)
+  useEffect(() => {
+    mounted.current = true
+    return () => {
+      mounted.current = false
+    }
+  }, [])
 
   useEffect(() => {
     // 처음 화면에 들어갔을 때, 또는 개발자 패널이 새로 부탁했을 때만 조회한다 (처음 화면을 떠날 때는 조회하지 않는다)
     const newAsk = asked !== answered.current
     answered.current = asked
-    if (homeState === null && !newAsk) return undefined
-    let cancelled = false
+    if (homeState === null && !newAsk) return
+    // 처음 화면을 떠났다고 결과를 버리지 않는다. 응답(실제는 GPS 최대 8초)보다 먼저 마이크를 누르면
+    // 예전에는 여기서 버려져 그 뒤 모든 화면의 얇은 띠 이름이 비었다 (2026-11-20)
+    const id = ++latest.current
+    const stale = () => !mounted.current || id !== latest.current
     ;(async () => {
       try {
         const location = await api.getLocation()
-        if (cancelled) return
+        if (stale()) return
         setValue({ location, status: 'ready' })
       } catch (e) {
-        if (cancelled) return
+        if (stale()) return
         console.warn('[location] getLocation 실패:', e?.message)
         // 전이 없음. 마지막 결과가 있으면 그대로 두고, 없을 때만 오류로 둔다
         setValue((prev) => (prev.location ? prev : { location: null, status: 'error' }))
       }
     })()
-    return () => {
-      cancelled = true
-    }
   }, [homeState, asked])
 
   return (
