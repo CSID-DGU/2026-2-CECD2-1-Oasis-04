@@ -2,13 +2,16 @@
 // 인터넷 없이 브라우저에서 만든다: npm 패키지 qrcode-generator (MIT, 라이선스는 assets/licenses/qrcode-generator.LICENSE.txt).
 // 누가 QR 을 만들지(docs/team-requests.md #10)가 정해지기 전의 대체 동작이다. 서버가 그림을 주게 되면 QrBox 만 바꾼다.
 //
-// 돌려주는 값: { size: 한 변의 칸 수, path: SVG path (검은 칸마다 1×1 네모) }. 조용한 여백(흰 테두리)은 넣지 않는다 —
-// 시안처럼 QrBox 의 흰 상자 안쪽 여백(40px)이 그 몫이다. 주소가 비면 null.
+// 돌려주는 값: { size: 한 변의 칸 수, path: SVG path (검은 칸마다 1×1 네모), quiet: 둘레 흰 여백 칸 수 }. 주소가 비면 null.
+// 조용한 여백은 QR 규격상 칸 4개가 필요하다. 주소 길이와 상관없이 늘 4칸으로 두고, 흰 상자 안쪽(560px)에
+// 무늬 + 여백을 함께 그린다. 칸이 많으면 한 칸이 작아진다 (디자인 문서 12-5절 'QR 조용한 여백', 11단계 보완).
 
 import qrcode from 'qrcode-generator'
 
 // 오류 정정 단계 M (약 15% 복구). 화면에 크게(480px) 보이므로 칸이 늘어나도 읽기 쉽다
 const ERROR_CORRECTION = 'M'
+
+export const QUIET_MODULES = 4 // QR 규격의 조용한 여백 칸 수. 칸 수와 상관없이 늘 이 값
 
 export function qrMatrix(text) {
   if (!text) return null
@@ -22,5 +25,5 @@ export function qrMatrix(text) {
       if (qr.isDark(r, c)) path += `M${c} ${r}h1v1h-1z`
     }
   }
-  return { size, path }
+  return { size, path, quiet: QUIET_MODULES }
 }

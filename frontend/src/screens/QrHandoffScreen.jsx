@@ -1,8 +1,8 @@
 // QR_HANDOFF: 6 QR 전달 (계획서 3절, 디자인 문서 12-5절, 확정 시안 qr-handoff-final.html).
 // 무입력 60초(INACTIVITY_TIMEOUT)는 effect 담당이고, 남은 15초부터 띠에 알림을 보인다 (FlowFrame 의 countdown, 11-4절).
 //
-// 보내는 경로: ROUTE_GUIDE 가 처음 보이는 경로와 같은 것 = toRouteGuide(state.routes).routes[0]
-//   (보통 1순위 state.routes[0]. R1 로 1순위가 빠지면 화면에 보였던 첫 경로). 고른 경로를 보내는 것은 11단계에서 한다.
+// 보내는 경로: ROUTE_GUIDE 에서 '휴대폰으로 보내기'를 누를 때 고른 경로 = state.selectedRouteId (11단계).
+//   그 id 가 화면 경로 목록(toRouteGuide(state.routes).routes)에 없거나 비어 있으면 첫 경로(ROUTE_GUIDE 가 처음 보이는 경로).
 // 화면이 열리면 그 경로의 id 로 api.createQr(routeId) 를 불러 받은 주소로 QR 그림을 만든다 (QrBox, 인터넷 없이).
 //   화면 컴포넌트가 API 를 직접 부르는 것은 getPois / createQr 둘만 허용된다 (계획서 2-3절 예외).
 //   만들든 실패하든 상태는 QR_HANDOFF 그대로이고, 실패해도 이벤트를 dispatch 하지 않고 QR 자리에 글만 보인다 (계획서 4절).
@@ -28,7 +28,10 @@ import './QrHandoffScreen.css'
 
 export default function QrHandoffScreen() {
   const { state } = useKiosk()
-  const route = useMemo(() => toRouteGuide(state.routes).routes[0] ?? null, [state.routes])
+  const route = useMemo(() => {
+    const { routes } = toRouteGuide(state.routes)
+    return routes.find((r) => r.id != null && r.id === state.selectedRouteId) ?? routes[0] ?? null
+  }, [state.routes, state.selectedRouteId])
   const routeId = route?.id ?? null
 
   // 경로가 없으면 부를 수 없으므로 처음부터 error 로 시작한다 (effect 안에서 동기 setState 를 피하려고 초기값에서 정한다)

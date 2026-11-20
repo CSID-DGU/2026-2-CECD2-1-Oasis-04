@@ -236,6 +236,16 @@ describe('real API', () => {
         url: `https://map.kakao.com/link/by/traffic/${encodeURIComponent('종로3가역 키오스크')},37.5704,126.9918/${encodeURIComponent('선릉역')},37.504,127.048`,
       })
     })
+    it('서버가 경로마다 landing_url 을 주면 고른 경로의 주소를 쓴다 (#7, 11단계)', async () => {
+      await prepare()
+      mockFetch([
+        { ...SUBWAY_ROUTE, landing_url: 'https://m.example/1' },
+        { ...SUBWAY_ROUTE, landing_url: 'https://m.example/2' },
+      ])
+      await route('SUB_0220_2호선')
+      expect(await createQr('SUB_0220_2호선#2')).toEqual({ url: 'https://m.example/2' })
+      expect(await createQr('SUB_0220_2호선#1')).toEqual({ url: 'https://m.example/1' })
+    })
     it('경로가 없으면 빈 목록, 그 뒤 createQr 는 QR_ERROR', async () => {
       await prepare()
       mockFetch([])

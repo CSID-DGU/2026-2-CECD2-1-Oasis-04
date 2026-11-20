@@ -10,6 +10,7 @@
 //   2. '취소' → LISTEN_CANCEL. '처음으로'(GO_HOME) 는 FlowFrame 의 showHome 이 그린다. 둘 다 IDLE 로 가고 failCount 를 0 으로 만든다.
 // mock 마이크의 글 입력창은 DevPanel 로 옮겼다 (계획서 4-2절. 시안에 입력창이 없다). DevPanel 이 recorder.onInput 을 부르고,
 // 무발화·무음 타이머는 예전처럼 recorder 가 관리한다. recorder.start / stop 은 LISTENING 핸들러가 부른다.
+// 음량 막대는 VoiceMeter 가 프레임마다 recorder.getLevel() 을 읽어 그린다 (React 상태를 거치지 않는다, 12단계).
 
 import FlowFrame from '../components/FlowFrame.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
@@ -29,7 +30,7 @@ export default function ListeningScreen() {
       showHome
       left={
         <div className="listening">
-          <VoiceMeter>
+          <VoiceMeter readLevel={recorder.getLevel}>
             <Ring icon="mic" />
           </VoiceMeter>
           <h1 className="listening-core">듣고 있어요</h1>

@@ -100,6 +100,7 @@ export default function PlaceBand({ place }) {
     const next = {
       mid: plate.offsetTop + parseFloat(plateStyle.height) / 2, // offsetHeight 는 정수로 반올림된다 (229.44 → 229)
       lineWidth: parseFloat(getComputedStyle(band).getPropertyValue('--line-width')) || 14,
+      lineEdge: parseFloat(getComputedStyle(band).getPropertyValue('--line-edge')) || 0, // 테두리가 있는 노선 선: 안쪽 선을 이만큼 가늘게
       colors: readColorTokens(band),
       plateMin: parseFloat(plateStyle.minWidth) || 0,
       platePad: parseFloat(plateStyle.paddingLeft) || 0,
@@ -170,7 +171,7 @@ export default function PlaceBand({ place }) {
           return (
             <g key={i}>
               {color.edge && <path d={d} stroke={color.edge} strokeLinecap={seg.cap} style={{ strokeWidth: w }} />}
-              <path d={d} stroke={color.band} strokeLinecap={seg.cap} style={{ strokeWidth: color.edge ? w - 6 : w }} />
+              <path d={d} stroke={color.band} strokeLinecap={seg.cap} style={{ strokeWidth: color.edge ? w - measured.lineEdge : w }} />
             </g>
           )
         })}

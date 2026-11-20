@@ -9,6 +9,7 @@ export const SCENARIOS = Object.freeze({
   sttDown: 'sttDown', // health → { server: true, stt: false } → IDLE_REDUCED
   micDown: 'micDown', // checkMic → { available: false } → IDLE_REDUCED
   routeError: 'routeError', // route → Error('ROUTE_ERROR')
+  noRoute: 'noRoute', // route → { routes: [] } (경로 없음 → UNAVAILABLE. 시연 흐름 3번, 옮기기 계획 5-3절)
   poisError: 'poisError', // getPois → Error (화면 오류 문구만, 전이 없음)
   longNames: 'longNames', // getPois → 긴 이름 12개 (줄 바꿈 시험, 전이 없음)
   qrError: 'qrError', // createQr → Error (화면 오류 문구만, 전이 없음)

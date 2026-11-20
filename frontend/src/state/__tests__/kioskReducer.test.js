@@ -23,6 +23,7 @@ const dirtySession = (state) =>
     resolve: { status: 'NOT_UNDERSTOOD' },
     selectedPoi: { id: 'poi-1', name: '서울역' },
     routes: [{ id: 'r1' }],
+    selectedRouteId: 'r1',
     qr: { url: 'https://example/r/1' },
     error: '오류',
     lastEvent: EVENTS.FAIL_COUNT_2,
@@ -56,6 +57,7 @@ describe('initialState', () => {
       resolve: null,
       selectedPoi: null,
       routes: [],
+      selectedRouteId: null,
       qr: null,
       error: null,
       lastEvent: null,
@@ -124,7 +126,7 @@ describe('IDLE 복귀 시 세션 초기화', () => {
     [STATES.LISTENING, EVENTS.LISTEN_CANCEL],
     [STATES.MANUAL_SELECT, EVENTS.GO_HOME],
     [STATES.QR_HANDOFF, EVENTS.INACTIVITY_TIMEOUT],
-  ])('%s + %s → transcript·resolve·selectedPoi·routes·qr·error 비움, health 는 유지', (state, event) => {
+  ])('%s + %s → transcript·resolve·selectedPoi·routes·selectedRouteId·qr·error 비움, health 는 유지', (state, event) => {
     const before = dirtySession(state)
     const next = kioskReducer(before, { type: event })
     expect(next).toMatchObject({
@@ -134,6 +136,7 @@ describe('IDLE 복귀 시 세션 초기화', () => {
       resolve: null,
       selectedPoi: null,
       routes: [],
+      selectedRouteId: null,
       qr: null,
       error: null,
       lastEvent: event,
@@ -266,6 +269,24 @@ describe('payload 저장', () => {
     const next = kioskReducer(at(STATES.ROUTING), { type: EVENTS.ROUTE_FOUND, routes })
     expect(next.state).toBe(STATES.ROUTE_GUIDE)
     expect(next.routes).toEqual(routes)
+  })
+
+  it('SEND_TO_PHONE_PRESSED({ routeId }) → selectedRouteId, 상태는 QR_HANDOFF', () => {
+    const routes = [{ id: 'r1' }, { id: 'r2' }]
+    const next = kioskReducer(at(STATES.ROUTE_GUIDE, { routes }), { type: EVENTS.SEND_TO_PHONE_PRESSED, routeId: 'r2' })
+    expect(next.state).toBe(STATES.QR_HANDOFF)
+    expect(next.selectedRouteId).toBe('r2')
+    expect(next.routes).toEqual(routes)
+  })
+
+  it('SEND_TO_PHONE_PRESSED 에 routeId 가 없으면 selectedRouteId 는 null (QR 화면이 첫 경로를 쓴다)', () => {
+    const next = kioskReducer(at(STATES.ROUTE_GUIDE, { selectedRouteId: 'old' }), { type: EVENTS.SEND_TO_PHONE_PRESSED })
+    expect(next.selectedRouteId).toBeNull()
+  })
+
+  it('경로를 다시 받으면(ROUTE_FOUND) 전에 고른 경로를 지운다', () => {
+    const next = kioskReducer(at(STATES.ROUTING, { selectedRouteId: 'r2' }), { type: EVENTS.ROUTE_FOUND, routes: [{ id: 'n1' }] })
+    expect(next.selectedRouteId).toBeNull()
   })
 
   it('유효한 전이는 lastEvent 에 이벤트 이름을 남긴다', () => {

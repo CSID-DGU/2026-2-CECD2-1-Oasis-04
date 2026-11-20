@@ -47,7 +47,7 @@ export const EVENTS = Object.freeze({
   SWITCH_TO_VOICE: 'SWITCH_TO_VOICE', // failCount = 0
 
   // 경로 안내 (ROUTE_GUIDE)
-  SEND_TO_PHONE_PRESSED: 'SEND_TO_PHONE_PRESSED',
+  SEND_TO_PHONE_PRESSED: 'SEND_TO_PHONE_PRESSED', // ({ routeId }) 고른 경로 id → selectedRouteId
 
   // 조작 화면 공통
   GO_HOME: 'GO_HOME', // '처음으로' 버튼 7곳 → IDLE, 세션 초기화

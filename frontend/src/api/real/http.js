@@ -7,7 +7,7 @@
 // HTTP 상태 코드가 4xx·5xx 여도 본문은 이 모양이므로, 여기서는 본문을 그대로 돌려주고
 // 어떤 code 를 어떻게 처리할지는 각 real/*.js 가 정한다.
 // 서버에 닿지 못했거나 시간 초과면 Error 를 throw 한다. message 는 'SERVER_UNREACHABLE' 같은 코드라서
-// 화면에는 공통 문구가 나오고 (screens/errorMessage.js), 원래 값은 DevPanel 에 남는다.
+// 화면에는 공통 문구가 나오고 (view/unavailableReason.js), 원래 값은 DevPanel 에 남는다.
 
 const env = import.meta.env ?? {}
 

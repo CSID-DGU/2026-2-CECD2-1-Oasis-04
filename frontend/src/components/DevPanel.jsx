@@ -18,6 +18,7 @@ import { DEV_EVENTS, EVENTS } from '../state/events.js'
 import { transitions } from '../state/transitions.js'
 import { config } from '../config.js'
 import { SCENARIOS, getScenario, setScenario } from '../api/mock/scenario.js'
+import { FAKE_LEVELS, getFakeLevel, setFakeLevel } from '../devices/mockRecorder.js'
 import { STATES } from '../state/states.js'
 import { USE_MOCK } from '../api/index.js'
 import { recorder } from '../devices/recorder.js'
@@ -101,6 +102,34 @@ function MockSpeechInput() {
   )
 }
 
+// mock 마이크의 가짜 음량 (LISTENING 음량 막대, 옮기기 계획 12단계). 녹음기 모듈 변수라 바로 다음 프레임부터 바뀐다
+const FAKE_LEVEL_LABELS = {
+  [FAKE_LEVELS.speak]: '켜기 (말하는 듯 오르내림)',
+  [FAKE_LEVELS.quiet]: '조용함',
+  [FAKE_LEVELS.loud]: '큰 소리',
+  [FAKE_LEVELS.off]: '끄기 (잴 수 없음 → 멈춘 모양)',
+}
+
+function MockLevelSelect() {
+  const [mode, setModeView] = useState(getFakeLevel)
+  const onChange = (e) => {
+    setFakeLevel(e.target.value)
+    setModeView(e.target.value)
+  }
+  return (
+    <div style={{ marginTop: 6 }}>
+      <strong>가짜 음량</strong>{' '}
+      <select value={mode} onChange={onChange} aria-label="가짜 음량">
+        {Object.values(FAKE_LEVELS).map((m) => (
+          <option key={m} value={m}>
+            {FAKE_LEVEL_LABELS[m]}
+          </option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 // 시나리오별 한 줄 설명. 어느 Phase 에서 효과가 나는지도 적어 둔다.
 const SCENARIO_LABELS = {
   [SCENARIOS.normal]: 'normal — 모두 정상',
@@ -108,6 +137,7 @@ const SCENARIO_LABELS = {
   [SCENARIOS.sttDown]: 'sttDown — STT 불가 → IDLE_REDUCED',
   [SCENARIOS.micDown]: 'micDown — 마이크 불가 → IDLE_REDUCED',
   [SCENARIOS.routeError]: 'routeError — 경로 조회 오류 → UNAVAILABLE',
+  [SCENARIOS.noRoute]: 'noRoute — 경로 없음 → UNAVAILABLE (시연 흐름 3번)',
   [SCENARIOS.poisError]: 'poisError — 목적지 목록 오류 (화면 문구만, 전이 없음)',
   [SCENARIOS.longNames]: 'longNames — 목적지 목록을 긴 이름 12개로 (줄 바꿈 시험)',
   [SCENARIOS.qrError]: 'qrError — QR 생성 오류 (화면 문구만, 전이 없음)',
@@ -258,6 +288,7 @@ export default function DevPanel() {
       <LocationInfo />
 
       {USE_MOCK && state.state === STATES.LISTENING && <MockSpeechInput />}
+      {USE_MOCK && <MockLevelSelect />}
 
       <div style={{ marginTop: 6 }}>
         <strong>scenario</strong> {scenario}

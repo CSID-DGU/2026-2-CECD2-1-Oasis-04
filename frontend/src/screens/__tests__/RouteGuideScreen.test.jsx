@@ -62,7 +62,15 @@ describe('RouteGuideScreen', () => {
     expect(container.querySelector('.route-card.is-only')).not.toBeNull()
     const send = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === '휴대폰으로 보내기')
     await act(async () => send.click())
-    expect(kiosk.dispatch).toHaveBeenCalledWith({ type: EVENTS.SEND_TO_PHONE_PRESSED })
+    expect(kiosk.dispatch).toHaveBeenCalledWith({ type: EVENTS.SEND_TO_PHONE_PRESSED, routeId: ROUTE_A.id })
+  })
+
+  it('2번 카드를 고르고 휴대폰으로 보내기 → 2번 경로 id 를 싣는다 (11단계)', async () => {
+    await renderWith(ROUTE_SUBWAY)
+    await act(async () => cards()[1].click())
+    const send = [...container.querySelectorAll('button')].find((b) => b.textContent.trim() === '휴대폰으로 보내기')
+    await act(async () => send.click())
+    expect(kiosk.dispatch).toHaveBeenCalledWith({ type: EVENTS.SEND_TO_PHONE_PRESSED, routeId: ROUTE_SUBWAY[1].id })
   })
 
   it('경로에 출발 장소가 없으면 지금 계신 곳 이름에서 " 키오스크" 만 떼고 쓴다 (역·정류장은 남김)', async () => {

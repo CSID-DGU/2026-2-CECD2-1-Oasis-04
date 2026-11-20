@@ -12,7 +12,7 @@ const { default: ConfirmingScreen } = await import('../ConfirmingScreen.jsx')
 const { default: ManualSelectScreen } = await import('../ManualSelectScreen.jsx')
 const { resolve } = await import('../../api/mock/resolve.js')
 const { getPois } = await import('../../api/mock/pois.js')
-vi.mock('../../api/mock/mockDelay.js', () => ({ mockDelay: async () => {} }))
+vi.mock('../../api/mock/mockDelay.js', () => ({ mockDelay: async () => {}, mockWaitDelay: async () => {} }))
 
 const render = (Screen, state) => {
   kiosk = { state, dispatch: vi.fn() }

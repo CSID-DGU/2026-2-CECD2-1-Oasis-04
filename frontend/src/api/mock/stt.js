@@ -3,12 +3,12 @@
 //   { text: '…에러…' } → Error('STT_ERROR')   (RESOLVING 핸들러가 RESOLVE_OUT_OF_SCOPE_OR_ERROR 로 바꾼다)
 //   { text: '' }       → { text: '' }         (10초 무발화. resolve('') 가 NOT_UNDERSTOOD 로 처리)
 
-import { mockDelay } from './mockDelay.js'
+import { mockWaitDelay } from './mockDelay.js'
 
 export async function stt(audio) {
   const text = audio?.text ?? ''
   console.log('[mock] stt 호출', JSON.stringify(text))
-  await mockDelay()
+  await mockWaitDelay(undefined, 0.5)
 
   if (text.includes('에러')) throw new Error('STT_ERROR')
   return { text }

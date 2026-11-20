@@ -6,6 +6,7 @@
 //   long     긴 경로(ROUTE_LONG, 9401-1 → 4 → 7011). 시안에는 이 경우가 없어 시안의 보내는 경로를 이 경로로 바꿔(주소 응답을 고쳐서) 찍는다.
 //            시안의 요약 판은 모든 탈것을 노선 원으로 그리므로(버스 번호 모양 없음) 노선 줄은 다르게 나온다
 //   loading·error  앱만. 만드는 중(가짜 시계를 흘리지 않음), 만들지 못함(mock 시나리오 qrError). 시안에 모양이 없다(12-5절)
+//   pick1·pick2·pick3  앱만 (11단계). ROUTE_GUIDE 에서 N번 카드를 누르고 화면의 '휴대폰으로 보내기'로 들어간다(고른 경로가 요약 판에 나와야 한다)
 // QR 무늬는 시안이 예시 무늬라 늘 다르다. 비교할 때 QR 상자 안(그림 480px)은 차이로 보지 않는다
 async (page) => {
   const OPTIONS = {
@@ -14,6 +15,9 @@ async (page) => {
     mock: 'http://127.0.0.1:8800/design/mockups/confirmed/qr-handoff-final.html',
     blur: ['default', 'long'],
     mockShots: true,
+    mockDir: 'mock-step10',
+    appDir: 'current-step10',
+    only: [], // 비우면 모든 경우. 예: ['pick1', 'pick2', 'pick3']
   }
   // 앱의 api/mock/data/routeCases.js ROUTE_LONG 과 같은 값
   const ROUTE_LONG = {"id":"long","durationMin":38,"start":{"name":"종로3가.탑골공원","kind":"STOP","dir":"ACROSS"},"legs":[{"mode":"BUS","kind":"EXPRESS","number":"9401-1","via":["종로5가","동대문","서울특별시립동대문역사문화공원.국립중앙의료원앞"],"to":{"name":"서울특별시립동대문역사문화공원.국립중앙의료원앞","kind":"STOP"}},{"mode":"WALK","minutes":4,"to":{"name":"동대문역사문화공원역","kind":"STATION"}},{"mode":"SUBWAY","lineId":"seoul-4","label":"4","via":["충무로"],"to":{"name":"충무로역","kind":"STATION"}},{"mode":"WALK","minutes":3,"to":{"name":"충무로역.매일경제","kind":"STOP","dir":"ACROSS"}},{"mode":"BUS","kind":"BRANCH","number":"7011","via":["퇴계로3가","명동입구"],"to":{"name":"명동입구","kind":"STOP"}}]}
@@ -24,7 +28,12 @@ async (page) => {
     long: ['', 60000, 'subway', 'long', ROUTE_LONG, 'normal', true],
     loading: [null, 60000, 'subway', 'subway', null, 'normal', false],
     error: [null, 60000, 'subway', 'subway', null, 'qrError', true],
+    // 8번째 값: ROUTE_GUIDE 에서 누를 카드 번호 (0 부터). 있으면 화면 버튼으로 보낸다
+    pick1: [null, 60000, 'subway', 'subway', null, 'normal', true, 0],
+    pick2: [null, 60000, 'subway', 'subway', null, 'normal', true, 1],
+    pick3: [null, 60000, 'subway', 'subway', null, 'normal', true, 2],
   }
+  const cases = Object.entries(ALL).filter(([name]) => !OPTIONS.only.length || OPTIONS.only.includes(name))
 
   await page.setViewportSize({ width: 1920, height: 1080 })
   // 움직임 줄이기로 찍는다: 움직이는 부분(마이크 고리, 음량 막대, 도는 호, 나타나기)이 멈춰 그림마다 같다 (10단계 전 보완)
@@ -79,7 +88,7 @@ async (page) => {
 
   // ---- 시안 ----
   if (OPTIONS.mockShots) {
-    for (const [name, [query, , , , inject]] of Object.entries(ALL)) {
+    for (const [name, [query, , , , inject]] of cases) {
       if (query === null) continue
       await page.unroute('**/qr-handoff-final.html*').catch(() => {})
       if (inject) {
@@ -90,7 +99,7 @@ async (page) => {
         })
       }
       await page.goto(OPTIONS.mock + query)
-      await snap('mock-step10', name, 'section.screen')
+      await snap(OPTIONS.mockDir, name, 'section.screen')
     }
     await page.unroute('**/qr-handoff-final.html*').catch(() => {})
   }
@@ -108,7 +117,7 @@ async (page) => {
     sel.dispatchEvent(new Event('change', { bubbles: true }))
   }, [label, v])
 
-  for (const [name, [, ms, place, set, , scenario, settle]] of Object.entries(ALL)) {
+  for (const [name, [, ms, place, set, , scenario, settle, card]] of cases) {
     await page.goto(`${OPTIONS.app}?inactivityMs=${ms}`)
     await page.waitForSelector('.stage')
     await page.addStyleTag({ content: 'aside[aria-label="개발자 패널"]{display:none !important}' })
@@ -121,13 +130,19 @@ async (page) => {
     await ev('POI_SELECTED')
     await pick('경로 묶음', set)
     await ev('ROUTE_FOUND')
-    await ev('SEND_TO_PHONE_PRESSED')
+    if (card === undefined) {
+      await ev('SEND_TO_PHONE_PRESSED')
+    } else {
+      await page.locator('.stage button.route-card').nth(card).click()
+      await page.locator('.stage').getByRole('button', { name: '휴대폰으로 보내기' }).click()
+      await page.waitForTimeout(80)
+    }
     if (settle) {
       // mock 지연(300~800ms) 뒤 QR 이 그려진다. 1초를 넘기면 알림 숫자가 14 가 되므로 850ms 만 흘린다
       await page.clock.runFor(850)
       await page.waitForTimeout(50)
     }
-    await snap('current-step10', name, '.stage')
+    await snap(OPTIONS.appDir, name, '.stage')
   }
   return out.join('\n')
 }

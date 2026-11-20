@@ -38,4 +38,11 @@ export const config = {
   inactivityMs: pick('inactivityMs', import.meta.env.VITE_INACTIVITY_MS, 60000),
   /** LISTENING(실제 마이크): 말하는 중이어도 녹음을 끝내는 상한 (운영 25초. 서버는 30초까지 받는다) */
   maxRecordMs: pick('maxRecordMs', import.meta.env.VITE_MAX_RECORD_MS, 25000),
+  /** FAIL_COUNT_CHECK: 판단 노드가 다음 이벤트를 내기까지 (운영 0 = 바로. 시연 모드에서만 화면이 보이게 늘린다) */
+  choiceDelayMs: pick('choiceDelayMs', import.meta.env.VITE_CHOICE_DELAY_MS, 0),
+  /** mock 의 기다림 화면 지연 (RESOLVING 의 stt+resolve 합, ROUTING 의 route). 0 이면 호출마다 300~800ms 무작위 (api/mock/mockDelay.js) */
+  mockWaitMs: pick('mockWaitMs', import.meta.env.VITE_MOCK_WAIT_MS, 0),
 }
+
+/** 시연 모드 (npm run dev:demo, .env.demo 의 VITE_DEMO=true). 발표자 키(demo/DemoKeys.jsx), DevPanel 처음에 숨김, 시험용 목적지 뺌 */
+export const DEMO = import.meta.env.VITE_DEMO === 'true'

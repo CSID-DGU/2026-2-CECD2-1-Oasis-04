@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>화면 전후 비교</title>
+    <style>
+      /* 옮기기 전(before/)과 옮긴 뒤(after/) 화면을 나란히 본다 (옮기기 계획 13단계, 2026-11-20).
+       * 파일을 그대로 열면 된다 (인터넷·서버 없이). 그림은 같은 폴더의 before/, after/ 에서 같은 이름으로 읽는다.
+       * 이 페이지는 비교 도구라 키오스크 토큰(global.css)을 쓰지 않는다 */
+      :root {
+        --bg: #ffffff;
+        --text: #111111;
+        --sub: #444444;
+        --line: #cccccc;
+        --panel: #f2f2f2;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #161616;
+          --text: #f2f2f2;
+          --sub: #bbbbbb;
+          --line: #3a3a3a;
+          --panel: #222222;
+        }
+      }
+      body {
+        margin: 0;
+        padding: 16px;
+        background: var(--bg);
+        color: var(--text);
+        font: 16px/1.5 system-ui, 'Malgun Gothic', sans-serif;
+      }
+      h1 {
+        margin: 0 0 4px;
+        font-size: 22px;
+      }
+      p.note {
+        margin: 0 0 16px;
+        color: var(--sub);
+      }
+      nav {
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        padding: 8px 0;
+        background: var(--bg);
+        border-bottom: 1px solid var(--line);
+      }
+      nav a {
+        padding: 2px 8px;
+        border: 1px solid var(--line);
+        border-radius: 4px;
+        color: var(--text);
+        text-decoration: none;
+        font-size: 13px;
+      }
+      section {
+        padding: 16px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      h2 {
+        margin: 0 0 8px;
+        font-size: 18px;
+      }
+      h2 small {
+        color: var(--sub);
+        font-weight: 400;
+      }
+      .pair {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+      }
+      figure {
+        margin: 0;
+      }
+      figcaption {
+        color: var(--sub);
+        font-size: 13px;
+      }
+      img {
+        display: block;
+        width: 100%;
+        height: auto;
+        aspect-ratio: 16 / 9;
+        background: var(--panel);
+        border: 1px solid var(--line);
+      }
+      .empty {
+        display: grid;
+        place-items: center;
+        aspect-ratio: 16 / 9;
+        background: var(--panel);
+        border: 1px dashed var(--line);
+        color: var(--sub);
+      }
+      @media (max-width: 720px) {
+        .pair {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>화면 전후 비교</h1>
+    <p class="note">
+      왼쪽 before/ (옮기기 전, 세로로 쌓던 예전 틀) · 오른쪽 after/ (확정 시안을 옮긴 최종, 2026-11-20 13단계). 모두 1920×1080.
+      after/ 는 시계 2026-11-19 오후 2:30, 움직임 줄이기, 무입력 60초(남은 시간 알림 없음), 장소는 지하철역(종로3가역)으로 찍었다.
+      그림을 누르면 원래 크기로 열린다.
+    </p>
+    <nav id="nav"></nav>
+    <main id="list"></main>
+    <script>
+      // [그림 이름, 설명]. before/ 에는 14화면만 있다. 나머지는 after/ 에만 있는 경우다
+      const SHOTS = [
+        ['STARTUP_CHECK', '시작 점검'],
+        ['CHECKING', '점검 중 (서버 불가)'],
+        ['IDLE', '대기 (지하철역)'],
+        ['IDLE-bus', '대기 (버스 정류장)'],
+        ['IDLE_REDUCED', '대기 (음성 불가)'],
+        ['LISTENING', '듣는 중'],
+        ['RESOLVING', '말씀 알아듣는 중'],
+        ['RESOLVING-empty', '말씀 알아듣는 중 (들은 말 없음)'],
+        ['CONFIRMING', '목적지 확인'],
+        ['FAIL_COUNT_CHECK', '실패 횟수 확인'],
+        ['REASKING', '다시 말하기'],
+        ['REASKING-empty', '다시 말하기 (들은 말 없음)'],
+        ['MANUAL_SELECT', '손으로 고르기'],
+        ['ROUTING', '가는 길 찾는 중'],
+        ['ROUTE_GUIDE', '경로 안내 (1번 경로)'],
+        ['ROUTE_GUIDE-pick2', '경로 안내 (2번 경로를 고름)'],
+        ['ROUTE_GUIDE-pick3', '경로 안내 (3번 경로를 고름)'],
+        ['QR_HANDOFF', '휴대폰으로 보내기 (1번 경로)'],
+        ['QR_HANDOFF-route2', '휴대폰으로 보내기 (2번 경로)'],
+        ['UNAVAILABLE', '안내 불가 (기본)'],
+        ['UNAVAILABLE-noroute', '안내 불가: 경로 없음'],
+        ['UNAVAILABLE-close', '안내 불가: 가까운 곳'],
+        ['UNAVAILABLE-scope', '안내 불가: 안내할 수 없는 곳'],
+        ['UNAVAILABLE-upstream', '안내 불가: 길 안내를 받아올 수 없음'],
+        ['UNAVAILABLE-generic', '안내 불가: 그 밖의 오류'],
+      ]
+      const BEFORE = new Set(SHOTS.map(([n]) => n).filter((n) => !n.includes('-')))
+      const fig = (dir, name, label) =>
+        dir === 'before' && !BEFORE.has(name)
+          ? `<figure><div class="empty">before 없음 (새로 생긴 경우)</div><figcaption>${label}</figcaption></figure>`
+          : `<figure><a href="${dir}/${name}.png" target="_blank"><img src="${dir}/${name}.png" alt="${name} ${label}" loading="lazy"></a><figcaption>${label} · ${dir}/${name}.png</figcaption></figure>`
+      document.getElementById('nav').innerHTML = SHOTS.map(([n]) => `<a href="#${n}">${n}</a>`).join('')
+      document.getElementById('list').innerHTML = SHOTS.map(
+        ([name, label]) => `
+          <section id="${name}">
+            <h2>${name} <small>${label}</small></h2>
+            <div class="pair">${fig('before', name, '전')}${fig('after', name, '후')}</div>
+          </section>`,
+      ).join('')
+    </script>
+  </body>
+</html>

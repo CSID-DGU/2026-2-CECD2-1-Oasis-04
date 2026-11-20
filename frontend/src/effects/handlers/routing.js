@@ -14,7 +14,7 @@ import { ERROR_CODES, kioskError } from '../../state/errorCodes.js'
 import { toKioskError } from '../../api/apiError.js'
 
 /** 경로가 하나도 없을 때 UNAVAILABLE 화면에 보여 줄 문구 */
-const NO_ROUTE_MESSAGE = '가는 길을 찾을 수 없어요'
+export const NO_ROUTE_MESSAGE = '가는 길을 찾을 수 없어요'
 /** 목적지 없이 ROUTING 에 들어왔을 때 문구 */
 const NO_POI_MESSAGE = '목적지가 정해지지 않았어요'
 

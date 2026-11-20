@@ -1,6 +1,7 @@
 // DevPanel 을 보일지 말지 정하는 스위치. DevPanel 자체는 건드리지 않고 바깥에서 감싼다.
 //
 //   기본값: 개발 서버(npm run dev)에서는 보임, 빌드 결과(npm run build / preview)에서는 숨김.
+//           시연 모드(npm run dev:demo)는 개발 서버여도 숨긴다. Ctrl+Shift+D 로만 연다.
 //           import.meta.env.DEV 는 Vite 가 빌드 시점에 true/false 로 박아 넣는 값이라 런타임 설정이 필요 없다.
 //   토글:   Ctrl + Shift + D 를 누르면 켜고 끈다. 시연 중 상태를 확인해야 할 때 쓴다.
 //           (키 이벤트는 inactivity 핸들러의 document keydown 리스너에도 잡히므로 무입력 타이머가 한 번 리셋된다.
@@ -10,6 +11,7 @@
 
 import { useEffect, useState } from 'react'
 import DevPanel from './DevPanel.jsx'
+import { DEMO } from '../config.js'
 
 /** 토글 단축키. 브라우저 기본 동작(Chrome 의 Ctrl+Shift+D = 모든 탭 북마크)과 겹치므로 preventDefault 한다. */
 function isToggleShortcut(e) {
@@ -17,7 +19,7 @@ function isToggleShortcut(e) {
 }
 
 export default function DevPanelToggle() {
-  const [visible, setVisible] = useState(import.meta.env.DEV)
+  const [visible, setVisible] = useState(import.meta.env.DEV && !DEMO)
 
   useEffect(() => {
     const onKeyDown = (e) => {

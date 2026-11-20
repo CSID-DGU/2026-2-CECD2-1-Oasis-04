@@ -37,6 +37,7 @@ tensorboard/
 !frontend/.env.development
 !frontend/.env.production
 !frontend/.env.real
+!frontend/.env.demo
 *.key
 *.pem
 

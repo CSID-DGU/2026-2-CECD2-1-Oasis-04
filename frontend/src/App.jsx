@@ -11,6 +11,8 @@ import { useKioskEffects } from './effects/useKioskEffects.js'
 import { SCREEN_BY_STATE } from './screens/index.js'
 import DevPanelToggle from './components/DevPanelToggle.jsx'
 import Stage from './components/Stage.jsx'
+import DemoKeys from './demo/DemoKeys.jsx'
+import { DEMO } from './config.js'
 
 // 화면을 그리지 않고 effect 만 돌리는 컴포넌트. 앱 전체에서 정확히 한 번만 마운트된다.
 function KioskEffects() {
@@ -40,6 +42,8 @@ export default function App() {
         {/* 개발 서버에서는 기본 표시, 빌드에서는 숨김. Ctrl+Shift+D 로 토글 (components/DevPanelToggle.jsx).
             무대 밖에 두어서 창 크기와 상관없이 같은 크기로 보인다 */}
         <DevPanelToggle />
+        {/* 시연 모드(npm run dev:demo)만: 발표자 키 → ← Home 1~5. 화면에는 아무것도 그리지 않는다 (demo/DemoKeys.jsx) */}
+        {DEMO && <DemoKeys />}
       </LocationProvider>
     </KioskProvider>
   )
