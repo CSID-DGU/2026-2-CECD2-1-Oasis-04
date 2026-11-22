@@ -6,6 +6,7 @@
 //              학습한 음성 모델이 올라간 서버가 없는 PC 에서는 끄거나 자동으로 두면 연습용 데이터로 돈다
 //   위치       키오스크가 놓인 곳: 현재 위치로 찾기 / 역 번호·정류장 번호·이름으로 직접 지정 (LocationTab.jsx, settings/kioskPlace.js)
 //   음성 안내  화면의 안내를 소리로 읽어 줄지, 빠르기, 목소리 (SpeechTab.jsx, settings/speechSettings.js)
+//   경로       카카오 길찾기가 실패할 때 ODsay 로 대신 찾을지, 백업 상태와 연결 확인 (RouteTab.jsx, settings/routeBackup.js)
 // 탭을 더할 때는 TABS 에 한 줄을 넣고 그 탭의 컴포넌트를 만든다.
 //
 // 저장하면 선택을 브라우저에 적고 키오스크 화면을 새로 연다. 연동 여부는 화면을 열 때 한 번 정해지기 때문이다.
@@ -14,6 +15,7 @@ import { useEffect, useState } from 'react'
 import { CHOICES, DEMO_BUILD, MOCK_BUILD, REASON_TEXT, decide, probeStt, readChoice, statusText, writeChoice } from './integration.js'
 import LocationTab from './LocationTab.jsx'
 import SpeechTab from './SpeechTab.jsx'
+import RouteTab from './RouteTab.jsx'
 import './SettingsPage.css'
 
 const CHOICE_TEXT = Object.freeze({
@@ -97,6 +99,7 @@ const TABS = Object.freeze([
   { id: 'integration', label: '서버 연동', Component: IntegrationTab },
   { id: 'location', label: '위치', Component: LocationTab },
   { id: 'speech', label: '음성 안내', Component: SpeechTab },
+  { id: 'route', label: '경로', Component: RouteTab },
 ])
 
 /** 설정을 닫고 키오스크 화면을 새로 연다 (연동 여부를 다시 정하도록). 주소에서 #settings 를 떼고 새로 연다 */
