@@ -4,6 +4,7 @@
 //   왼쪽 칸  본문색 고리 + 이유 그림 → 제목 → 이유 첫 문장(72px 굵게, 오류 색) → 나머지 문장(36px)
 //   그림과 문구는 view/unavailableReason.js 가 코드로 고른다. 글자는 바꾸지 않고 첫 ". " 뒤에서 나눈다
 // '처음으로'(GO_HOME) 는 FlowFrame 의 showHome 이 그린다.
+// 음성 안내: 화면이 열리면 이유 문구를 그대로 읽는다 (view/speechText.js unavailableSpeech, 2026-11-22)
 
 import FlowFrame from '../components/FlowFrame.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
@@ -14,10 +15,13 @@ import { EVENTS } from '../state/events.js'
 import { SCREEN_TITLES } from './titles.js'
 import { reasonOf, splitFirstSentence } from '../view/unavailableReason.js'
 import { evenWrapClass } from '../view/textWrap.js'
+import { useSay } from '../effects/useSay.js'
+import { unavailableSpeech } from '../view/speechText.js'
 
 export default function UnavailableScreen() {
   const { state, dispatch } = useKiosk()
   const reason = reasonOf(state.error)
+  useSay(unavailableSpeech(reason.text))
   const [first, rest] = splitFirstSentence(reason.text)
   return (
     <FlowFrame

@@ -148,7 +148,8 @@
   margin-bottom: 16px;
 }
 
-.settings-search-row input {
+.settings-search-row input,
+.settings-search-row select {
   flex: 1;
   min-width: 0;
   padding: 10px 14px;

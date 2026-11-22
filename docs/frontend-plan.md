@@ -47,6 +47,8 @@ frontend/
     effects/                 # 상태 진입 시 실행되는 부수효과 (API 호출, 타이머)
       useKioskEffects.js     #   현재 상태를 보고 해당 핸들러 실행 → 결과를 dispatch
       handlers/              #   상태별 effect 함수 (startupCheck.js, checking.js, idleReduced.js, listening.js, resolving.js, failCountCheck.js, routing.js, inactivity.js)
+      voiceGuide.js          #   음성 안내: 화면이 넘긴 문장을 읽고, '다시 듣기' 로 다시 읽는다 (2-6절)
+      useSay.js              #   화면이 열릴 때 문장을 읽어 달라고 하는 훅
     api/                     # 서버와 통신하는 유일한 곳
       index.js               #   VITE_USE_MOCK 보고 mock/real 중 하나를 export
       mock/                  #   mock 구현 (지연 시간 + 키워드 기반 시나리오)
@@ -56,10 +58,11 @@ frontend/
         mockDelay.js         #   공통 지연 헬퍼
       real/                  #   실제 구현. 같은 함수 이름으로 fetch 호출 (STT 서버 /api/v1, 경로 서버 /routes/transit). 응답 변환도 여기서
         health.js, stt.js, resolve.js, route.js, pois.js, qr.js
-    devices/                 # 브라우저 장치 추상화 (마이크). 서버가 아니라 장치이므로 api/와 분리
+    devices/                 # 브라우저 장치 추상화 (마이크, 스피커). 서버가 아니라 장치이므로 api/와 분리
       recorder.js            #   mock/real 선택
       mockRecorder.js        #   텍스트 입력을 음성 대신 받고, 10초 무발화·2.5초 무음 타이머를 흉내
       realRecorder.js        #   실제 마이크 녹음 (MediaRecorder + 음량 analyser)
+      speaker.js             #   글을 소리로 읽기 (브라우저 음성 합성, 2-6절). mock/real 을 나누지 않는다
     screens/                 # 상태 하나 = 화면 하나 (아래 3절 표 참고)
     components/              # 화면이 공유하는 부품. 틀(FlowFrame·WaitFrame·IdleFrame·Stage), 띠, 버튼, 고리, 카드, 타임라인, QR
                              #   (부품 목록은 docs/design-implementation-plan.md 2절. 예전 ScreenFrame 은 13단계에서 지웠다)
@@ -245,6 +248,26 @@ export function routingHandler(state, dispatch, api) {
 빈 텍스트로 넘어간 `SPEECH_END`는 `RESOLVING`에서 `resolve('')` → `NOT_UNDERSTOOD` → `FAIL_COUNT_CHECK`로 이어져 기존 실패 흐름을 그대로 탄다 (회의 확정). `LISTEN_CANCEL`·`GO_HOME`은 둘 다 `IDLE`로 가고 failCount를 0으로 만든다. 버튼이 둘인 이유는 '취소'는 "말하기만 그만둔다"는 뜻이고 '처음으로'는 모든 조작 화면에 공통으로 두는 버튼이기 때문이다.
 
 실제 마이크(`realRecorder.js`)로 바꿀 때는 `onInput` 대신 오디오 레벨로 발화·무음을 감지하고 `onSpeechEnd({ audio })`를 넘기면 되므로 화면·effect는 그대로다.
+
+### 2-6. 음성 안내 (TTS, 2026-11-22 방선우 추가)
+
+화면의 안내를 소리로 읽어 준다 (프로젝트 계획서 FR-05·FR-08, 5.3절 "글자와 음성 동시 제공"). 계획서와 API 명세서대로 브라우저의 음성 합성(Web Speech API)을 쓰고 서버는 거치지 않는다. 상태·전이·이벤트는 그대로다.
+
+| 담당 | 책임 |
+|---|---|
+| `devices/speaker.js` (장치) | `speak(lines, { rate, voiceURI })`, `cancel()`, `voices()`. 문장마다 따로 넘기고(크롬의 온라인 목소리는 긴 글이 끊긴다), 음성 합성이 없는 곳에서는 아무것도 하지 않는다 |
+| `view/speechText.js` (순수 함수) | 화면별로 읽을 문장을 만든다. 글로 보이는 것은 그 글 그대로, 경로 타임라인은 구간마다 한 문장으로 푼다. 숫자와 버스 번호, 이름 가운데 점을 읽기 좋게 다듬는다 |
+| `effects/voiceGuide.js` | 지금 화면의 문장을 들고 있다가 읽는다. `say` / `replay` / `clear`. 읽을 때마다 설정을 본다 |
+| `effects/useSay.js` (훅) | 화면이 `useSay(문장 목록)` 한 줄로 부른다. 문장이 바뀌면 새로 읽고, 화면을 떠나면 멈춘다 |
+| `components/ReplayButton.jsx` | 얇은 띠의 '다시 듣기'. 읽을 문장이 있는 화면에서만 보인다. 자리와 모양은 임시 (team-requests #19) |
+| `settings/SpeechTab.jsx`, `speechSettings.js` | 설정 페이지(`#settings`)의 '음성 안내' 탭: 켜기·끄기, 빠르기(처음 값은 보통의 0.9배), 목소리, 들어 보기 |
+
+읽는 화면: `CONFIRMING`, `REASKING`, `MANUAL_SELECT`, `UNAVAILABLE`, `ROUTE_GUIDE`, `QR_HANDOFF`. 나머지는 읽지 않는다.
+
+- `LISTENING` 에서 읽지 않는 이유: 안내 소리가 마이크에 들어가면 말소리로 잡힌다. 앞 화면을 떠날 때 읽던 것을 멈춘다
+- `IDLE` 에서 읽지 않는 이유: 크롬은 화면을 한 번도 누르지 않은 상태에서 소리를 내지 않고, 아무도 없는 정류장에서 혼자 말하지 않게 하려는 것이다
+- `CONFIRMING` 과 `REASKING` 은 자동으로 듣지 않으므로 무엇을 누를지도 말한다 ("맞으면 예를 눌러 주세요")
+- 목소리는 기기와 브라우저마다 다르다. 한국어 목소리가 없는 기기에서는 소리가 나지 않을 수 있다 (설정 탭이 알려 준다)
 
 ## 3. 화면 컴포넌트 목록 (상태 1 : 화면 1)
 

@@ -1,0 +1,41 @@
+/* ReplayButton — 얇은 띠의 '다시 듣기'. 보조 버튼과 같은 흰 바탕·가는 테두리를 띠 높이(96px)에 맞게 줄였다.
+ * 높이 72, 글씨 30/700, 아이콘 40. 자리와 모양은 임시 (docs/team-requests.md #19) */
+.replay-button {
+  --replay-height: 72px;
+  --replay-icon: 40px;
+  --replay-gap: 12px; /* 아이콘과 글자 사이 */
+  --replay-left: 40px; /* 서비스 이름과의 간격 */
+
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: var(--replay-gap);
+  height: var(--replay-height);
+  margin-left: var(--replay-left);
+  padding: 0 24px;
+  font: inherit;
+  font-size: var(--font-sub);
+  font-weight: 700;
+  white-space: nowrap;
+  color: var(--color-text);
+  background: var(--color-bg);
+  border: var(--border-thin) solid var(--color-text-sub);
+  border-radius: var(--radius);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.replay-button-icon {
+  width: var(--replay-icon);
+  height: var(--replay-icon);
+}
+
+.replay-button:active {
+  background: var(--color-secondary-pressed);
+}
+
+.replay-button:focus-visible {
+  outline: var(--focus-width) solid var(--color-text);
+  outline-offset: var(--focus-offset);
+}

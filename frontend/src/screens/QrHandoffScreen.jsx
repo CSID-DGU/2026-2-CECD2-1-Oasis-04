@@ -12,6 +12,7 @@
 //
 // 왼쪽 칸: 제목 → QR 상자 + 단계 세 줄. 오른쪽 칸: 보내는 경로의 요약 판(RouteSummary, 9-1 R3 와 같은 모양) + '처음으로'.
 // 주 버튼 없음 (디자인 문서 2절의 의도한 예외). 버튼은 '처음으로'(GO_HOME) 하나이고 FlowFrame 의 showHome 이 그린다.
+// 음성 안내: QR 이 만들어지면 단계 세 줄을, 만들지 못하면 그 문구를 읽는다 (view/speechText.js qrSpeech, 2026-11-22)
 
 import { useEffect, useMemo, useState } from 'react'
 import FlowFrame from '../components/FlowFrame.jsx'
@@ -24,6 +25,8 @@ import { api } from '../api/index.js'
 import { toRouteGuide } from '../view/routeView.js'
 import { SCREEN_TITLES } from './titles.js'
 import { QR_MESSAGES, QR_STEPS } from './qrHandoffText.js'
+import { useSay } from '../effects/useSay.js'
+import { qrSpeech } from '../view/speechText.js'
 import './QrHandoffScreen.css'
 
 export default function QrHandoffScreen() {
@@ -60,6 +63,7 @@ export default function QrHandoffScreen() {
   }, [routeId]) // 화면이 열릴 때 한 번. QR_HANDOFF 에 머무는 동안 경로는 바뀌지 않는다
 
   const message = load.status === 'loading' ? QR_MESSAGES.loading : load.message
+  useSay(qrSpeech(load.status, { steps: QR_STEPS, message }))
 
   return (
     <FlowFrame

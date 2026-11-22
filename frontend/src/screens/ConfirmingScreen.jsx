@@ -9,6 +9,7 @@
 // 오른쪽 칸: '모두 아니에요'(CONFIRM_NONE_OF_THEM, failCount +1), '다른 곳 말하기'(CONFIRM_SAY_OTHER_PLACE),
 //            '처음으로'(GO_HOME, FlowFrame 의 showHome 이 그린다)
 // 모양: 확정 시안 confirming-final.html, 디자인 문서 11-1·11-2절. 위치·크기는 ConfirmingScreen.css
+// 음성 안내: 화면이 열리면 질문과 후보 이름을 읽는다 (view/speechText.js confirmSpeech, 2026-11-22)
 
 import FlowFrame from '../components/FlowFrame.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
@@ -20,6 +21,8 @@ import { useKiosk } from '../state/KioskContext.jsx'
 import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { SCREEN_TITLES } from './titles.js'
+import { useSay } from '../effects/useSay.js'
+import { CONFIRM_DEFAULT_QUESTION, confirmSpeech } from '../view/speechText.js'
 import './ConfirmingScreen.css'
 
 /** /resolve 응답에서 후보 목록을 꺼낸다. candidates 가 없고 poi 만 있으면 그것을 유일한 후보로 본다. */
@@ -47,7 +50,7 @@ function ManyCandidates({ candidates, question, onConfirm }) {
   return (
     <div className="confirm-choose">
       {/* 서버가 되묻는 질문("종로 몇 가로 가세요?", "○○과 △△ 중 어디로 가세요?")이 있으면 그것을 보여 준다 */}
-      <p className="confirm-lead">{question || '가시려는 곳을 하나 골라 주세요'}</p>
+      <p className="confirm-lead">{question || CONFIRM_DEFAULT_QUESTION}</p>
       <PickList variant="confirm">
         {candidates.map((poi) => (
           // key: React 가 목록의 각 항목을 구분하는 이름표. 서버가 준 고유 id 를 쓴다 (인덱스 X).
@@ -64,6 +67,7 @@ export default function ConfirmingScreen() {
   const confirm = (poi) => dispatch({ type: EVENTS.DESTINATION_CONFIRMED, poi })
   // 실제 마이크에서는 reducer 의 transcript 가 비어 있다 (글자를 아는 것은 서버뿐). 서버가 해석한 문장을 대신 보여 준다
   const heard = state.transcript || state.resolve?.transcript
+  useSay(confirmSpeech({ candidates, question: state.resolve?.confirmText }))
 
   return (
     <FlowFrame

@@ -12,6 +12,8 @@
 // 카드 고르기는 화면 안 상태(useState)다. 이벤트·reducer 는 그대로 (docs/kiosk-workflow.md "전이가 아닌 화면 안 동작").
 //   처음에는 1순위. '휴대폰으로 보내기'를 누를 때 고른 경로 id 를 payload 로 싣는다: SEND_TO_PHONE_PRESSED({ routeId })
 //   reducer 가 selectedRouteId 에 담고 QR_HANDOFF 가 그 경로를 보낸다 (11단계)
+// 음성 안내: 화면이 열리면 지금 보이는 경로를 문장으로 읽고, 다른 경로 카드를 고르면 그 경로를 새로 읽는다
+//   (view/speechText.js routeSpeech, 2026-11-22)
 
 import { useMemo, useState } from 'react'
 import FlowFrame from '../components/FlowFrame.jsx'
@@ -26,7 +28,11 @@ import { EVENTS } from '../state/events.js'
 import { toRouteGuide } from '../view/routeView.js'
 import { startPlaceName, PLACE_TYPES } from '../view/placeName.js'
 import { SCREEN_TITLES } from './titles.js'
+import { useSay } from '../effects/useSay.js'
+import { routeSpeech } from '../view/speechText.js'
 import './RouteGuideScreen.css'
+
+const NO_ROUTE_TEXT = '보여 드릴 경로가 없어요'
 
 const KIND_OF_PLACE_TYPE = { [PLACE_TYPES.SUBWAY_STATION]: 'STATION', [PLACE_TYPES.BUS_STOP]: 'STOP' }
 
@@ -45,6 +51,7 @@ export default function RouteGuideScreen() {
   const [picked, setPicked] = useState({ index: 0, byTap: false })
   const index = Math.min(picked.index, Math.max(0, guide.routes.length - 1))
   const route = guide.routes[index]
+  useSay(route ? routeSpeech(route, { destination: state.selectedPoi?.name }) : [`${NO_ROUTE_TEXT}.`])
 
   const send = (
     <PrimaryButton icon="smartphone" onClick={() => dispatch({ type: EVENTS.SEND_TO_PHONE_PRESSED, routeId: route?.id ?? null })}>
@@ -63,7 +70,7 @@ export default function RouteGuideScreen() {
             // key: 다른 경로를 고르면 타임라인을 새로 그리고 처음부터 다시 잰다
             <Timeline key={route.id ?? index} route={route} fallback={guide.fallback} appear={picked.byTap} />
           ) : (
-            <p className="route-guide-empty">보여 드릴 경로가 없어요</p>
+            <p className="route-guide-empty">{NO_ROUTE_TEXT}</p>
           )}
         </div>
       }

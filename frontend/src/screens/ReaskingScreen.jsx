@@ -7,6 +7,7 @@
 //   왼쪽 칸  옅은 고리 + 마이크 → 제목 → "잘 못 알아들었어요" → 들은 말(비면 숨김) → 예시 한 줄
 //            들은 말이 3줄이면 예시를 숨긴다 (고리 자리가 정해져 있어 화면 아래를 넘는다, 12-2절)
 //   탓하는 느낌이 없게 오류 색·느낌표를 쓰지 않는다
+// 음성 안내: 화면이 열리면 "잘 못 알아들었어요" 와 누를 버튼을 읽는다 (view/speechText.js reaskSpeech, 2026-11-22)
 
 import FlowFrame from '../components/FlowFrame.jsx'
 import PrimaryButton from '../components/PrimaryButton.jsx'
@@ -20,11 +21,14 @@ import { EVENTS } from '../state/events.js'
 import { SCREEN_TITLES } from './titles.js'
 import { REASK_EXAMPLES, HIDE_EXAMPLES_AT_HEARD_LINES } from './sayExamples.js'
 import { useLineCount } from '../hooks/useLineCount.js'
+import { useSay } from '../effects/useSay.js'
+import { reaskSpeech } from '../view/speechText.js'
 
 const RING = { tone: 'soft', icon: 'mic' }
 
 export default function ReaskingScreen() {
   const { state, dispatch } = useKiosk()
+  useSay(reaskSpeech())
   const [heardRef, heardLines] = useLineCount(state.transcript)
   const showExamples = heardLines < HIDE_EXAMPLES_AT_HEARD_LINES
   return (

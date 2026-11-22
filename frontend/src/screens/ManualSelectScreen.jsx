@@ -22,6 +22,7 @@
 
 // 모양: 확정 시안 manual-select-final.html, 디자인 문서 11-1·11-3·12-4절. 위치·크기는 ManualSelectScreen.css
 //   불러오는 중: 작은 고리 + '불러오는 중이에요', 오류: '목록을 불러올 수 없어요'(48 굵게 오류 색). 두 상태 모두 목록 자리 가운데
+// 음성 안내: 화면이 열리면 제목을, 목록을 못 불러오면 그 문구를 읽는다 (2026-11-22)
 
 import { useEffect, useState } from 'react'
 import FlowFrame from '../components/FlowFrame.jsx'
@@ -34,6 +35,7 @@ import { STATES } from '../state/states.js'
 import { EVENTS } from '../state/events.js'
 import { api } from '../api/index.js'
 import { SCREEN_TITLES } from './titles.js'
+import { useSay } from '../effects/useSay.js'
 import './ManualSelectScreen.css'
 
 const LOAD_ERROR_MESSAGE = '목록을 불러올 수 없어요'
@@ -66,6 +68,8 @@ export default function ManualSelectScreen() {
       cancelled = true
     }
   }, []) // 화면이 처음 열릴 때 한 번. 상태가 MANUAL_SELECT 로 바뀔 때마다 새로 마운트되므로 매번 다시 불러온다.
+
+  useSay([`${load.status === 'error' ? LOAD_ERROR_MESSAGE : SCREEN_TITLES[STATES.MANUAL_SELECT]}.`])
 
   return (
     <FlowFrame
