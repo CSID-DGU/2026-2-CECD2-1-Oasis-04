@@ -38,8 +38,11 @@ def place_of(kb, poi):
       지하철역   {"type": "SUBWAY_STATION", "name": "종로3가역", "lines": [{"lineId": "seoul-1", "label": "1", "prev": "종각", "next": "종로5가"}]}
                  노선과 앞·다음 역은 지식베이스 폴더의 station_lines.json 에서 찾는다 (station_lines.py). 파일이 없으면 빈 목록
       버스정류장 {"type": "BUS_STOP", "name": "종로3가.탑골공원 정류장", "prev": "종로2가", "next": "종로4가.종묘",
-                  "buses": [{"kind": "TRUNK", "numbers": ["101", "260"]}, {"kind": "BRANCH", "numbers": ["7212"]}]}
+                  "buses": [{"kind": "TRUNK", "numbers": ["101", "260"], "prev": "종로2가", "next": "종로4가.종묘", "nextMedian": True},
+                            {"kind": "BRANCH", "numbers": ["7212"], "prev": "낙원상가", "next": "창덕궁", "nextMedian": False}]}
                  서는 버스와 앞·다음 정류장은 지식베이스 폴더의 stop_routes.json 에서 찾는다 (stop_routes.py).
+                 buses 는 종류와 앞·다음 정류장이 같은 버스끼리 한 묶음이다 (같은 종류가 여러 묶음일 수 있다).
+                 nextMedian 은 다음 정류장이 중앙차로 정류장인가. 같은 종류 안에서는 그런 묶음이 먼저 온다
                  파일이 없거나 그 자료에 없는 정류장이면 prev·next 는 None, buses 는 빈 목록
     poi 는 {"name", "poi_type", "x", "y"} 를 가진 것 (지식베이스의 장소, 또는 locate 가 돌려준 nearest). 정류장은 poi_id 도 본다
     """

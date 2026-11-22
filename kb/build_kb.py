@@ -246,7 +246,7 @@ def main():
                     help="서울시 역사마스터 정보 CSV. 있으면 역의 노선과 앞·다음 역(station_lines.json)도 만든다 (kb/station_lines.py)")
     ap.add_argument("--bus-routes",
                     help="서울시버스노선별정류소정보 (XLSX/CSV). 있으면 정류장에 서는 버스와 앞·다음 정류장(stop_routes.json)도 만든다 "
-                         "(kb/stop_routes.py)")
+                         "(kb/stop_routes.py). --bus-seoul 을 함께 주면 다음 정류장이 중앙차로인지도 적는다")
     args = ap.parse_args()
     if not (args.bus or args.bus_seoul or args.subway or args.facility):
         sys.exit("--bus / --bus-seoul / --subway / --facility 중 하나 이상 필요")
@@ -400,8 +400,10 @@ def main():
     bus_routes = os.path.expanduser(args.bus_routes or "")
     if bus_routes:
         from stop_routes import build as build_stop_routes
-        from stop_routes import read_routes
-        stops = build_stop_routes(read_routes(bus_routes))
+        from stop_routes import read_routes, read_stop_types
+        # 서울시 정류소 파일이 있으면 그 정류소타입 열로 중앙차로 정류장을 가린다 (버스 묶음의 nextMedian)
+        types = read_stop_types(args.bus_seoul) if args.bus_seoul else None
+        stops = build_stop_routes(read_routes(bus_routes), types)
         with open(os.path.join(out_dir, "stop_routes.json"), "w", encoding="utf-8") as f:
             json.dump(stops, f, ensure_ascii=False, indent=0)
         n_stop_routes = len(stops)

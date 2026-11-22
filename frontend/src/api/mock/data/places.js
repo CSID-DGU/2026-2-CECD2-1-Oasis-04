@@ -97,8 +97,8 @@ export const BAND_CASES = Object.freeze({
     example: true,
     buses: MANY_BUSES.filter((g) => g.kind !== 'CIRCULAR'),
   },
-  // 아래 셋은 시안에 없다. 서버가 정류장의 앞·다음 정류장(prev·next)을 줄 때의 모양 (2026-11-20 추가)
-  // 앞·다음 정류장 + 버스 2종류: 첫 줄에 앞·다음, 아래 두 줄에 종류와 번호
+  // 아래 넷은 시안에 없다. 서버가 정류장의 앞·다음 정류장(prev·next)을 줄 때의 모양 (2026-11-20 추가, 2026-11-21 고침)
+  // 앞·다음 정류장 + 버스 2종류: 간선 줄, 지선 줄에 저마다 앞·다음 정류장 (묶음에 prev·next 가 없으면 정류장의 것을 쓴다)
   busway: {
     type: 'BUS_STOP',
     name: '종로3가.탑골공원 정류장',
@@ -110,8 +110,22 @@ export const BAND_CASES = Object.freeze({
       { kind: 'BRANCH', numbers: ['7212'] },
     ],
   },
-  // 앞·다음 정류장 + 버스 6종류: 버스 줄이 2줄뿐이라 간선 다음은 모두 "그 밖"
+  // 앞·다음 정류장 + 버스 6종류: 간선·지선은 한 줄씩, 나머지는 셋째 줄 "그 밖"
   buswaymany: { type: 'BUS_STOP', name: '종로3가.탑골공원 정류장', example: true, prev: '종로2가', next: '종로4가.종묘', buses: MANY_BUSES },
+  // 버스마다 다음 정류장이 다른 정류장: 묶음마다 prev·next 가 온다. 같은 지선이 세 줄.
+  // 다음 정류장이 중앙차로 정류장인 묶음(nextMedian)이 먼저, 그다음 버스가 많은 묶음
+  buswaysplit: {
+    type: 'BUS_STOP',
+    name: 'DMC파인시티자이 정류장',
+    example: true,
+    prev: '수색초등학교',
+    next: '디지털미디어시티역',
+    buses: [
+      { kind: 'BRANCH', numbers: ['7715', '7019'], prev: '수색초등학교', next: '수색역', nextMedian: false },
+      { kind: 'BRANCH', numbers: ['7212'], prev: '수색초등학교', next: '디지털미디어시티역', nextMedian: true },
+      { kind: 'BRANCH', numbers: ['7017'], prev: '수색초등학교', next: '수색역앞', nextMedian: true },
+    ],
+  },
   // 여기서 끝나는 정류장 + 앞 정류장 이름이 김 (줄임표로 자른다. 이름은 지어낸 것)
   buswayend: {
     type: 'BUS_STOP',

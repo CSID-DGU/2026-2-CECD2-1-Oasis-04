@@ -121,6 +121,22 @@
   text-overflow: ellipsis;
 }
 
+/* "수색역 등": 그 줄의 버스가 가리키는 정류장이 여럿일 때 (2026-11-21). 이름이 길어 줄임표로 잘려도 "등"은 남긴다 */
+.place-band-tag.has-more {
+  display: flex;
+}
+
+.place-band-tag-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.place-band-tag-more {
+  flex-shrink: 0;
+  margin-left: 0.25em;
+}
+
 /* 노선 번호 원: 흰 바탕 + 옅은 노선색 고리 + 검정 글씨 */
 .place-band-circle {
   flex-shrink: 0;

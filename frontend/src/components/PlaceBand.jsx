@@ -4,7 +4,8 @@
 //   위쪽 줄   로고·서비스 이름, 날짜·시각. 얇은 띠(ThinBand)와 같은 부품·같은 자리라서 다음 화면으로 넘어갈 때 움직이지 않는다
 //   이름 상자 화면 가운데 흰 상자. 이름은 한 줄, 112px 에서 72px 까지 8px 씩 줄인다 (useFitText)
 //   줄       최대 3줄. 지하철은 노선 표시·앞 역 / 다음 역, 버스는 종류 / 번호. 선은 화면 끝까지 (규칙은 view/placeBand.js)
-//            정류장에 앞·다음 정류장(place.prev·next)이 오면 첫 줄에 앞 정류장 / 다음 정류장을 그리고 버스 줄은 2줄까지
+//            정류장에 앞·다음 정류장이 오면 버스 줄도 지하철 줄처럼 종류 표지·앞 정류장 / 다음 정류장을 그린다.
+//            번호는 다음 정류장 표지 왼쪽에 전부 들어갈 때만 놓는다 (이름 상자가 먼저다)
 //   정보 없음 회색 선 세 줄과 "지금 계신 곳을 확인하고 있어요"
 //
 // props
@@ -64,11 +65,29 @@ function readColorTokens(el) {
 
 const shadesOf = (token, colors) => (token ? lineShades(colors.read(token), colors) : neutralShades(colors))
 
+const MORE = '등'
+const tagClass = (more, extra = '') => ['place-band-tag', extra, more ? 'has-more' : ''].filter(Boolean).join(' ')
+
+/** 앞·다음 정류장 이름. 그 줄의 버스가 가리키는 곳이 여럿이면 가장 많은 곳 + "등" (이름이 줄임표로 잘려도 "등"은 남는다) */
+function StopName({ text, more }) {
+  if (!more) return text
+  return (
+    <>
+      <span className="place-band-tag-text">{text}</span>
+      <span className="place-band-tag-more">{MORE}</span>
+    </>
+  )
+}
+
 function Mark({ mark, colors }) {
   const ring = colors && mark.token ? shadesOf(mark.token, colors).ring : undefined
   if (mark.type === 'circle') return <span className="place-band-circle" style={{ '--c': ring }}>{mark.text}</span>
   if (mark.type === 'linetag') return <span className="place-band-tag place-band-linetag" style={{ '--c': ring }}>{mark.text}</span>
-  return <span className="place-band-tag">{mark.text}</span>
+  return (
+    <span className={tagClass(mark.more)}>
+      <StopName text={mark.text} more={mark.more} />
+    </span>
+  )
 }
 
 function Choice({ choice }) {
@@ -109,6 +128,9 @@ export default function PlaceBand({ place }) {
       // 오른쪽 표지는 오른쪽 여백에 붙어 있다. 종점 표지는 나중에 자리를 옮기므로 너비로 계산한다 (시안은 옮기기 전에 잰다)
       rightTagsLeft: Math.min(BAND.WIDTH, ...all('[data-right]').map((t) => BAND.WIDTH - BAND.PAD - t.offsetWidth)),
       choiceWidths: (rows ?? []).map((row, i) => all(`.place-band-measure[data-row="${i}"] > .place-band-nums`).map((el) => el.offsetWidth)),
+      // 줄마다 오른쪽 표지(다음 정류장)의 너비. 버스 번호를 그 왼쪽에 놓을 때 쓴다
+      rightWidths: (rows ?? []).map((row, i) => band.querySelector(`[data-right][data-row="${i}"]`)?.offsetWidth ?? 0),
+      groupGap: parseFloat(getComputedStyle(band).getPropertyValue('--group-gap')) || 0,
     }
     setMeasured(next)
     return () => {
@@ -116,9 +138,13 @@ export default function PlaceBand({ place }) {
     }
   }, [rows, fontsReady])
 
-  const hasNumbers = Boolean(rows?.some((r) => r.choices))
+  // 오른쪽 끝에 번호만 놓는 버스 줄(시안 모양)이 있으면 개수 표지 자리를 남긴다.
+  // 다음 정류장 표지 옆에 놓는 번호는 자리가 남을 때만 보이므로 이름 상자가 자리를 남기지 않는다
+  const hasNumbers = Boolean(rows?.some((r) => r.choices && !r.right))
   const limits = measured ? nameLimits({ groupsRight: measured.groupsRight, rightTagsLeft: measured.rightTagsLeft, hasNumbers }) : null
   const maxPx = rows && limits ? nameMaxWidth(limits.full, measured) : null
+  /** 그 줄의 번호 오른쪽에 이미 놓인 것의 너비 (다음 정류장 표지 + 사이 간격). 표지가 없는 줄은 0 */
+  const takenAt = (i) => (rows[i].right && measured ? measured.rightWidths[i] + measured.groupGap : 0)
 
   // 3. 이름 글씨를 정한 뒤: 숨길 것, 버스 줄의 번호/개수
   const onFit = useCallback(
@@ -129,7 +155,9 @@ export default function PlaceBand({ place }) {
       const plateRight = BAND.WIDTH / 2 + plateWidth / 2
       const hiding = decideHiding({ plateWidth, limits, hasNumbers })
       const choices = rows.map((row, i) =>
-        row.choices && !hiding.numbersHidden ? chooseNumbers({ choiceWidths: measured.choiceWidths[i], plateRight }) : -1,
+        row.choices && !hiding.numbersHidden
+          ? chooseNumbers({ choiceWidths: measured.choiceWidths[i], plateRight, taken: row.right ? measured.rightWidths[i] + measured.groupGap : 0 })
+          : -1,
       )
       const next = { size, plateRight, ...hiding, choices }
       setFit((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
@@ -211,14 +239,19 @@ export default function PlaceBand({ place }) {
             {row.right && (
               <span
                 data-right=""
-                className={seg?.endTagLeft != null ? 'place-band-tag place-band-end' : 'place-band-tag place-band-right'}
+                data-row={i}
+                className={tagClass(row.rightMore, seg?.endTagLeft != null ? 'place-band-end' : 'place-band-right')}
                 style={{ ...top, ...(seg?.endTagLeft != null ? { left: seg.endTagLeft } : {}), ...hide(!marksShown) }}
               >
-                {row.right}
+                <StopName text={row.right} more={row.rightMore} />
               </span>
             )}
+            {/* 번호: 오른쪽 여백에서부터. 다음 정류장 표지가 있는 줄은 그 표지 바로 왼쪽에서부터 */}
             {row.choices && fit && fit.choices[i] >= 0 && (
-              <span className="place-band-nums" style={{ ...top, ...hide(fit.numbersHidden || !marksShown) }}>
+              <span
+                className="place-band-nums"
+                style={{ ...top, ...(row.right ? { right: BAND.PAD + takenAt(i) } : {}), ...hide(fit.numbersHidden || !marksShown) }}
+              >
                 <Choice choice={row.choices[fit.choices[i]]} />
               </span>
             )}

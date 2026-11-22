@@ -131,40 +131,187 @@ describe('bandRows: 버스 (규칙 F·G)', () => {
   })
 })
 
-describe('bandRows: 버스정류장의 앞·다음 정류장 (2026-11-20 추가)', () => {
-  it('prev·next 가 오면 첫 줄에 앞 정류장 / 다음 정류장, 아래에 버스 줄', () => {
+describe('bandRows: 버스정류장의 앞·다음 정류장 (2026-11-20 추가, 2026-11-21 고침)', () => {
+  /** 줄을 "종류 | 앞 → 다음 | 번호" 로 줄여 본다. 이름 뒤 "등"은 그대로 붙인다 */
+  const brief = (row) =>
+    `${row.left[0].text} | ${row.left[1].text}${row.left[1].more ? ' 등' : ''} → ${row.right}${row.rightMore ? ' 등' : ''} | ${row.choices?.[0].numbers.join(' ') ?? '-'}`
+  const stop = (buses, more = {}) => ({ type: 'BUS_STOP', name: 'x', buses, ...more })
+  const group = (kind, numbers, prev, next) => ({ kind, numbers, prev, next })
+
+  it('종류마다 한 줄: 왼쪽에 종류 표지와 앞 정류장, 오른쪽에 다음 정류장, 선은 그 종류의 색', () => {
     const rows = bandRows(BAND_CASES.busway)
-    expect(rows).toHaveLength(3)
-    expect(rows[0]).toEqual({ token: null, left: [{ type: 'tag', text: '종로2가' }], right: '종로4가.종묘', choices: null, endLeft: false, endRight: false })
-    expect(rows.slice(1).map((r) => r.left[0].text)).toEqual(['간선', '지선'])
-    expect(rows[1].choices[0]).toEqual({ numbers: ['101', '260', '270', '720'] })
+    expect(rows).toEqual([
+      {
+        token: '--bus-trunk',
+        left: [
+          { type: 'tag', text: '간선' },
+          { type: 'tag', text: '종로2가', more: false },
+        ],
+        right: '종로4가.종묘',
+        rightMore: false,
+        choices: [{ numbers: ['101', '260', '270', '720'] }],
+        endLeft: false,
+        endRight: false,
+      },
+      {
+        token: '--bus-branch',
+        left: [
+          { type: 'tag', text: '지선' },
+          { type: 'tag', text: '종로2가', more: false },
+        ],
+        right: '종로4가.종묘',
+        rightMore: false,
+        choices: [{ numbers: ['7212'] }],
+        endLeft: false,
+        endRight: false,
+      },
+    ])
   })
-  it('버스 줄은 2줄까지: 종류가 3개 이상이면 첫 종류만 한 줄, 나머지는 "그 밖"', () => {
+  it('순서는 간선 → 지선 → 광역. 받은 순서와 상관없다', () => {
+    const rows = bandRows({ ...BAND_CASES.busway, buses: [...PLACES.bus.buses].reverse() })
+    expect(rows.map((r) => r.left[0].text)).toEqual(['간선', '지선', '광역'])
+    expect(rows.map((r) => r.token)).toEqual(['--bus-trunk', '--bus-branch', '--bus-express'])
+  })
+  it('종류가 3개를 넘으면 앞의 두 종류만 한 줄씩, 나머지는 셋째 줄 "그 밖" (회색 선)', () => {
     const rows = bandRows(BAND_CASES.buswaymany)
-    expect(rows.map((r) => r.left[0].text)).toEqual(['종로2가', '간선', '그 밖'])
-    expect(rows[2].choices.slice(1)).toEqual([{ text: '지선·광역·순환·마을·심야 버스 40개' }, { text: '버스 40개' }])
-    const three = bandRows({ ...BAND_CASES.busway, buses: PLACES.bus.buses })
-    expect(three.map((r) => r.left[0].text)).toEqual(['종로2가', '간선', '그 밖'])
-    expect(three[2].choices[0]).toEqual({ numbers: ['7212', '9301'] })
+    expect(rows.map((r) => r.left[0].text)).toEqual(['간선', '지선', '그 밖'])
+    expect(rows[2].token).toBeNull()
+    expect(rows[2].choices[0].numbers).toHaveLength(32)
+    expect(rows[2]).toMatchObject({ left: [{ text: '그 밖' }, { text: '종로2가', more: false }], right: '종로4가.종묘', rightMore: false })
   })
-  it('여기서 출발하거나 끝나는 정류장은 없는 쪽에 "종점"', () => {
-    expect(bandRows(BAND_CASES.buswayend)[0]).toMatchObject({ right: '종점', endRight: true, endLeft: false })
-    const start = bandRows({ ...BAND_CASES.busway, prev: null })
-    expect(start[0]).toMatchObject({ left: [{ type: 'tag', text: '종점' }], right: '종로4가.종묘', endLeft: true, endRight: false })
+  it('버스마다 다음 정류장이 다르면 같은 종류가 여러 줄: 중앙차로 정류장으로 가는 묶음이 먼저, 그다음 버스가 많은 묶음', () => {
+    expect(bandRows(BAND_CASES.buswaysplit).map(brief)).toEqual([
+      '지선 | 수색초등학교 → 디지털미디어시티역 | 7212',
+      '지선 | 수색초등학교 → 수색역앞 | 7017',
+      '지선 | 수색초등학교 → 수색역 | 7715 7019',
+    ])
+    // 중앙차로 표시가 없으면 버스가 많은 묶음부터 (같으면 받은 순서)
+    const plain = BAND_CASES.buswaysplit.buses.map((g) => ({ kind: g.kind, numbers: g.numbers, prev: g.prev, next: g.next }))
+    expect(bandRows(stop(plain)).map((r) => r.right)).toEqual(['수색역', '디지털미디어시티역', '수색역앞'])
   })
-  it('prev·next 가 둘 다 없으면 예전 그대로 버스 줄만 (3줄까지)', () => {
+  const median = (kind, numbers, prev, next) => ({ ...group(kind, numbers, prev, next), nextMedian: true })
+  it('남는 줄은 중앙차로로 가는 갈리는 묶음이 먼저 받는다', () => {
+    const rows = bandRows(
+      stop([median('TRUNK', ['101'], '가', '나'), group('TRUNK', ['260', '270', '720'], '가', '다'), median('BRANCH', ['1'], '가', '나'), median('BRANCH', ['2'], '가', '라')]),
+    )
+    // 갈리는 묶음: 간선 3대(길가), 지선 1대(중앙차로). 남는 한 줄은 지선이 받고 간선 3대는 간선 줄에 합친다
+    expect(rows.map(brief)).toEqual(['간선 | 가 → 나 등 | 101 260 270 720', '지선 | 가 → 나 | 1', '지선 | 가 → 라 | 2'])
+  })
+  it('중앙차로로 가는 묶음은 버스가 적어도 그 종류의 줄이 된다', () => {
+    const rows = bandRows(
+      stop([
+        group('TRUNK', ['101', '260', '270'], '가', '나'),
+        median('TRUNK', ['720'], '가', '다'),
+        group('BRANCH', ['7016', '7018'], '가', '나'),
+        group('BRANCH', ['7212', '7025', '1020'], '가', '라'),
+        median('BRANCH', ['1711'], '가', '다'),
+      ]),
+    )
+    // 갈리는 묶음은 간선 3대, 지선 3대, 지선 2대. 중앙차로로 가는 것이 없으니 버스 수 순서로 한 줄만 남고 나머지는 지선 줄에 합친다
+    expect(rows.map(brief)).toEqual(['간선 | 가 → 다 | 720', '지선 | 가 → 다 등 | 1020 1711 7016 7018 7025 7212', '간선 | 가 → 나 | 101 260 270'])
+  })
+  it('합친 줄에 보이는 이름은 중앙차로로 가는 묶음의 것 + "등"', () => {
+    const rows = bandRows(
+      stop([
+        group('TRUNK', ['101', '260', '270'], '가', '나'),
+        median('TRUNK', ['720'], '라', '다'),
+        group('BRANCH', ['1'], '가', '나'),
+        group('EXPRESS', ['9301'], '가', '나'),
+      ]),
+    )
+    expect(brief(rows[0])).toBe('간선 | 라 등 → 다 등 | 101 260 270 720')
+  })
+  it('갈리는 버스는 종류 줄 뒤에 놓는다 (간선, 지선, 그다음에 갈리는 간선)', () => {
+    const rows = bandRows(stop([group('TRUNK', ['101', '260'], '가', '나'), group('TRUNK', ['720'], '가', '다'), group('BRANCH', ['7212'], '가', '나')]))
+    expect(rows.map(brief)).toEqual(['간선 | 가 → 나 | 101 260', '지선 | 가 → 나 | 7212', '간선 | 가 → 다 | 720'])
+    expect(rows[2].token).toBe('--bus-trunk')
+  })
+  it('줄이 모자라면 갈리는 묶음을 같은 종류 줄에 합치고 이름 뒤에 "등". 버스가 많은 묶음부터 자리를 준다', () => {
+    const rows = bandRows(
+      stop([
+        group('TRUNK', ['101', '260'], '가', '나'),
+        group('TRUNK', ['720'], '가', '다'),
+        group('BRANCH', ['7212'], '가', '나'),
+        group('BRANCH', ['7016', '7018'], '라', '나'),
+      ]),
+    )
+    // 지선은 버스가 많은 '라 → 나' 가 종류 줄이고, 갈리는 두 묶음 가운데 먼저 받은 간선 720 이 남은 한 줄을 쓴다
+    expect(rows.map(brief)).toEqual(['간선 | 가 → 나 | 101 260', '지선 | 라 등 → 나 | 7016 7018 7212', '간선 | 가 → 다 | 720'])
+  })
+  it('종류가 3개면 갈리는 묶음은 모두 그 종류 줄에 합친다', () => {
+    const rows = bandRows(
+      stop([
+        group('TRUNK', ['101', '260'], '가', '나'),
+        group('TRUNK', ['720'], '가', '다'),
+        group('BRANCH', ['7212'], '가', '나'),
+        group('EXPRESS', ['9301'], '가', '나'),
+        group('EXPRESS', ['9401'], null, '나'),
+      ]),
+    )
+    expect(rows.map(brief)).toEqual(['간선 | 가 → 나 등 | 101 260 720', '지선 | 가 → 나 | 7212', '광역 | 가 등 → 나 | 9301 9401'])
+  })
+  it('"그 밖" 줄은 버스가 가장 많이 가리키는 곳 + "등"', () => {
+    const rows = bandRows(
+      stop([
+        group('TRUNK', ['101'], '가', '나'),
+        group('BRANCH', ['7212'], '가', '나'),
+        group('EXPRESS', ['9301'], '가', '다'),
+        group('NIGHT', ['N26', 'N15'], '가', '라'),
+      ]),
+    )
+    expect(rows.map(brief)).toEqual(['간선 | 가 → 나 | 101', '지선 | 가 → 나 | 7212', '그 밖 | 가 → 라 등 | 9301 N26 N15'])
+  })
+  it('묶음에 prev·next 가 없으면 정류장의 것을 쓰고, 있으면 묶음의 것이 먼저다 (null 은 종점)', () => {
+    const rows = bandRows(stop([{ kind: 'TRUNK', numbers: ['101'] }, group('BRANCH', ['7212'], null, '다')], { prev: '가', next: '나' }))
+    expect(rows.map(brief)).toEqual(['간선 | 가 → 나 | 101', '지선 | 종점 → 다 | 7212'])
+    expect(rows[1]).toMatchObject({ endLeft: true, endRight: false })
+  })
+  it('여기서 끝나는 줄은 오른쪽에 "종점", 번호는 두지 않는다. 일부만 끝나면 다른 곳 이름 + "등"', () => {
+    const [end] = bandRows(BAND_CASES.buswayend)
+    expect(end).toMatchObject({ right: '종점', rightMore: false, endRight: true, endLeft: false, choices: null })
+    expect(end.left).toEqual([
+      { type: 'tag', text: '지선' },
+      { type: 'tag', text: '서울특별시립동대문역사문화공원.국립중앙의료원앞', more: false },
+    ])
+    const mixed = bandRows(stop([group('TRUNK', ['101', '260'], '가', null), group('TRUNK', ['720'], '가', '나'), group('BRANCH', ['1'], '가', '나')]))
+    expect(mixed.map(brief)).toEqual(['간선 | 가 → 종점 | -', '지선 | 가 → 나 | 1', '간선 | 가 → 나 | 720'])
+    const folded = bandRows(
+      stop([group('TRUNK', ['101', '260'], '가', null), group('TRUNK', ['720'], '가', '나'), group('BRANCH', ['1'], '가', '나'), group('EXPRESS', ['9301'], '가', '나')]),
+    )
+    expect(brief(folded[0])).toBe('간선 | 가 → 나 등 | 101 260 720')
+    expect(folded[0].endRight).toBe(false)
+  })
+  it('같은 정류장을 두 번 지나는 버스가 한 줄에 합쳐지면 번호는 한 번만', () => {
+    const rows = bandRows(
+      stop([group('TRUNK', ['101'], '가', '나'), group('TRUNK', ['101'], '다', '가'), group('BRANCH', ['1'], '가', '나'), group('EXPRESS', ['9301'], '가', '나')]),
+    )
+    expect(rows[0].choices).toEqual([{ numbers: ['101'] }])
+  })
+  it('한 종류의 묶음 여럿을 합친 줄은 번호를 다시 작은 수부터 (글자로 시작하는 번호는 뒤). 묶음 하나는 받은 순서 그대로', () => {
+    const rows = bandRows(
+      stop([
+        group('TRUNK', ['260', '720', 'N15'], '가', '나'),
+        group('TRUNK', ['101', '9401-1'], '가', '다'),
+        group('BRANCH', ['7212', '1020'], '가', '나'),
+        group('EXPRESS', ['9301'], '가', '나'),
+      ]),
+    )
+    expect(rows[0].choices).toEqual([{ numbers: ['101', '260', '720', '9401-1', 'N15'] }])
+    expect(rows[1].choices).toEqual([{ numbers: ['7212', '1020'] }])
+  })
+  it('prev·next 가 어디에도 없으면 시안 그대로 (왼쪽 종류, 오른쪽 번호. 3줄까지)', () => {
     expect(bandRows({ ...PLACES.bus, prev: null, next: null })).toEqual(bandRows(PLACES.bus))
     expect(bandRows({ ...PLACES.bus, prev: '', next: undefined })).toHaveLength(3)
+    expect(bandRows(PLACES.bus)[0]).toMatchObject({ left: [{ type: 'tag', text: '간선' }], right: null })
   })
   it('버스가 없으면 앞·다음 정류장이 있어도 정보 없음', () => {
     expect(bandRows({ type: 'BUS_STOP', name: 'x', prev: 'a', next: 'b', buses: [] })).toBeNull()
   })
-  it('앞·다음 정류장 줄의 선: 종점 쪽은 이름 상자 근처에서 끝난다', () => {
+  it('종점 줄의 선은 이름 상자 근처에서 끝난다', () => {
     const rows = bandRows(BAND_CASES.buswayend)
-    const segs = lineSegments({ rows, ys: [164.5, 255.5], plateRight: 1300, marksShown: true })
-    expect(segs[0]).toMatchObject({ from: 0, to: 1300 + BAND.END_GAP, cap: 'round' })
-    expect(segs[0].endTagLeft).toBe(1300 + BAND.END_GAP + BAND.END_TAG_GAP)
-    expect(segs[1]).toMatchObject({ from: 0, to: BAND.WIDTH, cap: 'butt', endTagLeft: null })
+    const [seg] = lineSegments({ rows, ys: [210], plateRight: 1300, marksShown: true })
+    expect(seg).toMatchObject({ from: 0, to: 1300 + BAND.END_GAP, cap: 'round' })
+    expect(seg.endTagLeft).toBe(1300 + BAND.END_GAP + BAND.END_TAG_GAP)
   })
 })
 
@@ -219,6 +366,11 @@ describe('이름 상자 너비 (7절 규칙 3·4)', () => {
     expect(chooseNumbers({ choiceWidths: [500, 250], plateRight: 1300 })).toBe(0)
     expect(chooseNumbers({ choiceWidths: [700, 250], plateRight: 1300 })).toBe(1)
     expect(chooseNumbers({ choiceWidths: [700, 600], plateRight: 1300 })).toBe(-1)
+  })
+  it('다음 정류장 표지 옆에 놓는 번호: 표지와 간격만큼 자리가 준다', () => {
+    // 남은 자리 = 532 - 220 = 312
+    expect(chooseNumbers({ choiceWidths: [300], plateRight: 1300, taken: 220 })).toBe(0)
+    expect(chooseNumbers({ choiceWidths: [320], plateRight: 1300, taken: 220 })).toBe(-1)
   })
 })
 

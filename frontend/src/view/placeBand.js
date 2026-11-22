@@ -1,7 +1,9 @@
 // 첫 화면 큰 띠(역명판)의 규칙 (디자인 문서 7절, 8-3·8-4절). 시안 design/mockups/confirmed/idle-band.js 를 화면 밖 순수 함수로 옮겼다.
 // 측정(글자 너비)은 하지 않는다. 그리는 쪽(components/PlaceBand.jsx)이 잰 너비를 넘기면 여기서 정한다.
 //
-//   bandRows(place)        장소 정보 → 최대 3줄 (규칙 A·B·C·E·F·G). 정류장에 앞·다음 정류장이 오면 첫 줄에 그린다
+//   bandRows(place)        장소 정보 → 최대 3줄 (규칙 A·B·C·E·F·G). 정류장에 앞·다음 정류장이 오면 버스 줄도 지하철 줄처럼
+//                          종류마다 왼쪽에 앞 정류장, 오른쪽에 다음 정류장을 그린다 (간선 → 지선 → 광역 순서, 갈리는 버스는 뒤쪽 줄.
+//                          한 종류 안에서는 다음 정류장이 중앙차로인 버스가 먼저)
 //   lineShades(hex, t)     노선색 → 선·고리·테두리 색 (규칙 D·I, 8-4절 진하기)
 //   rowYs(count, mid)      줄의 세로 자리 (규칙 A)
 //   nameLimits(...)        이름 상자가 넓어질 수 있는 반너비 세 가지 (7절 규칙 3·4)
@@ -57,10 +59,12 @@ function lineMark(line) {
 /*
  * 줄 하나의 모양
  *   token     선 색 토큰 이름. null 이면 회색 선 (셋째 줄 모음, 토큰 없는 종류)
- *   left      왼쪽 묶음: [{ type: 'circle' | 'linetag' | 'tag', text, token? }]  (token 은 원·막대의 고리 색)
+ *   left      왼쪽 묶음: [{ type: 'circle' | 'linetag' | 'tag', text, token?, more? }]  (token 은 원·막대의 고리 색)
  *   right     오른쪽 표지 글자 (다음 역, "종점") 또는 null
  *   choices   버스 줄 오른쪽 후보 (앞에서부터 들어가는 것을 쓴다): [{ numbers: [...] } | { text }] 또는 null
+ *             right 가 함께 있으면(앞·다음 정류장이 있는 버스 줄) 번호는 다음 정류장 표지 바로 왼쪽에 놓는다
  *   endLeft / endRight  그쪽이 종점인가
+ *   more (왼쪽 표지), rightMore  그 줄의 버스 가운데 다른 곳에서 오거나 다른 곳으로 가는 것도 있다 → 이름 뒤에 "등"
  */
 function subwayRows(place) {
   const numbered = place.lines.filter(isNumbered).sort((a, b) => Number(a.label) - Number(b.label))
@@ -88,22 +92,99 @@ function subwayRows(place) {
   return rows
 }
 
-/**
- * 버스정류장의 앞·다음 정류장 줄 (2026-11-20 추가). 장소 정보에 prev·next 가 올 때만 첫 줄로 그린다.
- * 지하철 줄과 같은 모양(왼쪽 앞 정류장, 오른쪽 다음 정류장, 없는 쪽은 "종점")이고 선은 회색이다.
- * 길 한쪽 정류장은 한 방향 버스만 서므로 정류장 하나에 한 줄이면 된다. 둘 다 없으면 줄을 만들지 않는다
+const kindRank = (kind) => (BUS_ORDER.includes(kind) ? BUS_ORDER.indexOf(kind) : BUS_ORDER.length)
+const byKind = (a, b) => kindRank(a.kind) - kindRank(b.kind) // 같은 순위는 받은 순서 그대로
+/** 묶음의 우선 순서: 다음 정류장이 중앙차로 정류장인 묶음이 먼저, 그다음 버스가 많은 묶음 (같으면 받은 순서 그대로) */
+const byPriority = (a, b) => Number(b.median) - Number(a.median) || b.numbers.length - a.numbers.length
+
+/*
+ * 앞·다음 정류장이 있는 버스정류장의 줄 (2026-11-21. 시안 없음). 지하철 줄과 같은 모양이다:
+ * 왼쪽에 종류 표지와 앞 정류장, 오른쪽에 다음 정류장, 선은 그 종류의 색. 없는 쪽은 "종점".
+ *
+ * 묶음 = 종류와 앞·다음 정류장이 같은 버스들 ({ kind, numbers, prev, next, nextMedian }). 같은 정류장이어도 버스마다 앞·다음이 다른 곳이 많다.
+ * 묶음에 prev·next 가 없으면 정류장의 prev·next 를 쓴다 (묶음별 값을 주지 않는 장소 정보).
+ * nextMedian 은 다음 정류장이 중앙차로 정류장인가 (없으면 아닌 것으로 본다)
  */
-function stopWayRow(place) {
-  const [prev, next] = [one(place.prev), one(place.next)]
-  if (!prev && !next) return null
-  return { token: null, left: [{ type: 'tag', text: prev ?? END }], right: next ?? END, choices: null, endLeft: !prev, endRight: !next }
+function wayGroups(place) {
+  return place.buses.map((g) => ({
+    kind: g.kind,
+    numbers: g.numbers,
+    prev: one('prev' in g ? g.prev : place.prev),
+    next: one('next' in g ? g.next : place.next),
+    median: Boolean(g.nextMedian),
+  }))
+}
+
+/**
+ * 그쪽(prev 또는 next)에 보일 이름: 우선 순서가 가장 앞선 묶음의 것 (ranked 는 byPriority 순서).
+ * 그 묶음이 종점이면 이름이 있는 다음 묶음의 것. 묶음마다 다르면 more (이름 뒤에 "등"). 모두 종점이면 name 이 null
+ */
+function wayName(ranked, key) {
+  const named = ranked.find((g) => g[key])
+  return { name: named ? named[key] : null, more: new Set(ranked.map((g) => g[key])).size > 1 }
+}
+
+/**
+ * 묶음들 → 줄에 올릴 묶음 뭉치 (한 줄에 하나, 최대 3줄).
+ *   1. 종류마다 우선 순서(중앙차로로 가는 묶음 → 버스가 많은 묶음)가 가장 앞선 묶음이 그 종류의 줄이다.
+ *      줄 순서는 간선 → 지선 → 광역 → 순환 → 그 밖
+ *   2. 그 줄과 앞·다음 정류장이 다른 묶음(갈리는 버스)은 종류 줄 뒤에 따로 한 줄씩. 우선 순서대로 자리를 준다
+ *   3. 줄이 모자라면 갈리는 묶음을 같은 종류의 줄에 합친다 (그 줄의 정류장 이름 뒤에 "등")
+ *   4. 종류만으로 3줄을 넘으면 앞의 두 종류만 한 줄씩, 나머지는 셋째 줄 "그 밖"에 모은다 (규칙 F 와 같다)
+ */
+function wayBundles(groups) {
+  const kinds = [...new Set(groups.map((g) => g.kind))].sort((a, b) => kindRank(a) - kindRank(b))
+  const perKind = kinds.map((kind) => groups.filter((g) => g.kind === kind).sort(byPriority))
+  if (perKind.length > BAND.MAX_ROWS) return [...perKind.slice(0, BAND.MAX_ROWS - 1), perKind.slice(BAND.MAX_ROWS - 1).flat()]
+  const mains = perKind.map((list) => [list[0]])
+  const split = perKind.flatMap((list) => list.slice(1)).sort(byPriority)
+  const room = BAND.MAX_ROWS - mains.length
+  for (const g of split.slice(room)) mains[kinds.indexOf(g.kind)].push(g)
+  return [...mains, ...split.slice(0, room).sort(byKind).map((g) => [g])]
+}
+
+/** 번호를 읽는 순서로: 숫자로 시작하는 것을 작은 수부터, 그다음 글자로 시작하는 것 ('101' < '9401' < '9401-1' < 'N13') */
+function byNumber(a, b) {
+  const [x, y] = [parseInt(a, 10), parseInt(b, 10)]
+  if (Number.isNaN(x) !== Number.isNaN(y)) return Number.isNaN(x) ? 1 : -1
+  return (Number.isNaN(x) ? 0 : x - y) || a.localeCompare(b, 'ko')
+}
+
+/** 한 줄에 올린 묶음들의 번호: 종류 순서대로. 한 종류의 묶음 여럿을 합쳤으면 그 종류 안에서 다시 번호 순으로 (같은 번호는 한 번만) */
+function wayNumbers(bundle, kinds) {
+  return kinds.flatMap((kind) => {
+    const groups = bundle.filter((g) => g.kind === kind)
+    const numbers = [...new Set(groups.flatMap((g) => g.numbers))]
+    return groups.length > 1 ? numbers.sort(byNumber) : numbers
+  })
+}
+
+function wayRow(bundle) {
+  const kinds = [...new Set(bundle.map((g) => g.kind))]
+  const oneKind = kinds.length === 1
+  const ranked = [...bundle].sort(byPriority)
+  const [prev, next] = [wayName(ranked, 'prev'), wayName(ranked, 'next')]
+  return {
+    token: oneKind ? (BUS_KINDS[kinds[0]]?.token ?? null) : null,
+    left: [
+      { type: 'tag', text: oneKind ? kindName(kinds[0]) : OTHER },
+      { type: 'tag', text: prev.name ?? END, more: prev.more },
+    ],
+    right: next.name ?? END,
+    rightMore: next.more,
+    // 번호는 다음 정류장 표지 왼쪽에 전부 들어갈 때만 보인다 (규칙 G: 일부만 보이지 않는다). 종점 줄에는 두지 않는다
+    choices: next.name ? [{ numbers: wayNumbers(bundle, kinds) }] : null,
+    endLeft: !prev.name,
+    endRight: !next.name,
+  }
 }
 
 function busRows(place) {
-  const rank = (kind) => (BUS_ORDER.includes(kind) ? BUS_ORDER.indexOf(kind) : BUS_ORDER.length)
-  const groups = [...place.buses].sort((a, b) => rank(a.kind) - rank(b.kind)) // 같은 순위는 받은 순서 그대로
-  const way = stopWayRow(place)
-  const room = BAND.MAX_ROWS - (way ? 1 : 0) // 앞·다음 정류장 줄이 있으면 버스 줄은 2줄까지
+  const ways = wayGroups(place)
+  if (ways.some((g) => g.prev || g.next)) return wayBundles(ways).map(wayRow)
+  // 앞·다음 정류장이 없으면 시안 그대로: 종류마다 한 줄 (왼쪽 종류, 오른쪽 번호)
+  const groups = [...place.buses].sort(byKind)
+  const room = BAND.MAX_ROWS
   const main = groups.length > room ? groups.slice(0, room - 1) : groups
   const rest = groups.slice(main.length)
   const rows = main.map((group) => ({
@@ -127,7 +208,7 @@ function busRows(place) {
       endRight: false,
     })
   }
-  return way ? [way, ...rows] : rows
+  return rows
 }
 
 /** 장소 정보(8-5절) → 줄 목록. 그릴 수 없으면(정보 없음) null */
@@ -225,9 +306,10 @@ export function decideHiding({ plateWidth, limits, hasNumbers }) {
 /**
  * 버스 줄 오른쪽: 후보 너비(choiceWidths, choices 순서) 중 남은 자리에 들어가는 첫 번째 (규칙 G).
  * 남은 자리 = 오른쪽 여백까지 - 이름 상자 오른쪽 끝 - 여유. 하나도 안 들어가면 -1 (숨김)
+ * taken 은 오른쪽 여백 쪽에 이미 놓인 것의 너비다 (다음 정류장 표지 + 사이 간격). 번호는 그 왼쪽에 놓인다
  */
-export function chooseNumbers({ choiceWidths, plateRight }) {
-  const available = BAND.WIDTH - BAND.PAD - plateRight - BAND.MARGIN
+export function chooseNumbers({ choiceWidths, plateRight, taken = 0 }) {
+  const available = BAND.WIDTH - BAND.PAD - taken - plateRight - BAND.MARGIN
   return choiceWidths.findIndex((w) => w <= available)
 }
 

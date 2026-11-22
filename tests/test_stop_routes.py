@@ -10,7 +10,7 @@ import sys
 import pytest
 from origin import fixed_place, pinned, place_of
 from search import TransitKB
-from stop_routes import build, bus_kind, bus_number, index_by_ars, read_routes, stop_at
+from stop_routes import build, bus_kind, bus_number, index_by_ars, is_median, read_routes, read_stop_types, stop_at
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -55,15 +55,88 @@ def test_bus_kind_follows_the_number_shape(number, kind):
     assert bus_kind(number) == kind
 
 
-def test_buses_are_grouped_by_kind_in_reading_order():
+def group(kind, numbers, prev, nxt, median=False):
+    """버스 묶음 하나. median 은 다음 정류장이 중앙차로 정류장인가 (nextMedian)"""
+    return {"kind": kind, "numbers": numbers, "prev": prev, "next": nxt, "nextMedian": median}
+
+
+# 탑골공원에 서는 버스 묶음: 종류와 앞·다음 정류장이 같은 버스끼리. 110A 는 여기서 끝나고 종로01 은 여기서 출발한다
+TAPGOL_BUSES = [
+    group("TRUNK", ["101", "260"], "종로2가", "종로4가.종묘"),
+    group("TRUNK", ["110A"], "종로2가", None),
+    group("BRANCH", ["7212"], "낙원상가", "창덕궁"),
+    group("VILLAGE", ["종로01"], None, "창덕궁"),
+    group("NIGHT", ["N26"], "종로2가", "종로4가.종묘"),
+]
+
+
+def test_buses_are_grouped_by_kind_and_neighbours():
     table = build(ROWS)
-    assert table[TAPGOL[0]]["buses"] == [
-        {"kind": "TRUNK", "numbers": ["101", "110A", "260"]},
-        {"kind": "BRANCH", "numbers": ["7212"]},
-        {"kind": "VILLAGE", "numbers": ["종로01"]},
-        {"kind": "NIGHT", "numbers": ["N26"]},
-    ]
+    assert table[TAPGOL[0]]["buses"] == TAPGOL_BUSES
     assert table[TAPGOL[0]]["ars"] == "01010" and table[TAPGOL[0]]["name"] == "종로3가.탑골공원"
+
+
+def test_groups_of_one_kind_come_bigger_first_then_by_name():
+    here = ("5", "00005", "여기", 37.0, 127.0)
+    a, b, c, d = (("1", "00001", "가", 37.0, 127.01), ("2", "00002", "나", 37.0, 127.02),
+                  ("3", "00003", "다", 37.0, 127.03), ("4", "00004", "라", 37.0, 127.04))
+    # 다음 정류장: 7001 은 '라', 7002·7003 은 '다', 7004 는 '나' (앞은 모두 '가')
+    rows = (route("1", "7001", a, here, d) + route("2", "7002", a, here, c) + route("3", "7003", a, here, c) + route("4", "7004", a, here, b))
+    expected = [group("BRANCH", ["7002", "7003"], "가", "다"), group("BRANCH", ["7004"], "가", "나"), group("BRANCH", ["7001"], "가", "라")]
+    assert build(rows)["5"]["buses"] == expected and build(list(reversed(rows)))["5"]["buses"] == expected
+
+
+def test_groups_going_to_a_median_lane_stop_come_first():
+    here = ("5", "00005", "여기", 37.0, 127.0)
+    a, c, d = ("1", "00001", "가", 37.0, 127.01), ("3", "00003", "다", 37.0, 127.03), ("4", "00004", "라", 37.0, 127.04)
+    ggb = ("GGB7", "00007", "마(중)", 37.0, 127.05)                      # 정류소타입 표에 없는 정류장은 이름 끝의 '(중)' 으로 가린다
+    rows = (route("1", "7001", a, here, d) + route("2", "7002", a, here, c) + route("3", "7003", a, here, c)
+            + route("4", "7004", a, here, ggb) + route("5", "101", a, here, c))
+    types = {"3": "일반차로", "4": "중앙차로", "5": "일반차로"}
+    # 지선: 버스는 '다' 로 가는 묶음이 더 많지만 중앙차로 정류장 '라'·'마(중)' 로 가는 묶음이 먼저다
+    assert build(rows, types)["5"]["buses"] == [
+        group("TRUNK", ["101"], "가", "다"),
+        group("BRANCH", ["7001"], "가", "라", median=True),
+        group("BRANCH", ["7004"], "가", "마(중)", median=True),
+        group("BRANCH", ["7002", "7003"], "가", "다"),
+    ]
+    # 표를 주지 않으면 이름으로만 가린다
+    assert [b["next"] for b in build(rows)["5"]["buses"] if b["nextMedian"]] == ["마(중)"]
+
+
+def test_same_named_median_and_kerb_stops_count_by_majority():
+    here = ("5", "00005", "여기", 37.0, 127.0)
+    a = ("1", "00001", "가", 37.0, 127.01)
+    mid, kerb = ("31", "00031", "다", 37.0, 127.03), ("32", "00032", "다", 37.0, 127.0301)      # 이름이 같은 중앙차로·길가 정류장
+    types = {"31": "중앙차로", "32": "일반차로"}
+    two_of_three = route("1", "101", a, here, mid) + route("2", "102", a, here, mid) + route("3", "103", a, here, kerb)
+    assert build(two_of_three, types)["5"]["buses"] == [group("TRUNK", ["101", "102", "103"], "가", "다", median=True)]
+    one_of_three = route("1", "101", a, here, mid) + route("2", "102", a, here, kerb) + route("3", "103", a, here, kerb)
+    assert build(one_of_three, types)["5"]["buses"] == [group("TRUNK", ["101", "102", "103"], "가", "다")]
+
+
+def test_read_stop_types_reads_the_type_column():
+    types = read_stop_types(os.path.join(ROOT, "tests", "fixtures", "seoul_bus_stops_sample.csv"))
+    assert types["105000301"] == "중앙차로" and types["105000101"] == "일반차로" and len(types) == 5
+    assert is_median("105000301", "청량리역환승센터", types) and not is_median("105000101", "경동시장앞(중)", types)   # 표에 있으면 표가 먼저
+    assert is_median("없는곳", "잠실역.잠실대교남단(중)", types) and not is_median("없는곳", "잠실역", None)
+    with pytest.raises(KeyError):
+        read_stop_types(os.path.join(ROOT, "tests", "fixtures", "bus_stops_sample.csv"))                             # 정류소타입 열이 없는 파일
+
+
+def test_a_stop_listed_twice_in_a_row_counts_once():
+    turn = ("9", "00009", "회차지", 37.0, 127.0)
+    a, b = ("1", "00001", "가", 37.0, 127.01), ("2", "00002", "나", 37.0, 127.02)
+    table = build(route("1", "101", a, turn, turn, b))                   # 돌아 나오는 곳이 도착·출발로 두 번 적힌 노선
+    assert table["9"]["buses"] == [group("TRUNK", ["101"], "가", "나")]
+    assert (table["9"]["prev"], table["9"]["next"]) == ("가", "나")
+
+
+def test_a_bus_passing_twice_is_in_both_groups():
+    loop = ("9", "00009", "돌아오는곳", 37.0, 127.0)
+    a, b, c = ("1", "00001", "가", 37.0, 127.01), ("2", "00002", "나", 37.0, 127.02), ("3", "00003", "다", 37.0, 127.03)
+    table = build(route("1", "101", a, loop, b, c, loop, a))
+    assert table["9"]["buses"] == [group("TRUNK", ["101"], "가", "나"), group("TRUNK", ["101"], "다", "가")]
 
 
 def test_prev_and_next_are_where_most_buses_come_from_and_go_to():
@@ -126,9 +199,7 @@ def test_place_of_bus_stop_carries_buses_and_neighbours(kb_dir):
     kb.stop_routes = build(ROWS)
     kb.stops_by_ars = index_by_ars(kb.stop_routes)
     stop = kb.find_places("01010")[0]
-    expected = {"type": "BUS_STOP", "name": "종로3가.탑골공원(중) 정류장", "prev": "종로2가", "next": "종로4가.종묘",
-                "buses": [{"kind": "TRUNK", "numbers": ["101", "110A", "260"]}, {"kind": "BRANCH", "numbers": ["7212"]},
-                          {"kind": "VILLAGE", "numbers": ["종로01"]}, {"kind": "NIGHT", "numbers": ["N26"]}]}
+    expected = {"type": "BUS_STOP", "name": "종로3가.탑골공원(중) 정류장", "prev": "종로2가", "next": "종로4가.종묘", "buses": TAPGOL_BUSES}
     assert place_of(kb, stop) == expected
     # 설정에서 고른 곳, 고정 위치로 찾은 곳도 같다 (nearest 에는 정류장 번호가 없어서 지식베이스에서 읽는다)
     assert place_of(kb, pinned(kb, stop["poi_id"])["nearest"]) == expected
@@ -157,4 +228,4 @@ def test_build_kb_writes_the_route_table(tmp_path):
     assert meta["stop_routes"] == 5 and meta["sources"]["bus_routes"] == routes
     kb = TransitKB(str(out), use_embedding=False)
     place = place_of(kb, kb.find_places("01010")[0])
-    assert (place["prev"], place["next"]) == ("종로2가", "종로4가.종묘") and place["buses"][0] == {"kind": "TRUNK", "numbers": ["101", "110A", "260"]}
+    assert (place["prev"], place["next"]) == ("종로2가", "종로4가.종묘") and place["buses"] == TAPGOL_BUSES
