@@ -1,7 +1,8 @@
 // real 경로 응답의 예시 두 가지 (개발자 패널 '경로 묶음' 의 real-v1, real-transit). 서버 없이 화면을 보려고 둔다 (9단계).
 // 서버 모양은 계획서 4-5절. 값은 view/__tests__/routeView.test.js 의 'real 응답' 예시와 같은 길(종로3가 → 선릉 → 역삼세무서)이다.
 // 바꾸는 것은 실제 코드(api/real/route.js 의 routesFromV1, api/real/routeLegs.js)를 그대로 쓴다.
-// 서버가 주지 않는 값(노선 ID, 출구, ② 의 버스 종류)은 8단계 대체 동작대로 비어 있다: 노선 원·버스 테두리 회색, 출구 없음.
+// 서버가 주지 않는 값은 대체 동작대로다 (api/real/routeLegs.js): 노선 ID 는 노선 이름으로 정해 원에 노선색이 들어가고(2026-11-22),
+// ② 의 버스 종류는 안내 문구(guidance)가 비어 있는 이 예시에서는 알 수 없어 테두리가 회색이다. 출구는 없다.
 
 import { routesFromV1 } from '../../real/route.js'
 import { legsFromSteps, startFromSteps } from '../../real/routeLegs.js'

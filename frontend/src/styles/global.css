@@ -144,6 +144,10 @@
   --bus-branch: #53b332;
   --bus-express: #e60012;
   --bus-circular: #f2b70a;
+  /* 경기버스: 일반형 초록, 좌석형 파랑, 직행좌석형 빨강 (2026-11-22 방선우. 경로 안내에만 쓴다. 값은 임시이고 공식 자료로 확인하지 않았다) */
+  --bus-gg-general: #33cc99;
+  --bus-gg-seat: #0068b7;
+  --bus-gg-direct: #e60012;
   --line-none: #dcdcdc;
 
   /* 띠의 선·고리 진하기: 노선색이 남는 비율 (문서 8-4절). 주 버튼과 비슷한 파랑은 -soft */

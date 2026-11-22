@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest'
 import { toRouteGuide, toRouteView, timelineOf, stopsSentence, arriveAt, clockText, NO_COLOR } from '../routeView.js'
 import { ROUTE_CASES, ROUTE_SUBWAY, ROUTE_BUS, ROUTE_LONG, ROUTE_A } from '../../api/mock/data/routeCases.js'
 import { ROUTES as MOCK_ROUTES } from '../../api/mock/data/routes.js'
-import { legsFromSteps, startFromSteps, destinationPlace } from '../../api/real/routeLegs.js'
+import { legsFromSteps, startFromSteps, destinationPlace, subwayLineId } from '../../api/real/routeLegs.js'
 
 /** 타임라인을 읽기 쉬운 글자 줄로: 점은 "[라벨] 이름", 걷기는 "~ 글", 타기는 "= 표지 문장", 접기는 "… N" */
 const lines = (items) =>
@@ -168,8 +168,17 @@ describe('작은 규칙', () => {
     expect(stopsSentence('BUS', null)).toBeNull()
   })
   it('모르는 버스 종류·노선 ID 는 회색 (사라지지 않는다)', () => {
-    const r = toRouteView({ id: 'x', durationMin: 5, legs: [{ mode: 'BUS', kind: 'VILLAGE', number: '종로09', stops: 2, to: { name: 'a', kind: 'STOP' } }, { mode: 'SUBWAY', lineId: null, label: '3', stops: 1, to: { name: 'b역', kind: 'STATION' } }] })
-    expect(marks(r)).toEqual([`bus:종로09:${NO_COLOR}`, `circle:3:${NO_COLOR}`])
+    const r = toRouteView({ id: 'x', durationMin: 5, legs: [{ mode: 'BUS', kind: 'AIRPORT', number: '6002', stops: 2, to: { name: 'a', kind: 'STOP' } }, { mode: 'SUBWAY', lineId: null, label: '3', stops: 1, to: { name: 'b역', kind: 'STATION' } }] })
+    expect(marks(r)).toEqual([`bus:6002:${NO_COLOR}`, `circle:3:${NO_COLOR}`])
+  })
+  it('마을버스는 지선과 같은 초록 (2026-11-22)', () => {
+    const r = toRouteView({ id: 'x', durationMin: 5, legs: [{ mode: 'BUS', kind: 'VILLAGE', number: '종로09', stops: 2, to: { name: 'a', kind: 'STOP' } }] })
+    expect(marks(r)).toEqual(['bus:종로09:--bus-branch'])
+  })
+  it('경기버스는 경기버스 색: 일반 초록, 좌석 파랑, 직행 빨강 (2026-11-22)', () => {
+    const leg = (kind, number) => ({ mode: 'BUS', kind, number, stops: 2, to: { name: 'a', kind: 'STOP' } })
+    const r = toRouteView({ id: 'x', durationMin: 5, legs: [leg('GG_GENERAL', '11'), leg('GG_SEAT', '300'), leg('GG_DIRECT', '5000')] })
+    expect(marks(r)).toEqual(['bus:11:--bus-gg-general', 'bus:300:--bus-gg-seat', 'bus:5000:--bus-gg-direct'])
   })
   it('start 가 없으면 지금 계신 곳(here)', () => {
     const r = toRouteView({ id: 'x', legs: [{ mode: 'WALK', minutes: 2, to: { name: '종로3가역', kind: 'STATION' } }, ROUTE_A.legs[0]] }, { here: { name: '종로3가역 키오스크', kind: 'PLACE' } })
@@ -212,14 +221,14 @@ const REAL_TRANSIT_STEPS = [
 ]
 
 describe('real 응답 → 같은 모양', () => {
-  it('① /api/v1/route: 버스 종류·정거장 수·내리는 곳·걷는 시간, 노선 ID·출구는 비움', () => {
+  it('① /api/v1/route: 버스 종류·정거장 수·내리는 곳·걷는 시간, 노선 ID 는 노선 이름으로, 출구는 비움', () => {
     const destination = destinationPlace({ poi_id: 'POI_123', name: '강남세브란스병원' })
     const legs = legsFromSteps(REAL_V1_STEPS, { destination })
     expect(legs).toEqual([
       { mode: 'WALK', minutes: 1, to: { name: '종로3가역', kind: 'STATION' } },
-      { mode: 'SUBWAY', lineId: null, label: '3', stops: 9, to: { name: '교대역', kind: 'STATION' } },
+      { mode: 'SUBWAY', lineId: 'seoul-3', label: '3', stops: 9, to: { name: '교대역', kind: 'STATION' } },
       { mode: 'WALK', minutes: 2 },
-      { mode: 'SUBWAY', lineId: null, label: '2', stops: 3, to: { name: '선릉역', kind: 'STATION' } },
+      { mode: 'SUBWAY', lineId: 'seoul-2', label: '2', stops: 3, to: { name: '선릉역', kind: 'STATION' } },
       { mode: 'WALK', minutes: 4, to: { name: '선릉역', kind: 'STOP' } },
       { mode: 'BUS', kind: 'TRUNK', number: '273', stops: 4, to: { name: '역삼세무서', kind: 'STOP' } },
       { mode: 'WALK', minutes: 3, to: { name: '강남세브란스병원', kind: 'PLACE' } },
@@ -228,7 +237,7 @@ describe('real 응답 → 같은 모양', () => {
     const g = toRouteGuide([{ id: 'r1', durationMin: 31, exit: null, start: null, legs }], { here: { name: '종로3가역 키오스크', kind: 'PLACE' } })
     const [r] = g.routes
     expect(r.transfers).toBe(2)
-    expect(marks(r)).toEqual([`circle:3:${NO_COLOR}`, `circle:2:${NO_COLOR}`, 'bus:273:--bus-trunk'])
+    expect(marks(r)).toEqual(['circle:3:--line-seoul-3', 'circle:2:--line-seoul-2', 'bus:273:--bus-trunk'])
     expect(r).toMatchObject({ hasExit: false, endsAtPlace: true })
     expect(lines(r.timeline.full)).toEqual([
       '[지금 계신 곳] 종로3가역 키오스크',
@@ -247,18 +256,52 @@ describe('real 응답 → 같은 모양', () => {
       '[가실 곳] 강남세브란스병원',
     ])
   })
-  it('② /routes/transit: WALKING → WALK, stop_names 로 정거장 수, 조건 없는 버스 번호, 버스 종류는 없음(회색)', () => {
+  it('② /routes/transit: WALKING → WALK, stop_names 로 정거장 수, 조건 없는 버스 번호, 안내 문구가 없으면 버스 종류는 없음(회색)', () => {
     const legs = legsFromSteps(REAL_TRANSIT_STEPS, { destination: destinationPlace({ poi_id: 'BUS_1', name: '역삼세무서' }) })
     expect(legs).toEqual([
       { mode: 'WALK', minutes: 1, to: { name: '종로3가역', kind: 'STATION' } },
-      { mode: 'SUBWAY', lineId: null, label: '3', stops: 2, to: { name: '교대역', kind: 'STATION' } },
+      { mode: 'SUBWAY', lineId: 'seoul-3', label: '3', stops: 2, to: { name: '교대역', kind: 'STATION' } },
       { mode: 'WALK', minutes: 2 },
-      { mode: 'SUBWAY', lineId: null, label: '2', stops: 3, to: { name: '선릉역', kind: 'STATION' } },
+      { mode: 'SUBWAY', lineId: 'seoul-2', label: '2', stops: 3, to: { name: '선릉역', kind: 'STATION' } },
       { mode: 'BUS', kind: null, number: '273', stops: 1, to: { name: '역삼세무서', kind: 'STOP' } },
     ])
     const r = toRouteView({ id: 'r', durationMin: 31, legs })
-    expect(marks(r)[2]).toBe(`bus:273:${NO_COLOR}`)
+    expect(marks(r)).toEqual(['circle:3:--line-seoul-3', 'circle:2:--line-seoul-2', `bus:273:${NO_COLOR}`])
     expect(r.legs[4].stopsText).toBe('다음 정류장에서 내려요')
+  })
+  it('② 노선 색: 노선 이름으로 노선 ID 를 정한다. 다른 지역 노선과 모르는 이름은 비운다 (2026-11-22)', () => {
+    const idOf = (name) => legsFromSteps([step('SUBWAY', { stop_names: ['a', 'b'], vehicle_names: [name] })])[0].lineId
+    expect(['3호선', '수도권 1호선', '9호선', '공항철도', '경의중앙선', '수인분당선', 'GTX-A', '신분당선'].map(idOf)).toEqual([
+      'seoul-3', 'seoul-1', 'seoul-9', 'arex', 'gyeongui-jungang', 'suin-bundang', 'gtx-a', 'sinbundang',
+    ])
+    expect(['인천 1호선', '부산 3호선', '10호선', '모르는선', ''].map(idOf)).toEqual([null, null, null, null, null])
+    expect(subwayLineId('수도권 5호선')).toBe('seoul-5')
+    // 서버가 노선 ID 를 주면 그것을 쓴다
+    expect(legsFromSteps([step('SUBWAY', { line_id: 'seoul-7', stop_names: ['a', 'b'], vehicle_names: ['모르는선'] })])[0].lineId).toBe('seoul-7')
+  })
+  it('② 버스 색: 카카오 안내 문구의 앞머리로 종류를 정한다 (2026-11-22)', () => {
+    const bus = (guidance, vehicle_names) => {
+      const leg = legsFromSteps([step('BUS', { guidance, stop_names: ['a', 'b'], vehicle_names })])[0]
+      return [leg.number, leg.kind]
+    }
+    expect(bus('간선 271외 7대 (종로3가역.탑골공원 > 충정로역(중))', ['271', '273', 'N26(심야)'])).toEqual(['271', 'TRUNK'])
+    expect(bus('지선 7212 (종로4가.종묘 > 장충동.동국대입구)', ['7212'])).toEqual(['7212', 'BRANCH'])
+    expect(bus('광역 M5107외 1대 (명동성당 > 영통역)', ['M5107', 'M5107'])).toEqual(['M5107', 'EXPRESS'])
+    // 경기버스: 일반·좌석·직행은 경기버스 종류로 (경기버스 색)
+    expect(bus('직행 5000외 4대 (명동성당 > 기흥역8번출구)', ['5000', '5005'])).toEqual(['5000', 'GG_DIRECT'])
+    expect(bus('직행 G8110외 1대 (종로2가.삼일교(중) > 서현역.AK플라자)', ['G8110', 'G8110'])).toEqual(['G8110', 'GG_DIRECT'])
+    expect(bus('일반 11 (광교중앙역 > 수원역)', ['11'])).toEqual(['11', 'GG_GENERAL'])
+    expect(bus('좌석 300 (a > b)', ['300'])).toEqual(['300', 'GG_SEAT'])
+    expect(bus('순환 01B외 1대 (충무로역2번출구 > 남산서울타워)', ['01B', '01B'])).toEqual(['01B', 'CIRCULAR'])
+    expect(bus('마을 종로12 (종로3가역9번출구 > 창덕궁)', ['종로12'])).toEqual(['종로12', 'VILLAGE'])
+    expect(bus('공항 6002 (종로3가역11번출구 > 인천공항T1-3층)', ['6002'])).toEqual(['6002', 'AIRPORT'])
+    expect(bus('간선 N37(심야) (종로2가.삼일교 > 신사역)', ['N37(심야)'])).toEqual(['N37(심야)', 'TRUNK'])
+    // 색을 정하지 않은 종류
+    expect(bus('시외 8851 (수원터미널 > 수원역)', ['8851'])).toEqual(['8851', null])
+    // 문구의 첫 버스가 조건이 붙어 다른 번호를 골랐으면 종류를 모른다
+    expect(bus('지선 8641(평일)외 1대 (선릉역 > 역삼세무서)', ['8641(평일)', '273'])).toEqual(['273', null])
+    const r = toRouteView({ id: 'r', legs: legsFromSteps([step('BUS', { guidance: '간선 271 (a > b)', stop_names: ['a', 'b'], vehicle_names: ['271'] })]) })
+    expect(marks(r)).toEqual(['bus:271:--bus-trunk'])
   })
   it('먼저 걷지 않으면 첫 차를 타는 곳이 출발 장소, 이름 없는 노선은 평평한 표지', () => {
     const steps = [step('SUBWAY', { stop_names: ['서울역', '공덕'], vehicle_names: ['공항철도'] })]

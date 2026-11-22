@@ -9,6 +9,7 @@
 //       { mode: 'WALK',   minutes, to? }      to 가 없으면 같은 역 안에서 걷는다
 //   ] }
 //   장소 kind: 'STATION' | 'STOP' | 'PLACE'. 버스 kind: 'TRUNK' | 'BRANCH' | 'EXPRESS' | 'CIRCULAR' | 'VILLAGE' | 'NIGHT' | 'AIRPORT'
+//                                              + 경기버스 'GG_GENERAL'(일반) | 'GG_SEAT'(좌석) | 'GG_DIRECT'(직행좌석)
 //
 // 여기서 하지 않는 것 (9단계 화면 부품이 한다): 글자 너비가 있어야 하는 판단. 카드 노선 줄 접기(R5),
 // 타임라인 넘침에 따라 ①~④ 중 어느 단계를 쓸지(R2), 두 줄 이름 36px. 이 파일은 단계별 타임라인 항목 목록만 미리 만든다.
@@ -19,12 +20,21 @@ export const LINE_IDS_WITH_COLOR = Object.freeze([
   'arex', 'gyeongui-jungang', 'suin-bundang', 'gtx-a',
 ])
 
-/** 색 토큰이 있는 버스 종류. 그 밖의 종류(마을·심야·공항·모르는 값)는 회색 (계획서 6-1절 #7) */
+/**
+ * 색 토큰이 있는 버스 종류. 그 밖의 종류(심야·공항·모르는 값)는 회색 (계획서 6-1절 #7)
+ * 마을버스는 지선과 같은 초록으로 칠한다 (2026-11-22 방선우. 서울 마을버스가 초록이다. 토큰을 새로 만들지 않고 지선 토큰을 같이 쓴다)
+ * 경기버스는 경기버스 색으로 칠한다 (2026-11-22 방선우): 일반형 초록, 좌석형 파랑, 직행좌석형 빨강.
+ *   종류 값 GG_GENERAL · GG_SEAT · GG_DIRECT 는 경로에서만 온다 (api/real/routeLegs.js 가 카카오 안내 문구의 "일반"·"좌석"·"직행" 으로 정한다)
+ */
 export const BUS_KIND_COLORS = Object.freeze({
   TRUNK: '--bus-trunk',
   BRANCH: '--bus-branch',
   EXPRESS: '--bus-express',
   CIRCULAR: '--bus-circular',
+  VILLAGE: '--bus-branch',
+  GG_GENERAL: '--bus-gg-general',
+  GG_SEAT: '--bus-gg-seat',
+  GG_DIRECT: '--bus-gg-direct',
 })
 
 export const NO_COLOR = '--line-none'

@@ -7,9 +7,16 @@
 //      { type: 'WALKING'|'BUS'|'SUBWAY', duration_seconds, distance_meters, stop_names[], vehicle_names[], guidance }
 //
 // 서버가 주지 않는 값의 대체 동작 (docs/team-requests.md)
-//   lineId  늘 null → 노선 원 테두리는 회색 (#2). 색을 노선 이름으로 짐작하지 않는다 (디자인 문서 3-6절)
+//   lineId  서버가 line_id 를 주면 그것. 없으면 노선 이름으로 정한다 (2026-11-22, #2): "3호선"·"수도권 3호선" → "seoul-3",
+//           "공항철도" → "arex" 등 (subwayLineId. 값은 위치 응답의 lines[].lineId, kb/station_lines.py 와 같다).
+//           "인천 1호선" 처럼 다른 지역 이름이 붙은 노선과 모르는 이름은 null → 회색
 //   label   노선 이름 글자에서 만든다: "3호선"·"수도권 3호선" → "3" (원), 그 밖은 "수도권 " 만 떼고 그대로 ("공항철도" → 평평한 표지)
-//   kind    ① 의 bus_type 한글("간선" 등)을 TRUNK 등으로. ② 는 주지 않으므로 null → 회색 "그 밖" (#6)
+//   kind    ① 의 bus_type 한글("간선" 등)을 TRUNK 등으로. ② 는 따로 주지 않아서 카카오 안내 문구의 앞머리로 정한다 (2026-11-22, #6):
+//           guidance "간선 271외 7대 (종로3가 > 충정로역)" → 간선 → TRUNK.
+//           경기버스는 일반 → GG_GENERAL, 좌석 → GG_SEAT, 직행 → GG_DIRECT (경기버스 색으로 칠한다).
+//           문구의 번호가 화면에 쓰는 번호와 다르거나, 시외처럼 색을 정하지 않은 종류면 null → 회색 "그 밖"
+//           (종류별 색은 view/routeView.js 의 BUS_KIND_COLORS: 간선·지선·광역·순환, 마을은 지선과 같은 초록,
+//            경기 일반 초록·좌석 파랑·직행 빨강. 공항·심야는 회색)
 //   number  ① line. ② 는 vehicle_names 중 "(평일)" 같은 조건이 없는 첫 번호, 없으면 첫 번호 (같은 구간의 다른 버스는 쓰지 않는다, 계획서 6-1절 #11)
 //   stops   ① stops. ② stop_names 개수 - 1 (#5, 맞는지 확인 필요)
 //   to      내리는 곳 이름 (① alight, ② stop_names 마지막). 지하철은 끝에 "역" 을 붙여 STATION, 버스는 STOP
@@ -17,7 +24,34 @@
 //           마지막 차 뒤 걷기는 목적지 { name, kind } 까지 (#4. 서버가 줄 때만 있다)
 //   minutes ① minutes. ② duration_seconds 를 분으로 올림 (1분 미만도 1분)
 
-const BUS_KINDS_KO = { 간선: 'TRUNK', 지선: 'BRANCH', 광역: 'EXPRESS', 순환: 'CIRCULAR', 마을: 'VILLAGE', 심야: 'NIGHT', 공항: 'AIRPORT' }
+// 카카오가 일반·좌석·직행이라고 주는 것은 경기도 시내버스의 종류(일반형·좌석형·직행좌석형)다 → 경기버스 색 (2026-11-22)
+const BUS_KINDS_KO = {
+  간선: 'TRUNK',
+  지선: 'BRANCH',
+  광역: 'EXPRESS',
+  순환: 'CIRCULAR',
+  마을: 'VILLAGE',
+  심야: 'NIGHT',
+  공항: 'AIRPORT',
+  일반: 'GG_GENERAL',
+  좌석: 'GG_SEAT',
+  직행: 'GG_DIRECT',
+}
+
+// 번호가 아닌 이름으로 부르는 수도권 노선 → 노선 ID (kb/station_lines.py 의 LINES 와 같은 값)
+const LINE_ID_BY_NAME = {
+  공항철도: 'arex',
+  경의중앙선: 'gyeongui-jungang',
+  수인분당선: 'suin-bundang',
+  'GTX-A': 'gtx-a',
+  경춘선: 'gyeongchun',
+  신분당선: 'sinbundang',
+  우이신설선: 'ui-sinseol',
+  신림선: 'sillim',
+  김포골드라인: 'gimpo-gold',
+  서해선: 'seohae',
+  경강선: 'gyeonggang',
+}
 
 const modeOf = (s) => {
   const m = s.mode ?? s.type
@@ -36,6 +70,13 @@ export function subwayLabel(name) {
   return num ? num[1] : n || '지하철'
 }
 
+/** 지하철 노선 이름 → 노선 ID. 서울 1~9호선과 이름으로 부르는 수도권 노선만 알고, 그 밖은 null (색을 넣지 않는다) */
+export function subwayLineId(name) {
+  const n = clean(name).replace(/^수도권\s*/, '')
+  const num = n.match(/^([1-9])호선$/)
+  return num ? `seoul-${num[1]}` : (LINE_ID_BY_NAME[n] ?? null)
+}
+
 /** 버스 종류 글자(서버 bus_type) → TRUNK 등. 이미 영문 값이면 그대로, 모르면 null */
 export function busKind(type) {
   if (!type) return null
@@ -49,6 +90,24 @@ function busNumber(s) {
   if (s.line) return String(s.line).replace(/번$/, '')
   const names = (s.vehicle_names ?? []).map(String).filter(Boolean)
   return (names.find((n) => !/\(/.test(n)) ?? names[0] ?? '').replace(/번$/, '')
+}
+
+/** 카카오 안내 문구 "간선 271외 7대 (종로3가 > 충정로역)" → { type: '간선', number: '271' }. 그런 모양이 아니면 null */
+function guidanceBus(guidance) {
+  const m = String(guidance ?? '').match(/^(\S+)\s+(.+?)(?:외\s*\d+대)?\s*\(/)
+  return m ? { type: m[1], number: m[2].trim() } : null
+}
+
+/**
+ * 버스 종류: 서버가 준 bus_type, 없으면 안내 문구의 앞머리.
+ * 문구의 종류는 문구에 적힌 첫 버스의 것이라, 화면에 쓰는 번호(number)가 그 버스일 때만 쓴다
+ * (첫 버스가 "(평일)" 같은 조건이 붙어 다른 번호를 고른 경우에는 종류를 모른다 → null)
+ */
+function busKindOf(s, number) {
+  const given = busKind(s.bus_type)
+  if (given) return given
+  const g = guidanceBus(s.guidance)
+  return g && clean(g.number) === clean(number) ? busKind(g.type) : null
 }
 
 const stationName = (name) => (name && !/역$/.test(name) ? `${name}역` : name)
@@ -71,9 +130,10 @@ function rideLeg(s, mode) {
   const to = placeOf(mode, alightOf(s))
   if (mode === 'SUBWAY') {
     const name = s.line ?? s.vehicle_names?.[0]
-    return { mode, lineId: null, label: subwayLabel(name), stops: stopsOf(s), to }
+    return { mode, lineId: s.line_id ?? subwayLineId(name), label: subwayLabel(name), stops: stopsOf(s), to }
   }
-  return { mode, kind: busKind(s.bus_type), number: busNumber(s), stops: stopsOf(s), to }
+  const number = busNumber(s)
+  return { mode, kind: busKindOf(s, number), number, stops: stopsOf(s), to }
 }
 
 const samePlace = (a, b) => !!a && !!b && a.kind === b.kind && a.name === b.name

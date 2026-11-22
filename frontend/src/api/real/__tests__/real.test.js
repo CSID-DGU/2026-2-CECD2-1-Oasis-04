@@ -201,7 +201,7 @@ describe('real API', () => {
       const result = await route('SUB_0220_2호선')
       expect(fetchFn.mock.calls[0][0]).toBe('/routes/transit?start_latitude=37.5704&start_longitude=126.9918&end_latitude=37.504&end_longitude=127.048')
       expect(result.routes).toHaveLength(1)
-      // 디자인 문서 9-2절 모양만. 노선 ID·출구는 서버가 주지 않아 비운다
+      // 디자인 문서 9-2절 모양만. 노선 ID 는 노선 이름으로 정하고, 출구는 서버가 주지 않아 비운다
       expect(result).toEqual({
         routes: [
           {
@@ -211,8 +211,8 @@ describe('real API', () => {
             start: null,
             legs: [
               { mode: 'WALK', minutes: 1, to: { name: '종로3가역', kind: 'STATION' } },
-              { mode: 'SUBWAY', lineId: null, label: '3', stops: 2, to: { name: '교대역', kind: 'STATION' } },
-              { mode: 'SUBWAY', lineId: null, label: '2', stops: 3, to: { name: '선릉역', kind: 'STATION' } },
+              { mode: 'SUBWAY', lineId: 'seoul-3', label: '3', stops: 2, to: { name: '교대역', kind: 'STATION' } },
+              { mode: 'SUBWAY', lineId: 'seoul-2', label: '2', stops: 3, to: { name: '선릉역', kind: 'STATION' } },
             ],
           },
         ],
