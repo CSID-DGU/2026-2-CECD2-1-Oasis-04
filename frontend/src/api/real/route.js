@@ -8,6 +8,8 @@
 // 서버 응답 → 화면 모양 (mock/route.js 와 같은 { routes: [...] }, 1순위가 첫 번째)
 //   200 + 경로 배열  → { routes: [{ id, durationMin, exit, start, legs }] }   디자인 문서 9-2절 모양 (바꾸는 규칙·대체 동작은 routeLegs.js)
 //                      순서는 서버가 준 그대로(환승이 적은 순, 같으면 빨리 가는 순)이고, 화면에 맞춰 앞의 3개만 쓴다.
+//                      그 전에 지금 다니지 않는 버스(심야·출근·퇴근·새벽·평일 버스)로 가는 경로를 뺀다 (timedBus.js, 2026-11-22).
+//                      다 빠지면 빈 배열과 같다
 //   200 + 빈 배열    → { routes: [] }                     (ROUTING 핸들러가 '가는 길을 찾을 수 없어요' 로 처리)
 //   아주 가까운 곳    → 서버를 부르지 않고 ApiError(TOO_CLOSE, '가까운 곳이라 걸어서 가실 수 있어요. 약 300미터예요.')
 //   5xx              → ApiError(UPSTREAM)  그 밖의 응답·좌표를 모름 → ApiError(UNKNOWN)          (오류 코드는 docs/frontend-plan.md 2-3절)
@@ -20,6 +22,7 @@ import { getLocation, getOrigin } from './location.js'
 import { placeOf } from './poi.js'
 import { ApiError } from '../apiError.js'
 import { legsFromSteps, startFromSteps, destinationPlace } from './routeLegs.js'
+import { runningRoutes } from './timedBus.js'
 
 const MAX_ROUTES = 3
 const WALK_ONLY_M = 400 // 직선으로 이보다 가까우면 대중교통 대신 걸어가라고 안내한다
@@ -82,7 +85,8 @@ export function routesFromTransit(list, poiId, destination) {
 
 const point = (p) => `${encodeURIComponent(p.name || '위치')},${p.y},${p.x}`
 
-export async function route(poiId) {
+/** now: 버스 운행 시간을 가릴 때 쓰는 지금 시각 (테스트에서 바꾼다) */
+export async function route(poiId, { now = new Date() } = {}) {
   lastLandingUrl = null
   landingUrlById = new Map()
   const dest = placeOf(poiId)
@@ -110,10 +114,12 @@ export async function route(poiId) {
   const { status, body } = await routeFetch(`/routes/transit?${query}`, { timeoutMs: 12000 })
   if (status >= 500) throw new ApiError('UPSTREAM', null) // 카카오맵 조회 실패·키 미설정 등
   if (status !== 200 || !Array.isArray(body)) throw new ApiError('UNKNOWN', null)
-  if (body.length === 0) return { routes: [] }
+  // 지금 다니지 않는 버스로 가는 경로를 뺀다. 남는 경로가 없으면 경로가 없는 것과 같다
+  const list = runningRoutes(body, now)
+  if (list.length === 0) return { routes: [] }
 
   lastLandingUrl = `https://map.kakao.com/link/by/traffic/${point(origin)}/${point(dest)}`
-  const routes = routesFromTransit(body, poiId, { poi_id: poiId, name: dest.name })
-  rememberLandingUrls(routes, body)
+  const routes = routesFromTransit(list, poiId, { poi_id: poiId, name: dest.name })
+  rememberLandingUrls(routes, list)
   return { routes }
 }
