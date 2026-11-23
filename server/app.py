@@ -8,7 +8,7 @@ from typing import Annotated, Literal
 from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
 
-from kakao_transit import fetch_public_transit_routes, parse_public_transit_routes
+from kakao_transit import fetch_public_transit_routes, routes_with_final_walk
 from odsay_transit import Backup, DailyLimit, OdsayError, find_routes, usage_status
 from place_search import PlaceSearch
 from places import Place, load_places
@@ -150,7 +150,8 @@ def get_transit_routes(
     `summary`는 교통수단·소요 시간·환승 횟수의 요약이고,
     `instructions`는 `steps` 순서에 맞춘 한국어 안내다.
     `steps`의 `guidance`는 카카오맵이 제공한 원본 문구다.
-    목적지까지의 마지막 도보 구간은 카카오맵 응답에 들어 있는 경우에만 반환된다.
+    카카오 경로가 승차 구간으로 끝나면 그 구간의 끝 좌표에서 목적지까지 도보 경로를 조회한다.
+    좌표가 없거나 도보 조회가 실패하면 원래 경로를 반환한다. 경로 전체 시간과 거리는 대중교통 원본 값이다.
     """
     coordinates = {
         "start_latitude": start_latitude,
@@ -160,7 +161,7 @@ def get_transit_routes(
     }
     def from_kakao():
         kakao_usage.add()
-        return parse_public_transit_routes(fetch_public_transit_routes(**coordinates))
+        return routes_with_final_walk(fetch_public_transit_routes(**coordinates), end_longitude, end_latitude)
 
     try:
         routes, source = find_routes(provider, from_kakao, route_backup, **coordinates)

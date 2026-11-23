@@ -1,13 +1,17 @@
 import json
 import re
-from dataclasses import dataclass, field
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass, field, replace
+from http.client import HTTPException
 from os import environ
+from time import monotonic
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from transit_labels import bus_labels, subway_line_id
 
 PUBLIC_TRANSIT_URL = "https://dapi.kakao.com/v2/routing/publictraffic"
+WALK_URL = "https://dapi.kakao.com/v2/routing/walk"
 
 
 @dataclass(frozen=True, slots=True)
@@ -128,4 +132,62 @@ def parse_public_transit_routes(payload: dict[str, Any]) -> list[TransitRoute]:
                 exit=_arrival_exit(steps),
             )
         )
+    return routes
+
+
+def _alighting_point(raw_steps):
+    if not raw_steps or raw_steps[-1]["properties"]["type"] not in ("BUS", "SUBWAY"):
+        return None
+    points = (raw_steps[-1].get("path") or {}).get("points") or []
+    if not points:
+        return None
+    point = points[-1]
+    if not isinstance(point, (list, tuple)) or len(point) != 2 or any(type(v) not in (int, float) for v in point):
+        return None
+    x, y = point
+    return (x, y) if -180 <= x <= 180 and -90 <= y <= 90 else None
+
+
+def _walk_to_destination(start, destination, deadline):
+    if start == destination:
+        return 0, 0
+    timeout = deadline - monotonic()
+    if timeout <= 0:
+        return None
+    query = urlencode(dict(start_x=start[0], start_y=start[1], end_x=destination[0], end_y=destination[1]))
+    request = Request(f"{WALK_URL}?{query}", headers={"Authorization": f"KakaoAK {environ['KAKAO_REST_API_KEY']}"})
+    try:
+        with urlopen(request, timeout=timeout) as response:
+            payload = json.load(response)
+        if payload.get("status") == "SAME_POINT":
+            return 0, 0
+        if payload.get("status", "OK") != "OK":
+            return None
+        properties = payload["route"]["properties"]
+        values = properties["totalTime"], properties["totalDistance"]
+        if all(type(v) is int and v >= 0 for v in values):
+            return values
+    except (OSError, HTTPException, ValueError, TypeError, KeyError, AttributeError):
+        pass
+    return None
+
+
+def routes_with_final_walk(payload, end_longitude, end_latitude):
+    routes = parse_public_transit_routes(payload)
+    if not routes:
+        return routes
+    starts = [_alighting_point(raw["steps"]) for raw in payload["routes"]]
+    unique = list(dict.fromkeys(start for start in starts if start is not None))
+    if not unique:
+        return routes
+    destination = (end_longitude, end_latitude)
+    deadline = monotonic() + 2
+    with ThreadPoolExecutor(max_workers=min(4, len(unique))) as pool:
+        walks = dict(zip(unique, pool.map(lambda start: _walk_to_destination(start, destination, deadline), unique)))
+    for i, start in enumerate(starts):
+        walk = walks.get(start)
+        if walk is not None:
+            seconds, meters = walk
+            step = TransitStep("WALKING", "목적지까지 도보", seconds, meters, [], [])
+            routes[i] = replace(routes[i], steps=[*routes[i].steps, step])
     return routes
