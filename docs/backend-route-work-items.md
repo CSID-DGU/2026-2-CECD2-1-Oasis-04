@@ -6,7 +6,7 @@
 |---|---|---|---|
 | A. 선택 경로 QR | 1, 9 | QR 생성은 현행 유지. 후보별 주소는 모바일 랜딩 구현 필요 | 필터 적용 후 2·3순위 QR을 각각 휴대폰에서 열면 선택한 승하차·환승 순서가 나온다. |
 | B. 지하철 노선 ID | 2, 3 | 알려진 노선부터 구현 가능 | 위치 응답과 경로 응답에서 같은 노선의 ID가 일치한다. |
-| C. 버스 종류 | 2, 4 | 문자열 계약 도입 가능. 카카오 원본 타입과 코드표는 검증 필요 | 실제 표시 번호에 대응하는 종류가 전달되고 미확인 종류는 회색으로 표시된다. |
+| C. 버스 종류 | 2, 4 | 구현 완료. API 반환값과 화면 색상은 아래 C항 참조 | 화면에 표시하는 버스 번호에 해당하는 종류로 테두리 색을 정한다. |
 | D. 도착 출구 | 5 | 값이 확인되는 경로에 한해 가능 | 마지막 하차역의 출구만 하차 위치 옆에 표시한다. |
 | E. 마지막 도보 | 6 | 제공된 도보 전달 가능. 전 경로 시간 보장은 조건부 | 마지막 도보의 유무와 실제 소요 시간이 두 제공자에서 일관되게 표시된다. |
 | F. 정거장 수·환승 수 검증 | 7, 8 | 카카오 실호출과 기준 경로 대조 필요 | 제공자·경로별 비교 결과를 남기고 표시와 정렬에 쓸 기준을 확정한다. |
@@ -23,9 +23,22 @@
 
 ### C. 버스 종류
 
-카카오 파서는 `vehicles[].name`만 읽는다. 현재 코드로는 원본 `type`의 숫자·문자 여부와 의미를 확정할 수 없다. 원본 차량별 이름·타입 쌍을 확보해 대응을 확인한다. ODsay는 독립된 숫자 코드표를 쓰므로 별도로 변환한다. [카카오 파서](../server/kakao_transit.py) · [ODsay 코드표](../server/odsay_transit.py)
+**응답 형식** — `GET /routes/transit`의 `steps[].bus_type`은 영문 대문자 문자열 또는 JSON `null`이다. 카카오의 `vehicles[].type`은 한글 종류명 문자열이고, ODsay의 버스 종류는 숫자 코드다. 서버는 두 제공자의 값을 아래와 같이 통일한다. 도보·지하철 구간이나 버스 종류를 식별할 수 없는 경우에는 `null`을 반환한다. [카카오 공식 명세](https://developers.kakao.com/docs/ko/kakaomap/rest-api) · [ODsay 코드표](../server/odsay_transit.py) · [서버 변환표](../server/transit_labels.py)
 
-공개 필드 `steps[].bus_type`은 프론트가 이미 읽는 문자열 또는 null을 제안한다. 간선→TRUNK, 지선→BRANCH, 광역→EXPRESS, 순환→CIRCULAR, 마을→VILLAGE, 심야→NIGHT, 공항→AIRPORT. 경기 일반·좌석·직행은 각각 GG_GENERAL·GG_SEAT·GG_DIRECT를 유지한다. 이는 화면 계약이며 카카오 원본 코드표는 아니다. 현재 화면은 괄호 조건이 없는 첫 버스를 우선하므로 복수 후보에서 같은 번호의 타입을 골라야 한다. 번호별 종류가 다르고 대표 차량을 특정할 수 없으면 null로 둔다. 공항·심야는 현재 색상 정책상 종류를 알아도 회색이다.
+| 버스 종류 | API의 `bus_type` | 경로 화면 테두리 | CSS 변수 |
+|---|---|---|---|
+| 간선 | `TRUNK` | 파랑 `#0068B7` | `--bus-trunk` |
+| 지선 | `BRANCH` | 초록 `#53B332` | `--bus-branch` |
+| 광역 | `EXPRESS` | 빨강 `#E60012` | `--bus-express` |
+| 순환 | `CIRCULAR` | 노랑 `#F2B70A` | `--bus-circular` |
+| 마을 | `VILLAGE` | 초록 `#53B332` | `--bus-branch` |
+| 심야 | `NIGHT` | 기본 회색 `#DCDCDC` | `--line-none` |
+| 공항 | `AIRPORT` | 기본 회색 `#DCDCDC` | `--line-none` |
+| 경기 일반 | `GG_GENERAL` | 청록 `#33CC99` | `--bus-gg-general` |
+| 경기 좌석 | `GG_SEAT` | 파랑 `#0068B7` | `--bus-gg-seat` |
+| 경기 직행 | `GG_DIRECT` | 빨강 `#E60012` | `--bus-gg-direct` |
+
+**표시할 차량 선택** — 같은 구간에 후보가 여러 대면 괄호 없는 첫 차량을, 모두 괄호가 있으면 첫 차량을 표시한다. 운행시간 필터로 후보가 바뀌면 프론트는 `bus_types_by_name`에서 새 표시 번호의 종류를 읽는다. 예를 들어 차량명이 `N37(심야)`여도 제공자가 종류를 `간선`으로 주면 `TRUNK`이므로 테두리는 파랑이다. `bus_type`이 `null`이면 화면은 안내 문구의 번호가 표시 번호와 일치할 때 종류를 보완하고, 끝까지 식별되지 않으면 기본 회색을 쓴다. [차량 선택과 종류 판별](../frontend/src/api/real/routeLegs.js) · [운행시간 필터](../frontend/src/api/real/timedBus.js) · [테두리 매핑](../frontend/src/view/routeView.js) · [CSS 색상값](../frontend/src/styles/global.css)
 
 ### D. 도착 출구
 
