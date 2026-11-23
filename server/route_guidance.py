@@ -15,6 +15,7 @@ ROUTE_MODE_SENTENCES = {
 class GuidedTransitRoute(TransitRoute):
     """대중교통 경로와 해당 경로의 한국어 안내."""
 
+    landing_url: str
     summary: str = field(
         metadata={
             "description": "교통수단, 예상 소요 시간, 환승 횟수를 풀어 쓴 요약",
@@ -74,11 +75,12 @@ def _step_instruction(step: TransitStep) -> str:
     return step.guidance
 
 
-def add_route_guidance(route: TransitRoute) -> GuidedTransitRoute:
+def add_route_guidance(route: TransitRoute, landing_url: str) -> GuidedTransitRoute:
     mode = ROUTE_MODE_SENTENCES[route.type]
     duration = _format_duration(route.duration_seconds)
     transfers = f"{route.transfers}번 갈아타요." if route.transfers else "갈아타지 않아요."
     return GuidedTransitRoute(
+        landing_url=landing_url,
         type=route.type,
         duration_seconds=route.duration_seconds,
         distance_meters=route.distance_meters,

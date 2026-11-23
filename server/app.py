@@ -2,15 +2,18 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from os import environ
+from secrets import token_urlsafe
 from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi.responses import HTMLResponse
 
 from kakao_transit import fetch_public_transit_routes, parse_public_transit_routes
 from odsay_transit import Backup, DailyLimit, OdsayError, find_routes, usage_status
 from place_search import PlaceSearch
 from places import Place, load_places
 from route_guidance import GuidedTransitRoute, add_route_guidance
+from route_landing import landing_page, save_landings
 
 
 @dataclass
@@ -98,6 +101,7 @@ def search_places(
                                     "summary": "버스만 이용해요. 약 20분 걸려요. 갈아타지 않아요.",
                                     "instructions": ["출발 정류장에서 101번, 102번 버스 중 한 대를 타세요. 도착 정류장에서 내리세요."],
                                     "type": "BUS",
+                                    "landing_url": "https://routes.example.org/routes/qr?route_id=example",
                                     "duration_seconds": 1200,
                                     "distance_meters": 4200,
                                     "transfers": 0,
@@ -122,6 +126,7 @@ def search_places(
     },
 )
 def get_transit_routes(
+    request: Request,
     response: Response,
     start_latitude: Annotated[float, Query(ge=-90, le=90, description="출발지 위도(WGS84 십진도)", examples=[37.568])],
     start_longitude: Annotated[float, Query(ge=-180, le=180, description="출발지 경도(WGS84 십진도)", examples=[126.991])],
@@ -164,7 +169,20 @@ def get_transit_routes(
         raise HTTPException(status_code=BACKUP_ERROR_STATUS.get(error.code, 502), detail=f"BACKUP_{error.code}: {error}") from None
     response.headers["X-Route-Provider"] = source
     routes.sort(key=lambda route: (route.transfers, route.duration_seconds))
-    return [add_route_guidance(route) for route in routes]
+    base = (environ.get("ROUTE_PUBLIC_BASE_URL") or str(request.base_url)).rstrip("/")
+    entries = []
+    for route in routes:
+        route_id = token_urlsafe(16)
+        guided = add_route_guidance(route, f"{base}/routes/qr?route_id={route_id}")
+        entries.append((route_id, guided))
+    save_landings(entries)
+    return [guided for _, guided in entries]
+
+
+@app.get("/routes/qr", response_class=HTMLResponse, tags=["길찾기"], summary="선택한 경로의 휴대폰 안내")
+def open_route(route_id: str):
+    html, status = landing_page(route_id)
+    return HTMLResponse(html, status_code=status, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/routes/status", tags=["길찾기"], summary="길찾기 제공자(카카오맵·ODsay) 상태", response_model=RouteStatus)
