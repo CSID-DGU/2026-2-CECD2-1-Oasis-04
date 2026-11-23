@@ -86,6 +86,7 @@ def add_route_guidance(route: TransitRoute, landing_url: str) -> GuidedTransitRo
         distance_meters=route.distance_meters,
         transfers=route.transfers,
         steps=route.steps,
+        exit=route.exit,
         summary=f"{mode} 약 {duration} 걸려요. {transfers}",
         instructions=[_step_instruction(step) for step in route.steps],
     )

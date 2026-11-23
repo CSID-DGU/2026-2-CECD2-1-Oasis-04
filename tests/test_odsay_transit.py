@@ -83,6 +83,37 @@ def test_routes_use_the_same_dataclasses_as_the_kakao_side():
     assert [step.type for step in route.steps] == ["WALKING", "SUBWAY", "WALKING"]
 
 
+def test_exit_belongs_to_final_ride():
+    assert one(SUBWAY_PATH).exit == "6"
+    assert one(BUS_PATH).exit is None
+    subs = SUBWAY_PATH["subPath"] + BUS_PATH["subPath"]
+    assert one(path(3, 44, 1, 1, subs)).exit is None
+
+
+@pytest.mark.parametrize(("rides", "final_walk", "expected"), [
+    (["SUBWAY"], "동대입구역 6번 출구로 나가세요.", "6"),
+    (["SUBWAY"], "3-1번 출구로 나와서 걸어가세요.", "3-1"),
+    (["SUBWAY"], "6번 출구 앞 약국까지 도보", None),
+    (["SUBWAY"], "6번 출구 또는 7번 출구로 나가세요.", None),
+    (["SUBWAY"], None, None),
+    (["SUBWAY", "BUS"], "6번 출구로 나가세요.", None),
+])
+def test_kakao_arrival_exit(rides, final_walk, expected):
+    from kakao_transit import parse_public_transit_routes
+
+    def step(kind, guidance):
+        return {"properties": {"type": kind, "guidance": guidance, "time": 60, "distance": 100, "stops": [{"name": "동대입구"}]}}
+
+    steps = [step("WALKING", "2번 출구로 나가세요.")]
+    for ride in rides:
+        steps.append(step(ride, ""))
+    if final_walk:
+        steps.append(step("WALKING", final_walk))
+    props = {"type": "SUBWAY", "totalTime": 600, "totalDistance": 1000, "transfers": 0}
+    route, = parse_public_transit_routes({"status": "OK", "routes": [{"properties": props, "steps": steps}]})
+    assert route.exit == expected
+
+
 def test_subway_step_is_written_like_the_kakao_guidance():
     step = one(SUBWAY_PATH).steps[1]
     assert step == TransitStep(type="SUBWAY", guidance="수도권 3호선 (종로3가 > 동대입구)", duration_seconds=360, distance_meters=4200,

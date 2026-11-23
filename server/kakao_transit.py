@@ -1,4 +1,5 @@
 import json
+import re
 from dataclasses import dataclass, field
 from os import environ
 from typing import Any
@@ -39,6 +40,28 @@ class TransitRoute:
     distance_meters: int = field(metadata={"description": "카카오맵이 반환한 경로 전체 이동 거리(미터)", "examples": [4200]})
     transfers: int = field(metadata={"description": "카카오맵이 반환한 전체 환승 횟수. 0이면 환승 없음.", "examples": [0]})
     steps: list[TransitStep] = field(metadata={"description": "승객의 이동 순서대로 정렬된 경로 구간 목록"})
+    exit: str | None = field(default=None, kw_only=True, metadata={"description": "마지막 지하철 하차역의 출구 번호. 확인되지 않으면 null."})
+
+
+EXIT_NUMBER = r"[1-9][0-9]*(?:-[1-9][0-9]*)?"
+
+
+def _arrival_exit(steps: list[TransitStep]) -> str | None:
+    last = next((i for i in reversed(range(len(steps))) if steps[i].type != "WALKING"), None)
+    if last is None or steps[last].type != "SUBWAY" or last + 1 == len(steps):
+        return None
+
+    guidance = steps[last + 1].guidance.strip()
+    stops = steps[last].stop_names
+    if stops:
+        station = stops[-1].strip().removesuffix("역")
+        if station:
+            guidance = re.sub(rf"^{re.escape(station)}역?(?:에서|의)?\s*", "", guidance)
+    # 첫 도보의 명시적인 출구 지시만 사용한다. 목적지·정류장 이름에도 출구 번호가 들어갈 수 있다.
+    if guidance.count("출구") != 1:
+        return None
+    match = re.match(rf"^({EXIT_NUMBER})\s*번\s*출구로\s*(?:나가|나와|나오|나갑|나감)", guidance)
+    return match[1] if match else None
 
 
 def fetch_public_transit_routes(
@@ -94,13 +117,15 @@ def parse_public_transit_routes(payload: dict[str, Any]) -> list[TransitRoute]:
     routes = []
     for route in payload["routes"]:
         properties = route["properties"]
+        steps = [_parse_step(step) for step in route["steps"]]
         routes.append(
             TransitRoute(
                 type=properties["type"],
                 duration_seconds=properties["totalTime"],
                 distance_meters=properties["totalDistance"],
                 transfers=properties["transfers"],
-                steps=[_parse_step(step) for step in route["steps"]],
+                steps=steps,
+                exit=_arrival_exit(steps),
             )
         )
     return routes

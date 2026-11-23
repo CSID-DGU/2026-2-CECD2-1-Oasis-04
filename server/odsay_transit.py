@@ -16,13 +16,14 @@ ODsay (https://lab.odsay.com, 2026-11-22 문서 확인)
 """
 import datetime
 import json
+import re
 import urllib.error
 from os import environ
 from typing import Any, Callable
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from kakao_transit import TransitRoute, TransitStep
+from kakao_transit import EXIT_NUMBER, TransitRoute, TransitStep
 from transit_labels import bus_labels, subway_line_id
 
 ODSAY_URL = "https://api.odsay.com/v1/api/searchPubTransPathT"
@@ -130,6 +131,7 @@ def _parse_route(path: dict[str, Any]) -> TransitRoute:
     subs = path.get("subPath") or []
     ride_indexes = [i for i, sub in enumerate(subs) if sub.get("trafficType") in (1, 2)]
     first, last = (ride_indexes[0], ride_indexes[-1]) if ride_indexes else (0, -1)
+    exit_no = str(subs[last].get("endExitNo") or "").strip() if last >= 0 and subs[last]["trafficType"] == 1 else ""
     steps = [step for i, sub in enumerate(subs) if (step := _parse_step(sub, first < i < last))]
     return TransitRoute(
         type=PATH_TYPES.get(path.get("pathType"), "BUS_AND_SUBWAY"),
@@ -137,6 +139,7 @@ def _parse_route(path: dict[str, Any]) -> TransitRoute:
         distance_meters=int(round(float(info.get("totalDistance") or 0))),
         transfers=max(0, int(info.get("busTransitCount") or 0) + int(info.get("subwayTransitCount") or 0) - 1),
         steps=steps,
+        exit=exit_no if re.fullmatch(EXIT_NUMBER, exit_no) else None,
     )
 
 

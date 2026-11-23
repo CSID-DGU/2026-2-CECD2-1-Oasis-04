@@ -18,7 +18,7 @@
 //   화면은 어디서 받았는지 몰라도 된다. 설정 페이지의 '경로' 탭에서 고른 방식만 provider 값으로 넘긴다
 //   (settings/routeBackup.js: 처음 값이면 넘기지 않고, 백업을 끄면 kakao, ODsay 로만 찾으면 odsay)
 //
-// ROUTE_GUIDE 는 이것을 view/routeView.js 로 바꿔 그린다 (9단계). exit 는 서버가 주지 않아 늘 null (#3).
+// ROUTE_GUIDE 는 이것을 view/routeView.js 로 바꿔 그린다 (9단계).
 // '휴대폰으로 보내기'(qr.js)가 쓸 카카오맵 길찾기 주소는 같은 출발·도착지로 여기서 만든다.
 
 import { routeFetch } from './http.js'
@@ -82,7 +82,7 @@ export function routesFromTransit(list, poiId, destination) {
   return (list ?? []).slice(0, MAX_ROUTES).map((r, i) => ({
     id: `${poiId}#${i + 1}`,
     durationMin: r.duration_seconds ? Math.max(1, Math.floor((r.duration_seconds + 30) / 60)) : 0,
-    exit: null,
+    exit: r.exit ?? null,
     start: startFromSteps(r.steps),
     legs: legsFromSteps(r.steps, { destination: dest }),
   }))
