@@ -4,6 +4,7 @@ from os import environ
 from typing import Any
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+from transit_labels import bus_labels, subway_line_id
 
 PUBLIC_TRANSIT_URL = "https://dapi.kakao.com/v2/routing/publictraffic"
 
@@ -24,6 +25,9 @@ class TransitStep:
     vehicle_names: list[str] = field(
         metadata={"description": "버스 번호·전철 노선 이름 목록. 중복 이름이 있을 수 있으며 값이 없으면 빈 배열.", "examples": [["101", "102"]]}
     )
+    bus_type: str | None = None
+    line_id: str | None = None
+    bus_types_by_name: dict[str, str | None] = field(default_factory=dict)
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,13 +71,18 @@ def fetch_public_transit_routes(
 
 def _parse_step(step: dict[str, Any]) -> TransitStep:
     properties = step["properties"]
+    vehicles = properties.get("vehicles") or []
+    names = [vehicle["name"] for vehicle in vehicles]
+    labels = bus_labels((v["name"], v.get("type")) for v in vehicles) if properties["type"] == "BUS" else {}
     return TransitStep(
         type=properties["type"],
         guidance=properties.get("guidance") or "",
         duration_seconds=properties["time"],
         distance_meters=properties["distance"],
         stop_names=[stop["name"] for stop in properties.get("stops") or []],
-        vehicle_names=[vehicle["name"] for vehicle in properties.get("vehicles") or []],
+        vehicle_names=names,
+        line_id=subway_line_id(names[0]) if properties["type"] == "SUBWAY" and names else None,
+        **labels,
     )
 
 

@@ -86,13 +86,14 @@ def test_routes_use_the_same_dataclasses_as_the_kakao_side():
 def test_subway_step_is_written_like_the_kakao_guidance():
     step = one(SUBWAY_PATH).steps[1]
     assert step == TransitStep(type="SUBWAY", guidance="수도권 3호선 (종로3가 > 동대입구)", duration_seconds=360, distance_meters=4200,
-                               stop_names=["종로3가", "을지로3가", "충무로", "동대입구"], vehicle_names=["수도권 3호선"])
+                               stop_names=["종로3가", "을지로3가", "충무로", "동대입구"], vehicle_names=["수도권 3호선"], line_id="seoul-3")
 
 
 def test_bus_step_starts_with_the_type_word_and_lists_unique_numbers():
     step = one(BUS_PATH).steps[1]
     assert step.type == "BUS"
     assert step.vehicle_names == ["273", "271"]
+    assert step.bus_type == "TRUNK"
     assert step.guidance == "간선 273외 1대 (종로3가.탑골공원 > 동대입구역.장충동)"
     assert step.stop_names == ["종로3가.탑골공원", "종로4가.종묘", "동대입구역.장충동"]
     assert step.duration_seconds == 1200

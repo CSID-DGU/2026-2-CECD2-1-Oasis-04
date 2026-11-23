@@ -137,6 +137,10 @@ export function runningRoutes(list, now = new Date()) {
       if (step.type !== 'BUS' || names.every((n) => busRunning(n, now))) return step
       const left = names.filter((n) => busRunning(n, now))
       if (left.length === 0) dropped = true
+      if (step.bus_types_by_name) {
+        const display = left.find((name) => !/\(/.test(name)) ?? left[0]
+        return { ...step, vehicle_names: left, bus_type: step.bus_types_by_name[display] ?? null }
+      }
       return { ...step, vehicle_names: left }
     })
     if (!dropped) out.push({ ...route, steps })

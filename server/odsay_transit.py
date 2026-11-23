@@ -23,6 +23,7 @@ from urllib.parse import urlencode
 from urllib.request import urlopen
 
 from kakao_transit import TransitRoute, TransitStep
+from transit_labels import bus_labels, subway_line_id
 
 ODSAY_URL = "https://api.odsay.com/v1/api/searchPubTransPathT"
 KEY_NAME = "ODSAY_API_KEY"
@@ -115,11 +116,12 @@ def _parse_step(sub: dict[str, Any], between_rides: bool) -> TransitStep | None:
         word = BUS_TYPES.get(lanes[0].get("type"), "버스") if lanes else "버스"
         more = f"외 {len(numbers) - 1}대" if len(numbers) > 1 else ""
         return TransitStep(type="BUS", guidance=f"{word} {numbers[0] if numbers else ''}{more}{span}".strip(),
-                           duration_seconds=seconds, distance_meters=meters, stop_names=stops, vehicle_names=numbers)
+                           duration_seconds=seconds, distance_meters=meters, stop_names=stops, vehicle_names=numbers,
+                           **bus_labels((str(lane.get("busNo") or "").strip(), BUS_TYPES.get(lane.get("type"))) for lane in lanes))
     if kind == 1:
         name = str((lanes[0].get("name") if lanes else "") or "").strip()
         return TransitStep(type="SUBWAY", guidance=f"{name}{span}", duration_seconds=seconds, distance_meters=meters,
-                           stop_names=stops, vehicle_names=[name] if name else [])
+                           stop_names=stops, vehicle_names=[name] if name else [], line_id=subway_line_id(name))
     return None
 
 
