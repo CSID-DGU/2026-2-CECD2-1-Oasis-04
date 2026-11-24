@@ -37,6 +37,7 @@ def landing_page(route_id):
         content = f"<p>{escape(summary)}</p><ol>{steps}</ol>"
     html = ('<!doctype html><html lang="ko"><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width, initial-scale=1">'
-            '<title>선택한 경로</title><style>body{font:1.1rem/1.6 system-ui;max-width:40rem;margin:2rem auto;padding:0 1rem}li{margin:1rem 0}</style>'
+            '<title>선택한 경로</title>'
+            '<style>body{font:1.1rem/1.6 system-ui;max-width:40rem;margin:2rem auto;padding:0 1rem}li{margin:1rem 0}</style>'
             f'<main><h1>선택한 경로</h1>{content}</main></html>')
     return html, 200 if row else 404
