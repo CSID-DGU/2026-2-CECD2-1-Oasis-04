@@ -74,3 +74,4 @@ desktop.ini
 design/references/
 # 지난 시안의 스크린샷 (archive/ 의 HTML 은 올린다. 그림은 각 폴더의 찍기 스크립트로 다시 만들 수 있다)
 design/mockups/archive/shots/
+server/route_landings.sqlite3*

@@ -59,7 +59,7 @@ const modeOf = (s) => {
 }
 
 const minutesOf = (s) =>
-  Number.isFinite(s.minutes) ? s.minutes : Number.isFinite(s.duration_seconds) ? Math.max(1, Math.ceil(s.duration_seconds / 60)) : null
+  Number.isFinite(s.minutes) ? s.minutes : Number.isFinite(s.duration_seconds) ? Math.max(0, Math.ceil(s.duration_seconds / 60)) : null
 
 const clean = (name) => String(name ?? '').replace(/\s*\(.*?\)/g, '').trim()
 

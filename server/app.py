@@ -2,15 +2,18 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from dataclasses import dataclass
 from os import environ
+from secrets import token_urlsafe
 from typing import Annotated, Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request, Response
+from fastapi.responses import HTMLResponse
 
-from kakao_transit import fetch_public_transit_routes, parse_public_transit_routes
+from kakao_transit import fetch_public_transit_routes, routes_with_final_walk
 from odsay_transit import Backup, DailyLimit, OdsayError, find_routes, usage_status
 from place_search import PlaceSearch
 from places import Place, load_places
 from route_guidance import GuidedTransitRoute, add_route_guidance
+from route_landing import landing_page, save_landings
 
 
 @dataclass
@@ -98,6 +101,7 @@ def search_places(
                                     "summary": "버스만 이용해요. 약 20분 걸려요. 갈아타지 않아요.",
                                     "instructions": ["출발 정류장에서 101번, 102번 버스 중 한 대를 타세요. 도착 정류장에서 내리세요."],
                                     "type": "BUS",
+                                    "landing_url": "https://routes.example.org/routes/qr?route_id=example",
                                     "duration_seconds": 1200,
                                     "distance_meters": 4200,
                                     "transfers": 0,
@@ -122,6 +126,7 @@ def search_places(
     },
 )
 def get_transit_routes(
+    request: Request,
     response: Response,
     start_latitude: Annotated[float, Query(ge=-90, le=90, description="출발지 위도(WGS84 십진도)", examples=[37.568])],
     start_longitude: Annotated[float, Query(ge=-180, le=180, description="출발지 경도(WGS84 십진도)", examples=[126.991])],
@@ -145,7 +150,8 @@ def get_transit_routes(
     `summary`는 교통수단·소요 시간·환승 횟수의 요약이고,
     `instructions`는 `steps` 순서에 맞춘 한국어 안내다.
     `steps`의 `guidance`는 카카오맵이 제공한 원본 문구다.
-    목적지까지의 마지막 도보 구간은 카카오맵 응답에 들어 있는 경우에만 반환된다.
+    카카오 경로가 승차 구간으로 끝나면 그 구간의 끝 좌표에서 목적지까지 도보 경로를 조회한다.
+    좌표가 없거나 도보 조회가 실패하면 원래 경로를 반환한다. 경로 전체 시간과 거리는 대중교통 원본 값이다.
     """
     coordinates = {
         "start_latitude": start_latitude,
@@ -155,7 +161,7 @@ def get_transit_routes(
     }
     def from_kakao():
         kakao_usage.add()
-        return parse_public_transit_routes(fetch_public_transit_routes(**coordinates))
+        return routes_with_final_walk(fetch_public_transit_routes(**coordinates), end_longitude, end_latitude)
 
     try:
         routes, source = find_routes(provider, from_kakao, route_backup, **coordinates)
@@ -164,7 +170,20 @@ def get_transit_routes(
         raise HTTPException(status_code=BACKUP_ERROR_STATUS.get(error.code, 502), detail=f"BACKUP_{error.code}: {error}") from None
     response.headers["X-Route-Provider"] = source
     routes.sort(key=lambda route: (route.transfers, route.duration_seconds))
-    return [add_route_guidance(route) for route in routes]
+    base = (environ.get("ROUTE_PUBLIC_BASE_URL") or str(request.base_url)).rstrip("/")
+    entries = []
+    for route in routes:
+        route_id = token_urlsafe(16)
+        guided = add_route_guidance(route, f"{base}/routes/qr?route_id={route_id}")
+        entries.append((route_id, guided))
+    save_landings(entries)
+    return [guided for _, guided in entries]
+
+
+@app.get("/routes/qr", response_class=HTMLResponse, tags=["길찾기"], summary="선택한 경로의 휴대폰 안내")
+def open_route(route_id: str):
+    html, status = landing_page(route_id)
+    return HTMLResponse(html, status_code=status, headers={"Cache-Control": "no-store"})
 
 
 @app.get("/routes/status", tags=["길찾기"], summary="길찾기 제공자(카카오맵·ODsay) 상태", response_model=RouteStatus)

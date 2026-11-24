@@ -16,13 +16,15 @@ ODsay (https://lab.odsay.com, 2026-11-22 문서 확인)
 """
 import datetime
 import json
+import re
 import urllib.error
 from os import environ
 from typing import Any, Callable
 from urllib.parse import urlencode
 from urllib.request import urlopen
 
-from kakao_transit import TransitRoute, TransitStep
+from kakao_transit import EXIT_NUMBER, TransitRoute, TransitStep
+from transit_labels import bus_labels, subway_line_id
 
 ODSAY_URL = "https://api.odsay.com/v1/api/searchPubTransPathT"
 KEY_NAME = "ODSAY_API_KEY"
@@ -115,11 +117,12 @@ def _parse_step(sub: dict[str, Any], between_rides: bool) -> TransitStep | None:
         word = BUS_TYPES.get(lanes[0].get("type"), "버스") if lanes else "버스"
         more = f"외 {len(numbers) - 1}대" if len(numbers) > 1 else ""
         return TransitStep(type="BUS", guidance=f"{word} {numbers[0] if numbers else ''}{more}{span}".strip(),
-                           duration_seconds=seconds, distance_meters=meters, stop_names=stops, vehicle_names=numbers)
+                           duration_seconds=seconds, distance_meters=meters, stop_names=stops, vehicle_names=numbers,
+                           **bus_labels((str(lane.get("busNo") or "").strip(), BUS_TYPES.get(lane.get("type"))) for lane in lanes))
     if kind == 1:
         name = str((lanes[0].get("name") if lanes else "") or "").strip()
         return TransitStep(type="SUBWAY", guidance=f"{name}{span}", duration_seconds=seconds, distance_meters=meters,
-                           stop_names=stops, vehicle_names=[name] if name else [])
+                           stop_names=stops, vehicle_names=[name] if name else [], line_id=subway_line_id(name))
     return None
 
 
@@ -128,6 +131,7 @@ def _parse_route(path: dict[str, Any]) -> TransitRoute:
     subs = path.get("subPath") or []
     ride_indexes = [i for i, sub in enumerate(subs) if sub.get("trafficType") in (1, 2)]
     first, last = (ride_indexes[0], ride_indexes[-1]) if ride_indexes else (0, -1)
+    exit_no = str(subs[last].get("endExitNo") or "").strip() if last >= 0 and subs[last]["trafficType"] == 1 else ""
     steps = [step for i, sub in enumerate(subs) if (step := _parse_step(sub, first < i < last))]
     return TransitRoute(
         type=PATH_TYPES.get(path.get("pathType"), "BUS_AND_SUBWAY"),
@@ -135,6 +139,7 @@ def _parse_route(path: dict[str, Any]) -> TransitRoute:
         distance_meters=int(round(float(info.get("totalDistance") or 0))),
         transfers=max(0, int(info.get("busTransitCount") or 0) + int(info.get("subwayTransitCount") or 0) - 1),
         steps=steps,
+        exit=exit_no if re.fullmatch(EXIT_NUMBER, exit_no) else None,
     )
 
 
